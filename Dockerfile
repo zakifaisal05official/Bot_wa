@@ -3,20 +3,19 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 USER root
 WORKDIR /app
 
-# Bersihkan sisa build lama
+# Pastikan folder bersih total
 RUN rm -rf node_modules package-lock.json
 
-# Salin package.json
+# Salin hanya package.json
 COPY package.json ./
 
-# Install library tanpa meminta lockfile
+# Paksa install tanpa lockfile agar tidak mencari npm ci
 RUN npm install --no-package-lock
 
-# Salin semua file project
+# Salin sisa file lainnya
 COPY . .
 
-# Berikan izin akses folder untuk menyimpan session WhatsApp
+# Izin tulis untuk session WhatsApp
 RUN chmod -R 777 /app
 
-# Jalankan bot
 CMD ["node", "index.js"]
