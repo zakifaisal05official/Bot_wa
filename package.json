@@ -1,7 +1,7 @@
 {
   "name": "bot-wa",
   "version": "1.0.0",
-  "description": "",
+  "description": "WhatsApp Bot Railway",
   "main": "index.js",
   "dependencies": {
     "whatsapp-web.js": "^1.23.0",
@@ -10,6 +10,9 @@
   },
   "scripts": {
     "start": "node index.js"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
 
