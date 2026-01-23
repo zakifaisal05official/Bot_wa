@@ -3,17 +3,20 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 USER root
 WORKDIR /app
 
-# Hanya salin package.json
+# Hapus sisa-sisa file lama jika ada
+RUN rm -rf node_modules package-lock.json
+
+# Salin file konfigurasi
 COPY package.json ./
 
-# Pakai install biasa agar Railway tidak rewel soal lockfile
-RUN npm install
+# Instal library (tanpa lockfile agar tidak error)
+RUN npm install --no-package-lock
 
-# Salin semua file bot
+# Salin semua kode bot kamu
 COPY . .
 
-# Berikan izin folder agar session bisa tersimpan
+# Berikan izin tulis (Penting untuk menyimpan session WA)
 RUN chmod -R 777 /app
 
-# Jalankan perintah start
-CMD ["npm", "start"]
+# Jalankan bot
+CMD ["node", "index.js"]
