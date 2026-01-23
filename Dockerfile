@@ -3,17 +3,17 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 USER root
 WORKDIR /app
 
-# Salin package.json saja
+# Hanya salin package.json
 COPY package.json ./
 
-# Pakai install biasa agar Railway yang buat filenya
+# Pakai install biasa agar Railway tidak rewel soal lockfile
 RUN npm install
 
-# Baru salin semua file lainnya
+# Salin semua file bot
 COPY . .
 
-# Berikan izin akses penuh ke folder
+# Berikan izin folder agar session bisa tersimpan
 RUN chmod -R 777 /app
 
-# Jalankan bot
-CMD ["node", "index.js"]
+# Jalankan perintah start
+CMD ["npm", "start"]
