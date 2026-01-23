@@ -1,7 +1,7 @@
 {
-  "name": "bot-wa",
+  "name": "bot-wa-railway",
   "version": "1.0.0",
-  "description": "WhatsApp Bot",
+  "description": "WA Bot Railway Fix",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -10,5 +10,8 @@
     "whatsapp-web.js": "^1.23.0",
     "qrcode-terminal": "^0.12.0",
     "puppeteer": "^21.0.0"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
