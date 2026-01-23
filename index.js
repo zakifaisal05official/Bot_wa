@@ -1,7 +1,6 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { handleMessage } = require('./handler');
-const fs = require('fs');
 
 const client = new Client({
     authStrategy: new LocalAuth({ dataPath: './sessions' }),
@@ -11,14 +10,14 @@ const client = new Client({
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--no-zygote',
-            '--single-process'
+            '--no-zygote'
         ],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
     }
 });
 
 client.on('qr', (qr) => {
-    console.log('📢 SCAN QR CODE SEKARANG:');
+    console.log('📢 SCAN QR SEKARANG:');
     qrcode.generate(qr, { small: true });
 });
 
@@ -31,9 +30,9 @@ client.on('message_create', async (msg) => {
     try {
         await handleMessage(client, msg);
     } catch (e) {
-        console.error(e);
+        console.error('Error handler:', e);
     }
 });
 
+console.log('🚀 Sedang memulai mesin bot...');
 client.initialize();
-
