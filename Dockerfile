@@ -3,17 +3,17 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 USER root
 WORKDIR /app
 
-# Salin package json
+# Salin file package
 COPY package*.json ./
 
-# Install dependensi
-RUN npm install
+# Install dengan clean-install
+RUN npm ci
 
-# Salin semua kode bot
+# Salin semua file bot
 COPY . .
 
-# Berikan izin akses folder
+# Pastikan bot punya izin akses
 RUN chmod -R 777 /app
 
-# Jalankan aplikasi
+# Jalankan bot
 CMD ["node", "index.js"]
