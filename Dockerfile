@@ -3,13 +3,11 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 USER root
 WORKDIR /app
 
-# Paksa hapus file lock agar tidak memicu 'npm ci'
-RUN rm -f package-lock.json
-
+# Gabungkan hapus & install dalam satu langkah untuk menghindari error cache
 COPY package.json ./
 
-# Install bersih tanpa peduli file lock lama
-RUN npm install --no-package-lock
+RUN rm -rf node_modules package-lock.json && \
+    npm install --no-package-lock --network-timeout=100000
 
 COPY . .
 
