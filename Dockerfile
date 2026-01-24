@@ -3,19 +3,16 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 USER root
 WORKDIR /app
 
-# Pastikan folder bersih total
-RUN rm -rf node_modules package-lock.json
+# Paksa hapus file lock agar tidak memicu 'npm ci'
+RUN rm -f package-lock.json
 
-# Salin hanya package.json
 COPY package.json ./
 
-# Paksa install tanpa lockfile agar tidak mencari npm ci
+# Install bersih tanpa peduli file lock lama
 RUN npm install --no-package-lock
 
-# Salin sisa file lainnya
 COPY . .
 
-# Izin tulis untuk session WhatsApp
 RUN chmod -R 777 /app
 
 CMD ["node", "index.js"]
