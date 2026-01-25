@@ -1,36 +1,22 @@
-FROM node:20
+FROM node:18-slim
 
-# Instal library lengkap untuk Chrome
+# Instal tools dan browser Chromium untuk Linux
 RUN apt-get update && apt-get install -y \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    libpangocairo-1.0-0 \
-    libxshmfence1 \
-    libatk1.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libx11-xcb1 \
-    libxfixes3 \
-    libxrender1 \
-    libxtst6 \
+    chromium \
+    fonts-freefont-ttf \
     libxss1 \
-    fonts-liberation \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+    libasound2 \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
-USER node
-WORKDIR /home/node/app
+# Beri tahu Puppeteer lokasi browsernya
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-COPY --chown=node:node package*.json ./
+WORKDIR /app
+COPY package*.json ./
 RUN npm install
+COPY . .
 
-COPY --chown=node:node . .
-
-# Perintah untuk memastikan bot mencoba akses internet secara agresif
+# Jalankan bot
 CMD ["node", "index.js"]
