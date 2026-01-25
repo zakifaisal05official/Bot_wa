@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer');
-const qrcode = require('qrcode-terminal'); // Tambahkan ini
+const qrcode = require('qrcode-terminal');
 const { handleMessage } = require('./handler');
 
 (async () => {
@@ -8,13 +8,12 @@ const { handleMessage } = require('./handler');
     try {
         const browser = await puppeteer.launch({
             headless: "new",
-            ignoreHTTPSErrors: true,
+            ignoreHTTPSErrors: true, 
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--ignore-certificate-errors',
-                '--ignore-certificate-errors-spki-list'
+                '--ignore-certificate-errors'
             ]
         });
 
@@ -25,43 +24,38 @@ const { handleMessage } = require('./handler');
         
         await page.goto('https://web.whatsapp.org', {
             waitUntil: 'networkidle0',
-            timeout: 0
-        }).catch(e => console.log("⚠️ Info: Sedang memuat halaman..."));
+            timeout: 60000 
+        }).catch(() => console.log("⚠️ Sedang mencoba menembus koneksi..."));
 
-        // --- LOGIKA DETEKSI & TAMPILKAN QR CODE ---
-        console.log("🔍 Menunggu QR Code muncul...");
+        console.log("🔍 Menunggu QR Code muncul di Logs...");
         
         let qrLogged = false;
-        const checkQR = setInterval(async () => {
+        setInterval(async () => {
             try {
-                // Mengambil data string dari canvas QR WhatsApp
                 const qrData = await page.evaluate(() => {
-                    const selector = 'div[data-ref]';
-                    const element = document.querySelector(selector);
-                    return element ? element.getAttribute('data-ref') : null;
+                    const el = document.querySelector('div[data-ref]');
+                    return el ? el.getAttribute('data-ref') : null;
                 });
 
                 if (qrData && !qrLogged) {
                     console.log("✅ QR CODE DITEMUKAN! SCAN SEKARANG:");
-                    // Menampilkan QR di log terminal
                     qrcode.generate(qrData, { small: true });
                     qrLogged = true;
                 } else if (!qrData) {
-                    qrLogged = false; // Reset jika QR berubah/refresh
+                    qrLogged = false; 
                 }
             } catch (e) {}
-        }, 3000);
+        }, 5000);
 
         const client = { pupPage: page };
 
-        // Cek pesan masuk setiap 5 detik
+        // Cek pesan masuk
         setInterval(async () => {
             try {
                 const unread = await page.evaluate(() => {
                     const nodes = document.querySelectorAll('.message-in.unread');
                     return Array.from(nodes).map(n => {
-                        // Menandai pesan sebagai terbaca agar tidak diproses berulang
-                        n.classList.remove('unread');
+                        n.classList.remove('unread'); // Tandai terbaca
                         return {
                             body: n.querySelector('.copyable-text')?.innerText,
                             from: "User" 
@@ -71,7 +65,7 @@ const { handleMessage } = require('./handler');
 
                 for (const msg of unread) {
                     if (msg.body) {
-                        console.log(`📩 Pesan baru diterima: ${msg.body}`);
+                        console.log(`📩 Pesan: ${msg.body}`);
                         await handleMessage(client, msg);
                     }
                 }
