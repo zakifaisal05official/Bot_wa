@@ -1,65 +1,78 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const puppeteer = require('puppeteer');
 const qrcode = require('qrcode-terminal');
 const { handleMessage } = require('./handler');
 
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu'
-        ]
-    }
-});
-
-let pairingCodeSent = false;
-
-client.on('qr', async (qr) => {
-    // 1. Tetap tampilkan QR di log sebagai cadangan
-    console.log('\n--- QR CODE DETECTED ---');
-    qrcode.generate(qr, { small: true });
-
-    // 2. Minta Pairing Code HANYA SEKALI
-    if (!pairingCodeSent) {
-        const phoneNumber = "6285158738155"; 
-        try {
-            console.log(`\n📨 Meminta Kode Pairing untuk: ${phoneNumber}...`);
-            const code = await client.requestPairingCode(phoneNumber);
-            
-            console.log("========================================");
-            console.log("🔥 KODE PAIRING KAMU: " + code);
-            console.log("========================================");
-            console.log("👉 Masukkan kode ini di WhatsApp HP kamu");
-            console.log("👉 Menu > Perangkat Tertaut > Tautkan dengan nomor");
-            console.log("========================================\n");
-            
-            pairingCodeSent = true;
-        } catch (err) {
-            console.log("❌ Gagal meminta kode pairing, silakan scan QR di atas saja.");
-            console.error(err);
-        }
-    }
-});
-
-client.on('ready', () => {
-    console.log('🎊 BOT SUDAH AKTIF & TERHUBUNG!');
-});
-
-// Menangani pesan masuk
-client.on('message', async (msg) => {
+(async () => {
+    console.log("🚀 Memulai Bot di Railway...");
+    
     try {
-        await handleMessage(client, msg);
+        const browser = await puppeteer.launch({
+            headless: "new",
+            ignoreHTTPSErrors: true, 
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--ignore-certificate-errors'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
+
+        console.log("🌐 Membuka WhatsApp Web...");
+        
+        await page.goto('https://web.whatsapp.org', {
+            waitUntil: 'networkidle0',
+            timeout: 60000 
+        }).catch(() => console.log("⚠️ Sedang mencoba menembus koneksi..."));
+
+        console.log("🔍 Menunggu QR Code muncul di Logs...");
+        
+        let qrLogged = false;
+        setInterval(async () => {
+            try {
+                const qrData = await page.evaluate(() => {
+                    const el = document.querySelector('div[data-ref]');
+                    return el ? el.getAttribute('data-ref') : null;
+                });
+
+                if (qrData && !qrLogged) {
+                    console.log("✅ QR CODE DITEMUKAN! SCAN SEKARANG:");
+                    qrcode.generate(qrData, { small: true });
+                    qrLogged = true;
+                } else if (!qrData) {
+                    qrLogged = false; 
+                }
+            } catch (e) {}
+        }, 5000);
+
+        const client = { pupPage: page };
+
+        // Cek pesan masuk
+        setInterval(async () => {
+            try {
+                const unread = await page.evaluate(() => {
+                    const nodes = document.querySelectorAll('.message-in.unread');
+                    return Array.from(nodes).map(n => {
+                        n.classList.remove('unread'); // Tandai terbaca
+                        return {
+                            body: n.querySelector('.copyable-text')?.innerText,
+                            from: "User" 
+                        };
+                    });
+                });
+
+                for (const msg of unread) {
+                    if (msg.body) {
+                        console.log(`📩 Pesan: ${msg.body}`);
+                        await handleMessage(client, msg);
+                    }
+                }
+            } catch (err) {}
+        }, 5000);
+
     } catch (e) {
-        console.log("Error Handler:", e.message);
+        console.error("❌ Error Fatal:", e.message);
     }
-});
-
-// Penanganan jika auth gagal
-client.on('auth_failure', () => {
-    console.error('❌ Autentikasi gagal, mohon restart dan scan ulang.');
-});
-
-client.initialize();
+})();
