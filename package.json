@@ -1,10 +1,11 @@
 {
-  "name": "bot-pr-sekolah",
+  "name": "bot-wa",
   "version": "1.0.0",
-  "description": "Bot WhatsApp List Tugas Sekolah",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
-    "puppeteer": "^21.0.0",
-    "fs": "latest"
+    "puppeteer": "^21.5.0"
   }
 }
