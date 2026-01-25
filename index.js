@@ -1,38 +1,49 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const puppeteer = require('puppeteer');
 const { handleMessage } = require('./handler');
 
-const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: './sessions' }),
-    puppeteer: {
-        headless: true,
+(async () => {
+    console.log("🚀 Menjalankan Browser...");
+    const browser = await puppeteer.launch({
+        headless: "new",
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--no-zygote'
-        ],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
-    }
-});
+            '--disable-gpu'
+        ]
+    });
 
-client.on('qr', (qr) => {
-    console.log('📢 SCAN QR SEKARANG:');
-    qrcode.generate(qr, { small: true });
-});
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
+    
+    console.log("🌐 Membuka WhatsApp Web...");
+    await page.goto('https://web.whatsapp.org');
 
-client.on('ready', () => {
-    console.log('✅ BOT BERHASIL ONLINE DI RAILWAY!');
-});
+    // Menampilkan QR Code di Console Hugging Face
+    console.log("📸 SILAKAN CEK LOG UNTUK SCAN QR CODE");
+    
+    // Simpan page ke client dummy agar bisa dipakai di handler
+    const client = { pupPage: page };
 
-client.on('message_create', async (msg) => {
-    if (msg.fromMe) return;
-    try {
-        await handleMessage(client, msg);
-    } catch (e) {
-        console.error('Error handler:', e);
-    }
-});
+    // Loop untuk membaca pesan baru
+    setInterval(async () => {
+        try {
+            const newMsgs = await page.evaluate(() => {
+                const msgs = document.querySelectorAll('.message-in.unread');
+                return Array.from(msgs).map(m => {
+                    const body = m.querySelector('.copyable-text')?.innerText;
+                    const from = m.closest('.item-hints')?.querySelector('.chat-title')?.innerText;
+                    return { body, from };
+                });
+            });
 
-console.log('🚀 Sedang memulai mesin bot...');
-client.initialize();
+            for (let msg of newMsgs) {
+                if (msg.body) {
+                    await handleMessage(client, msg);
+                }
+            }
+        } catch (e) {}
+    }, 3000);
+
+})();
