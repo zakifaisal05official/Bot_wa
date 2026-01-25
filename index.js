@@ -1,78 +1,54 @@
-const puppeteer = require('puppeteer');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { handleMessage } = require('./handler');
 
-(async () => {
-    console.log("🚀 Memulai Bot di Railway...");
-    
-    try {
-        const browser = await puppeteer.launch({
-            headless: "new",
-            ignoreHTTPSErrors: true, 
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--ignore-certificate-errors'
-            ]
-        });
-
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
-
-        console.log("🌐 Membuka WhatsApp Web...");
-        
-        await page.goto('https://web.whatsapp.org', {
-            waitUntil: 'networkidle0',
-            timeout: 60000 
-        }).catch(() => console.log("⚠️ Sedang mencoba menembus koneksi..."));
-
-        console.log("🔍 Menunggu QR Code muncul di Logs...");
-        
-        let qrLogged = false;
-        setInterval(async () => {
-            try {
-                const qrData = await page.evaluate(() => {
-                    const el = document.querySelector('div[data-ref]');
-                    return el ? el.getAttribute('data-ref') : null;
-                });
-
-                if (qrData && !qrLogged) {
-                    console.log("✅ QR CODE DITEMUKAN! SCAN SEKARANG:");
-                    qrcode.generate(qrData, { small: true });
-                    qrLogged = true;
-                } else if (!qrData) {
-                    qrLogged = false; 
-                }
-            } catch (e) {}
-        }, 5000);
-
-        const client = { pupPage: page };
-
-        // Cek pesan masuk
-        setInterval(async () => {
-            try {
-                const unread = await page.evaluate(() => {
-                    const nodes = document.querySelectorAll('.message-in.unread');
-                    return Array.from(nodes).map(n => {
-                        n.classList.remove('unread'); // Tandai terbaca
-                        return {
-                            body: n.querySelector('.copyable-text')?.innerText,
-                            from: "User" 
-                        };
-                    });
-                });
-
-                for (const msg of unread) {
-                    if (msg.body) {
-                        console.log(`📩 Pesan: ${msg.body}`);
-                        await handleMessage(client, msg);
-                    }
-                }
-            } catch (err) {}
-        }, 5000);
-
-    } catch (e) {
-        console.error("❌ Error Fatal:", e.message);
+// Inisialisasi Client
+const client = new Client({
+    authStrategy: new LocalAuth(), // Menyimpan login agar tidak scan terus
+    puppeteer: {
+        headless: true,
+        handleSIGINT: false,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process', 
+            '--disable-gpu'
+        ],
     }
-})();
+});
+
+console.log("🚀 Menghubungkan ke WhatsApp...");
+
+// Munculkan QR Code di Logs
+client.on('qr', (qr) => {
+    console.clear();
+    console.log('✅ QR CODE DITERIMA! SCAN SEKARANG:');
+    qrcode.generate(qr, { small: true });
+});
+
+// Jika sudah berhasil Login
+client.on('ready', () => {
+    console.log('🎊 LOGIN BERHASIL! Bot sudah siap menerima pesan.');
+});
+
+// Tangani Pesan Masuk
+client.on('message', async (msg) => {
+    try {
+        console.log(`📩 Pesan dari ${msg.from}: ${msg.body}`);
+        // Kirim ke handler.js kamu
+        await handleMessage(client, msg);
+    } catch (e) {
+        console.error("❌ Error saat memproses pesan:", e);
+    }
+});
+
+// Tangani jika gagal login
+client.on('auth_failure', msg => {
+    console.error('❌ Gagal login, mencoba ulang...', msg);
+});
+
+client.initialize();
