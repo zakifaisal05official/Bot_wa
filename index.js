@@ -2,48 +2,54 @@ const puppeteer = require('puppeteer');
 const { handleMessage } = require('./handler');
 
 (async () => {
-    console.log("🚀 Menjalankan Browser...");
-    const browser = await puppeteer.launch({
-        headless: "new",
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu'
-        ]
-    });
-
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
+    console.log("🚀 Memulai Bot di Railway...");
     
-    console.log("🌐 Membuka WhatsApp Web...");
-    await page.goto('https://web.whatsapp.org');
+    try {
+        const browser = await puppeteer.launch({
+            headless: "new",
+            ignoreHTTPSErrors: true, // Mengabaikan error SSL/Sertifikat
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--ignore-certificate-errors',
+                '--ignore-certificate-errors-spki-list'
+            ]
+        });
 
-    // Menampilkan QR Code di Console Hugging Face
-    console.log("📸 SILAKAN CEK LOG UNTUK SCAN QR CODE");
-    
-    // Simpan page ke client dummy agar bisa dipakai di handler
-    const client = { pupPage: page };
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
 
-    // Loop untuk membaca pesan baru
-    setInterval(async () => {
-        try {
-            const newMsgs = await page.evaluate(() => {
-                const msgs = document.querySelectorAll('.message-in.unread');
-                return Array.from(msgs).map(m => {
-                    const body = m.querySelector('.copyable-text')?.innerText;
-                    const from = m.closest('.item-hints')?.querySelector('.chat-title')?.innerText;
-                    return { body, from };
+        console.log("🌐 Membuka WhatsApp Web...");
+        
+        // Membuka WA dengan penanganan error lebih kuat
+        await page.goto('https://web.whatsapp.org', {
+            waitUntil: 'networkidle0',
+            timeout: 0
+        }).catch(e => console.log("⚠️ Info: Terjadi kendala saat loading awal, tapi tetap mencoba..."));
+
+        console.log("📸 Halaman termuat! Silakan scan QR Code di Logs.");
+        
+        const client = { pupPage: page };
+
+        // Cek pesan masuk setiap 5 detik
+        setInterval(async () => {
+            try {
+                const unread = await page.evaluate(() => {
+                    const nodes = document.querySelectorAll('.message-in.unread');
+                    return Array.from(nodes).map(n => ({
+                        body: n.querySelector('.copyable-text')?.innerText,
+                        from: "User" 
+                    }));
                 });
-            });
 
-            for (let msg of newMsgs) {
-                if (msg.body) {
-                    await handleMessage(client, msg);
+                for (const msg of unread) {
+                    if (msg.body) await handleMessage(client, msg);
                 }
-            }
-        } catch (e) {}
-    }, 3000);
+            } catch (err) {}
+        }, 5000);
 
+    } catch (e) {
+        console.error("❌ Error Fatal:", e.message);
+    }
 })();
