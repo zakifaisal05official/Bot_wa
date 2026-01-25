@@ -1,11 +1,12 @@
 {
-  "name": "bot-wa",
+  "name": "bot-wa-railway",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "puppeteer": "^21.5.0"
+    "puppeteer": "^21.5.0",
+    "qrcode-terminal": "^0.12.0"
   }
 }
