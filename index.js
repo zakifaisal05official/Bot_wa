@@ -17,7 +17,7 @@ client.on('qr', async (qr) => {
     
     // Memicu PAIRING CODE
     // GANTI nomor di bawah dengan nomor HP kamu (awali 62)
-    const phoneNumber = "628xxxxxxxxxx"; 
+    const phoneNumber = "6285158738155"; 
     try {
         const code = await client.requestPairingCode(phoneNumber);
         console.log("========================================");
