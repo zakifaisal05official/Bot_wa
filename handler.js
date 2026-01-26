@@ -32,26 +32,27 @@ async function handleMessages(sock, m) {
     const sender = msg.key.remoteJid;
     const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || "").trim();
     const textLower = body.toLowerCase();
-    
-    // Pengecekan Admin yang lebih akurat
     const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
 
-    // --- 1. EMERGENCY RESET ---
+    // --- 1. FITUR EMERGENCY: RESET SESSION ---
     if (body === '!reset-bot' && isAdmin) {
-        await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI TOTAL...*\nBot akan mati. Silakan tunggu 1 menit lalu scan ulang QR baru." });
+        await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI TOTAL...*\nBot akan restart otomatis. Silakan tunggu 1 menit lalu scan ulang QR baru di web." });
         try {
             fs.rmSync('./auth_info', { recursive: true, force: true });
+            console.log("Sesi dihapus oleh admin via perintah !reset-bot");
             process.exit(1);
         } catch (e) {
-            console.error(e);
+            console.error("Gagal hapus folder:", e);
         }
     }
 
-    // --- 2. EDUKASI FORMAT ---
+    // --- 2. FITUR EDUKASI FORMAT (ANTI LUPA !) ---
     const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info'];
     const firstWord = textLower.split(' ')[0];
+    
     if (!body.startsWith('!') && triggers.includes(firstWord)) {
-        return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\nContoh: *!menu*` });
+        const pesanEdukasi = `⚠️ *Format Salah!*\n\nUntuk menggunakan bot, gunakan tanda seru (*!*) di depan perintah.\n\n💡 Contoh: Ketik *!menu* atau *!pr*`;
+        return await sock.sendMessage(sender, { text: pesanEdukasi });
     }
 
     if (!body.startsWith('!')) return;
@@ -81,38 +82,48 @@ async function handleMessages(sock, m) {
         return rekap;
     };
 
-    // --- FUNGSI KIRIM GRUP BARU (ANTI STUCK) ---
+    // --- FUNGSI PENGIRIMAN GRUP STABIL ---
     const sendToGroupSafe = async (content) => {
         try {
-            // LANGSUNG KIRIM (Tanpa Presence Update agar tidak macet)
+            // Memaksa sinkronisasi kunci dengan mengambil metadata grup
+            await sock.groupMetadata(ID_GRUP_TUJUAN);
+            
+            // Status mengetik diaktifkan kembali dengan jeda
+            await sock.sendPresenceUpdate('composing', ID_GRUP_TUJUAN);
+            await delay(3000); 
+            
             await sock.sendMessage(ID_GRUP_TUJUAN, content);
+            await sock.sendPresenceUpdate('paused', ID_GRUP_TUJUAN);
             return true;
         } catch (err) {
-            console.log("Gagal kirim pertama, mencoba pancing metadata...");
+            console.log("Gagal kirim pertama, mencoba jalur darurat...");
             try {
-                await sock.groupMetadata(ID_GRUP_TUJUAN);
+                await sock.groupFetchAllParticipating();
                 await delay(2000);
                 await sock.sendMessage(ID_GRUP_TUJUAN, content);
                 return true;
             } catch (err2) {
-                console.error("Gagal Total:", err2.message);
+                console.error("Gagal Total Kirim Grup:", err2.message);
                 return false;
             }
         }
     };
 
     try {
+        // Tandai pesan sudah dibaca
         await sock.readMessages([msg.key]);
 
         // --- FITUR UMUM ---
         if (cmd === '!p') return await sock.sendMessage(sender, { text: '✅ *Bot Aktif!*' });
 
         if (cmd === '!pr') {
+            await sock.sendPresenceUpdate('composing', sender);
+            await delay(1000);
             return await sock.sendMessage(sender, { text: formatRekap() });
         }
 
         if (cmd === '!menu') {
-            const menu = `📖 *Daftar Perintah Bot*\n\n🔹 !p ➜ Cek Status\n🔹 !pr ➜ Rekap PR\n\n⚙️ *Khusus Pengurus:*\n🔸 !grup ➜ Kirim Rekap ke Grup\n🔸 !update [hari] [isi] ➜ Simpan & Kirim\n🔸 !update jadwal [hari] [isi] ➜ Simpan Saja\n🔸 !hapus [hari] ➜ Kosongkan Tugas\n🔸 !info [pesan] ➜ Pengumuman Grup\n🔸 !reset-bot ➜ Reset Sesi`;
+            const menu = `📖 *Daftar Perintah Bot*\n\n🔹 !p ➜ Cek Status\n🔹 !pr ➜ Rekap PR\n\n⚙️ *Khusus Pengurus:*\n🔸 !grup ➜ Kirim Rekap ke Grup\n🔸 !update [hari] [isi] ➜ Simpan & Kirim\n🔸 !update jadwal [hari] [isi] ➜ Simpan Saja\n🔸 !hapus [hari] ➜ Kosongkan Tugas\n🔸 !info [pesan] ➜ Pengumuman Grup\n🔸 !reset-bot ➜ Reset Sesi Total`;
             return await sock.sendMessage(sender, { text: menu });
         }
 
@@ -122,14 +133,14 @@ async function handleMessages(sock, m) {
 
             if (cmd === '!info') {
                 const info = body.slice(6).trim();
-                if (!info) return await sock.sendMessage(sender, { text: '⚠️ Isi pesannya!' });
+                if (!info) return await sock.sendMessage(sender, { text: '⚠️ Isi pesan infonya!' });
                 const sukses = await sendToGroupSafe({ text: `📢 *INFO BARU* 📢\n\n${info}\n\n_________________________________` });
-                return await sock.sendMessage(sender, { text: sukses ? '✅ Berhasil!' : '❌ Gagal. Ketik !reset-bot' });
+                return await sock.sendMessage(sender, { text: sukses ? '✅ Terkirim ke grup.' : '❌ Gagal. Ketik !reset-bot dan scan ulang.' });
             }
 
             if (cmd === '!grup') {
                 const sukses = await sendToGroupSafe({ text: formatRekap() });
-                return await sock.sendMessage(sender, { text: sukses ? '✅ Rekap terkirim.' : '❌ Gagal.' });
+                return await sock.sendMessage(sender, { text: sukses ? '✅ Rekap terkirim.' : '❌ Gagal mengirim.' });
             }
 
             if (cmd === '!update') {
@@ -145,10 +156,10 @@ async function handleMessages(sock, m) {
                 db.updateTugas(targetDay, content);
 
                 if (isOnlySave) {
-                    return await sock.sendMessage(sender, { text: `✅ Tersimpan lokal.` });
+                    return await sock.sendMessage(sender, { text: `✅ Berhasil disimpan secara lokal.` });
                 } else {
                     const sukses = await sendToGroupSafe({ text: `📢 *UPDATE TUGAS: ${targetDay.toUpperCase()}*\n\n${content}\n\n_Cek list lengkap ketik *!pr*_` });
-                    return await sock.sendMessage(sender, { text: sukses ? `✅ Update Berhasil!` : `✅ Tersimpan lokal, Gagal ke grup.` });
+                    return await sock.sendMessage(sender, { text: sukses ? `✅ Update & Kirim Berhasil!` : `✅ Berhasil Update Lokal, tapi Gagal Kirim Grup.` });
                 }
             }
 
