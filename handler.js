@@ -9,7 +9,8 @@ const ID_GRUP_TUJUAN = '120363403625197368@g.us';
 
 // ================= UTIL: AUTO DATE LOGIC =================
 function getWeekDates() {
-    const now = new Date();
+    // Sinkronisasi waktu Jakarta untuk penentuan tanggal
+    const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
     const dayOfWeek = now.getDay(); 
     const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
     const monday = new Date(now);
@@ -36,27 +37,45 @@ function getClosestCommand(cmd) {
     });
 }
 
+// --- PERBAIKAN SCHEDULER: Sesuai Jam 13:00 WIB & Sesuai Hari ---
 async function initQuizScheduler(sock) {
-    console.log("✅ Scheduler Polling Aktif (13:00)");
+    console.log("✅ Scheduler Polling Aktif (13:00 WIB)");
+    let lastSentDate = ""; 
+
     setInterval(async () => {
-        const now = new Date();
+        // Ambil waktu spesifik Asia/Jakarta
+        const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
         const jam = now.getHours();
         const menit = now.getMinutes();
-        const hari = now.getDay(); 
+        const hariAngka = now.getDay(); // 1 = Senin, 5 = Jumat
+        const tanggalHariIni = now.getDate();
 
-        if (jam === 13 && menit === 0 && hari >= 1 && hari <= 5) {
-            const randomQuiz = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
-            await sock.sendMessage(ID_GRUP_TUJUAN, {
-                poll: {
-                    name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`,
-                    values: randomQuiz.options,
-                    selectableCount: 1
+        // Cek jika Jam 13:00, Hari Senin-Jumat, dan Belum kirim hari ini
+        if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tanggalHariIni) {
+            try {
+                // Ambil list kuis berdasarkan hari
+                const kuisHariIni = QUIZ_BANK[hariAngka];
+                
+                if (kuisHariIni && kuisHariIni.length > 0) {
+                    const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
+                    await sock.sendMessage(ID_GRUP_TUJUAN, {
+                        poll: {
+                            name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`,
+                            values: randomQuiz.options,
+                            selectableCount: 1
+                        }
+                    });
+                    lastSentDate = tanggalHariIni; 
+                    console.log(`[LOG] Kuis hari ke-${hariAngka} terkirim jam 13:00 WIB`);
                 }
-            });
+            } catch (err) {
+                console.error("Gagal kirim kuis otomatis:", err);
+            }
         }
-    }, 60000); 
+    }, 30000); // Cek setiap 30 detik
 }
 
+// ================= HANDLE MESSAGES (TETAP SAMA) =================
 async function handleMessages(sock, m) {
     try {
         const msg = m.messages[0];
@@ -163,9 +182,10 @@ async function handleMessages(sock, m) {
             
             case '!polling':
                 if (!isAdmin) return;
-                const random = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
+                const random = QUIZ_BANK[new Date().getDay()] || QUIZ_BANK[1];
+                const q = random[Math.floor(Math.random() * random.length)];
                 await sock.sendMessage(ID_GRUP_TUJUAN, {
-                    poll: { name: `📊 *POLLING*\n${random.question}`, values: random.options, selectableCount: 1 }
+                    poll: { name: `📊 *POLLING*\n${q.question}`, values: q.options, selectableCount: 1 }
                 });
                 break;
 
@@ -201,7 +221,6 @@ async function handleMessages(sock, m) {
                     let content = body.replace(/!update/i, '').replace(new RegExp(targetDay, 'gi'), '').trim();
                     db.updateTugas(targetDay, content);
                     
-                    // STRUKTUR PESAN GRUP SESUAI PERMINTAAN
                     const pesanGrup = `📌 *Daftar tugas/ pr di Minggu ini* 📢\n` +
                                      `➝ ${periode}\n\n` +
                                      `---------------------------------------------------------------------------------\n\n\n` +
