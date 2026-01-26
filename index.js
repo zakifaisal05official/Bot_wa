@@ -15,7 +15,7 @@ async function start() {
         keepAliveIntervalMs: 30000
     });
 
-    const nomorHP = "6285158738155";
+    const nomorHP = "85158738155";
     let sudahMinta = false;
 
     sock.ev.on("connection.update", async (update) => {
