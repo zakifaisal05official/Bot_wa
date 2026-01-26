@@ -1,66 +1,47 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
 const { handleMessage } = require('./handler');
 
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
-        handleSIGINT: false,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu'
-        ],
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     }
 });
 
-let pairingCodeRequested = false;
+let codeSent = false;
 
-console.log("🚀 Menghubungkan ke WhatsApp...");
+console.log("🚀 Memulai Bot - Mode Pairing Code (Tanpa Scan)...");
 
 client.on('qr', async (qr) => {
-    console.clear();
-    console.log('✅ QR CODE DITERIMA!');
-    
-    // 1. Menampilkan QR dengan mode 'small' agar lebih rapat di layar HP
-    qrcode.generate(qr, { small: true });
-
-    console.log('\n💡 TIPS SCAN:');
-    console.log('- Zoom Out browser Railway kamu sampai QR berbentuk kotak sempurna.');
-    console.log('- Jika sulit di-scan, gunakan KODE PAIRING di bawah ini:\n');
-
-    // 2. OTOMATIS memunculkan Pairing Code jika QR muncul
-    if (!pairingCodeRequested) {
-        const phoneNumber = "6285158738155"; // Nomor kamu sudah saya masukkan
+    // Kita abaikan QR karena berantakan di layar HP kamu
+    if (!codeSent) {
+        const phoneNumber = "6285158738155"; // Nomor kamu
         try {
+            console.log("\n----------------------------------------");
+            console.log("⏳ Sedang meminta kode pairing...");
             const code = await client.requestPairingCode(phoneNumber);
-            console.log("========================================");
-            console.log("🔥 KODE PAIRING: " + code);
-            console.log("========================================");
-            console.log("Cara Input: WA HP > Perangkat Tertaut > Tautkan dg Nomor");
-            pairingCodeRequested = true;
+            console.log("🔥 KODE PAIRING ANDA: " + code);
+            console.log("----------------------------------------");
+            console.log("CARA PAKAI:");
+            console.log("1. Buka WA di HP kamu.");
+            console.log("2. Perangkat Tertaut > Tautkan Perangkat.");
+            console.log("3. Pilih 'Tautkan dengan nomor telepon saja' di bawah.");
+            console.log("4. Masukkan kode: " + code);
+            console.log("----------------------------------------\n");
+            codeSent = true;
         } catch (err) {
-            console.log("Gagal memicu kode pairing, fokus scan QR saja.");
+            console.log("⚠️ Gagal minta kode, tunggu sebentar...");
         }
     }
 });
 
 client.on('ready', () => {
-    console.log('🎊 LOGIN BERHASIL! Bot sudah aktif.');
+    console.log('🎊 BERHASIL TERHUBUNG!');
 });
 
 client.on('message', async (msg) => {
-    try {
-        await handleMessage(client, msg);
-    } catch (e) {
-        console.error("❌ Error Handler:", e);
-    }
-});
-
-client.on('auth_failure', () => {
-    console.error('❌ Gagal login, pastikan nomor benar dan belum tertaut di 4 perangkat.');
+    try { await handleMessage(client, msg); } catch (e) {}
 });
 
 client.initialize();
