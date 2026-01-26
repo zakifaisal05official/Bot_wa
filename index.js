@@ -99,7 +99,7 @@ async function start() {
             printQRInTerminal: true,
             browser: ["Ubuntu", "Chrome", "20.0.04"],
             getMessage: async (key) => {
-                return { conversation: 'bot-checking' }
+                return { conversation: undefined }
             }
         });
 
