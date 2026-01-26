@@ -5,39 +5,47 @@ const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage'
+        ]
     }
 });
 
-let codeSent = false;
+let pairingCodeRequested = false;
 
-console.log("🚀 Memulai Bot - Mode Pairing Code (Tanpa Scan)...");
+console.log("🚀 Memulai Bot - Mode Pairing Code...");
 
 client.on('qr', async (qr) => {
-    // Kita abaikan QR karena berantakan di layar HP kamu
-    if (!codeSent) {
-        const phoneNumber = "6285158738155"; // Nomor kamu
-        try {
-            console.log("\n----------------------------------------");
-            console.log("⏳ Sedang meminta kode pairing...");
-            const code = await client.requestPairingCode(phoneNumber);
-            console.log("🔥 KODE PAIRING ANDA: " + code);
-            console.log("----------------------------------------");
-            console.log("CARA PAKAI:");
-            console.log("1. Buka WA di HP kamu.");
-            console.log("2. Perangkat Tertaut > Tautkan Perangkat.");
-            console.log("3. Pilih 'Tautkan dengan nomor telepon saja' di bawah.");
-            console.log("4. Masukkan kode: " + code);
-            console.log("----------------------------------------\n");
-            codeSent = true;
-        } catch (err) {
-            console.log("⚠️ Gagal minta kode, tunggu sebentar...");
-        }
+    // Jika kode belum berhasil diminta, kita coba terus
+    if (!pairingCodeRequested) {
+        const phoneNumber = "6285158738155"; 
+        
+        const requestPairing = async () => {
+            try {
+                console.log("⏳ Sedang meminta kode pairing... (Tunggu 10-20 detik)");
+                const code = await client.requestPairingCode(phoneNumber);
+                
+                console.log("\n========================================");
+                console.log("🔥 KODE PAIRING ANDA: " + code);
+                console.log("========================================");
+                console.log("Masukkan di WA HP > Perangkat Tertaut");
+                console.log("========================================\n");
+                
+                pairingCodeRequested = true;
+            } catch (err) {
+                console.log("⚠️ Gagal minta kode, mencoba lagi dalam 10 detik...");
+                setTimeout(requestPairing, 10000); // Coba lagi tiap 10 detik
+            }
+        };
+
+        requestPairing();
     }
 });
 
 client.on('ready', () => {
-    console.log('🎊 BERHASIL TERHUBUNG!');
+    console.log('🎊 BOT SUDAH AKTIF!');
 });
 
 client.on('message', async (msg) => {
