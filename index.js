@@ -6,57 +6,44 @@ const {
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 
-async function startBot() {
-    // Menyimpan sesi di folder 'auth_info'
+async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
     
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
         logger: pino({ level: "silent" }),
-        browser: ["Chrome (Linux)", "Chrome", "110.0.0"]
+        browser: ["Linux", "Chrome", "110.0.0"]
     });
 
-    // NOMOR HP KAMU
     const phoneNumber = "6285158738155";
 
-    // MINTA KODE PAIRING JIKA BELUM LOGIN
     if (!sock.authState.creds.registered) {
-        console.log(`\n⏳ Menghubungkan ke server WhatsApp...`);
-        await delay(6000); // Tunggu 6 detik agar koneksi stabil
-        
+        console.log("⏳ Menghubungkan ke WhatsApp...");
+        await delay(5000); 
+
         try {
-            console.log(`📨 Meminta kode pairing untuk: ${phoneNumber}`);
             const code = await sock.requestPairingCode(phoneNumber);
             console.log("\n========================================");
             console.log("🔥 KODE PAIRING ANDA: " + code);
             console.log("========================================");
-            console.log("Masukkan di WA HP > Perangkat Tertaut");
+            console.log("Input di WA HP > Perangkat Tertaut > Tautkan dg No Telp");
             console.log("========================================\n");
         } catch (err) {
-            console.log("❌ Gagal minta kode. Coba klik 'Redeploy' di Railway.");
+            console.log("❌ Gagal. Coba RESTART/REDEPLOY di Railway.");
         }
     }
 
-    sock.ev.on("connection.update", async (update) => {
+    sock.ev.on("connection.update", (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === "close") {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) startBot();
+            if (shouldReconnect) connectToWhatsApp();
         } else if (connection === "open") {
             console.log("🎊 BOT BERHASIL AKTIF!");
         }
     });
 
     sock.ev.on("creds.update", saveCreds);
-
-    // Baca Pesan
-    sock.ev.on("messages.upsert", async ({ messages }) => {
-        const m = messages[0];
-        if (!m.message || m.key.fromMe) return;
-        const text = m.message.conversation || m.message.extendedTextMessage?.text;
-        console.log(`📩 Pesan: ${text}`);
-    });
 }
 
-startBot();
+connectToWhatsApp();
