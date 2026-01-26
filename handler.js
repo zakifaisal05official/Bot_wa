@@ -85,10 +85,7 @@ async function handleMessages(sock, m) {
     // --- FUNGSI PENGIRIMAN GRUP STABIL ---
     const sendToGroupSafe = async (content) => {
         try {
-            // Memaksa sinkronisasi kunci dengan mengambil metadata grup
             await sock.groupMetadata(ID_GRUP_TUJUAN);
-            
-            // Status mengetik diaktifkan kembali dengan jeda
             await sock.sendPresenceUpdate('composing', ID_GRUP_TUJUAN);
             await delay(3000); 
             
@@ -110,7 +107,6 @@ async function handleMessages(sock, m) {
     };
 
     try {
-        // Tandai pesan sudah dibaca
         await sock.readMessages([msg.key]);
 
         // --- FITUR UMUM ---
@@ -131,10 +127,14 @@ async function handleMessages(sock, m) {
         if (['!grup', '!update', '!hapus', '!info'].includes(cmd)) {
             if (!isAdmin) return await sock.sendMessage(sender, { text: `🚫 *Akses Ditolak!*` });
 
+            // Fitur Info (Sudah Diperbarui Formatnya)
             if (cmd === '!info') {
-                const info = body.slice(6).trim();
-                if (!info) return await sock.sendMessage(sender, { text: '⚠️ Isi pesan infonya!' });
-                const sukses = await sendToGroupSafe({ text: `📢 *INFO BARU* 📢\n\n${info}\n\n_________________________________` });
+                const infoMessage = body.slice(6).trim();
+                if (!infoMessage) return await sock.sendMessage(sender, { text: '⚠️ Isi pesan infonya!' });
+
+                const finalMessage = `📢 *PENGUMUMAN INFO BARU* 📢\n\n${infoMessage}\n\n---------------------------------------------------------------------------------\n_Info dari: Pengurus List Tugas_`;
+
+                const sukses = await sendToGroupSafe({ text: finalMessage });
                 return await sock.sendMessage(sender, { text: sukses ? '✅ Terkirim ke grup.' : '❌ Gagal. Ketik !reset-bot dan scan ulang.' });
             }
 
