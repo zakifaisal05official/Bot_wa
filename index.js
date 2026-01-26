@@ -2,60 +2,57 @@ const { default: makeWASocket, useMultiFileAuthState, delay, DisconnectReason } 
 const pino = require("pino");
 
 async function start() {
-    // Menggunakan folder 'session_final' agar sesi rusak yang lama tidak terbawa
-    const { state, saveCreds } = await useMultiFileAuthState('session_final');
+    // GANTI NAMA FOLDER SESI LAGI agar benar-benar fresh (pakai 'session_fix_final')
+    const { state, saveCreds } = await useMultiFileAuthState('session_fix_final');
     
     const sock = makeWASocket({
         auth: state,
         logger: pino({ level: "silent" }),
-        printQRInTerminal: false, // QR Tetap mati sesuai permintaan
-        browser: ["Ubuntu", "Chrome", "20.0.04"]
+        printQRInTerminal: false,
+        // Tambahkan opsi browser yang lebih spesifik agar WhatsApp tidak curiga
+        browser: ["Chrome (Linux)", "Chrome", "110.0.5481.177"],
+        connectTimeoutMs: 60000, // Tunggu 1 menit sebelum menyerah
+        defaultQueryTimeoutMs: 0,
+        keepAliveIntervalMs: 10000
     });
 
     const nomorHP = "6285158738155";
-    let sedangProsesPairing = false; 
+    let sedangMintaKode = false;
 
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // Logika Pairing Code
-        if (qr && !sock.authState.creds.registered && !sedangProsesPairing) {
-            sedangProsesPairing = true;
+        if (qr && !sock.authState.creds.registered && !sedangMintaKode) {
+            sedangMintaKode = true;
             
-            console.log("\n----------------------------------------");
-            console.log("🌐 Menunggu jaringan stabil (20 detik)...");
-            console.log("----------------------------------------");
-
-            // Jeda 20 detik agar server Railway siap 100%
-            await delay(20000); 
+            console.log("\n🌐 Jaringan terdeteksi. Menunggu 25 detik agar stabil...");
+            await delay(25000); 
 
             try {
-                console.log("📨 Mengirim permintaan kode ke WhatsApp...");
+                console.log("📨 Mengambil Kode Pairing untuk " + nomorHP + "...");
                 const code = await sock.requestPairingCode(nomorHP);
                 console.log("\n========================================");
                 console.log("🔥 KODE PAIRING ANDA: " + code);
                 console.log("========================================");
-                console.log("Buka WA HP > Perangkat Tertaut > Tautkan dg No Telp");
-                console.log("========================================\n");
             } catch (e) {
-                console.log("❌ Gagal mengambil kode. Menunggu 30 detik untuk coba lagi...");
-                sedangProsesPairing = false;
-                await delay(30000);
+                console.log("❌ Gagal: " + e.message);
+                sedangMintaKode = false;
             }
         }
 
-        // Logika Reconnect agar tidak looping terus-menerus
         if (connection === "close") {
-            const reason = lastDisconnect?.error?.output?.statusCode;
-            console.log(`⚠️ Koneksi Terputus (Kode: ${reason})`);
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            console.log(`⚠️ Terputus (Status: ${statusCode}). Mengulang...`);
             
-            if (reason !== DisconnectReason.loggedOut) {
-                console.log("🔄 Mencoba hubungkan ulang dalam 10 detik...");
-                setTimeout(() => start(), 10000); // Jeda 10 detik sebelum restart bot
+            // Jika folder sesi rusak (401), lebih baik jangan langsung restart agar tidak loop
+            if (statusCode === DisconnectReason.loggedOut) {
+                console.log("Sesi dikeluarkan, silakan hapus folder session_fix_final.");
+            } else {
+                setTimeout(() => start(), 15000); // Jeda 15 detik sebelum coba lagi
             }
         } else if (connection === "open") {
-            console.log("🎊 BOT SUDAH AKTIF DAN TERHUBUNG!");
-            sedangProsesPairing = false;
+            console.log("🎊 BOT BERHASIL TERHUBUNG!");
+            sedangMintaKode = false;
         }
     });
 
