@@ -1,6 +1,5 @@
-const { default: makeWASocket, useMultiFileAuthState, delay, DisconnectReason } = require("@whiskeysockets/baileys");
-const pino = require("pino");
 const fs = require('fs');
+const { delay } = require("@whiskeysockets/baileys");
 
 // ================= CONFIG =================
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155']; 
@@ -29,41 +28,29 @@ function getWeekDates() {
     return { dates, periode: `${dates[0]} - ${dates[4]}` };
 }
 
-async function start() {
-    const { state, saveCreds } = await useMultiFileAuthState('session_fix');
-    const sock = makeWASocket({
-        auth: state,
-        logger: pino({ level: "silent" }),
-        printQRInTerminal: true,
-        browser: ["Ubuntu", "Chrome", "110.0"]
-    });
+// Fungsi utama handler
+async function handleMessages(sock, m) {
+    const msg = m.messages[0];
+    if (!msg.message || msg.key.fromMe) return;
 
-    sock.ev.on("creds.update", saveCreds);
+    const sender = msg.key.remoteJid;
+    const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
+    if (!body) return;
 
-    sock.ev.on("messages.upsert", async (m) => {
-        const msg = m.messages[0];
-        if (!msg.message || msg.key.fromMe) return;
+    // FITUR: AUTO READ & TYPING
+    await sock.readMessages([msg.key]);
+    await sock.sendPresenceUpdate('composing', sender);
 
-        const sender = msg.key.remoteJid;
-        const body = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
-        
-        // FITUR: AUTO READ (Centang Biru)
-        await sock.readMessages([msg.key]);
+    const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
+    const db = readData();
+    const { dates, periode } = getWeekDates();
+    
+    const formatRekap = () => `📌 *Daftar List Tugas PR Minggu Ini* 📢\n➝ ${periode}\n\n------------------------------------------------\n\n*📅 Senin* ➝ ${dates[0]}\n${db.senin || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Selasa* ➝ ${dates[1]}\n${db.selasa || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Rabu* ➝ ${dates[2]}\n${db.rabu || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Kamis* ➝ ${dates[3]}\n${db.kamis || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Jumat* ➝ ${dates[4]}\n${db.jumat || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n------------------------------------------------\n\n*semangat mengerjakan tugasnya! 🚀*`;
 
-        // FITUR: TAMPILKAN STATUS "SEDANG MENGETIK"
-        await sock.sendPresenceUpdate('composing', sender);
-        await delay(1000); // Jeda 1 detik biar kelihatan ngetik asli
+    const args = body.split(' ');
+    const cmd = args[0].toLowerCase();
 
-        const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
-        const db = readData();
-        const { dates, periode } = getWeekDates();
-        
-        const formatRekap = () => `📌 *Daftar List Tugas PR Minggu Ini* 📢\n➝ ${periode}\n\n------------------------------------------------\n\n*📅 Senin* ➝ ${dates[0]}\n${db.senin || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Selasa* ➝ ${dates[1]}\n${db.selasa || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Rabu* ➝ ${dates[2]}\n${db.rabu || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Kamis* ➝ ${dates[3]}\n${db.kamis || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n*📅 Jumat* ➝ ${dates[4]}\n${db.jumat || '➝ (Tidak ada PR)\n╰┈➤ 👍'}\n\n------------------------------------------------\n\n*semangat mengerjakan tugasnya! 🚀*`;
-
-        const args = body.split(' ');
-        const cmd = args[0].toLowerCase();
-
-        // --- HANDLING COMMANDS ---
+    try {
         if (cmd === '!p') {
             await sock.sendMessage(sender, { text: '✅ *Bot Aktif & Responsif!*' });
         } 
@@ -81,15 +68,11 @@ async function start() {
             fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
             await sock.sendMessage(sender, { text: `✅ Berhasil update hari ${day}!` });
         }
-
-        // Matikan status mengetik setelah kirim
+    } catch (err) {
+        console.error("Error handling command:", err);
+    } finally {
         await sock.sendPresenceUpdate('paused', sender);
-    });
-
-    sock.ev.on("connection.update", (update) => {
-        if (update.connection === "open") console.log("🎊 BOT TUGAS SIAP DIGUNAKAN!");
-        if (update.connection === "close") start();
-    });
+    }
 }
 
-start();
+module.exports = { handleMessages };
