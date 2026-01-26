@@ -2,57 +2,55 @@ const { default: makeWASocket, useMultiFileAuthState, delay, DisconnectReason } 
 const pino = require("pino");
 
 async function start() {
-    // GANTI NAMA FOLDER SESI LAGI agar benar-benar fresh (pakai 'session_fix_final')
-    const { state, saveCreds } = await useMultiFileAuthState('session_fix_final');
+    // GANTI LAGI NAMA FOLDER SESI (Wajib agar Railway buat storage baru)
+    const { state, saveCreds } = await useMultiFileAuthState('sesi_total_reset');
     
     const sock = makeWASocket({
         auth: state,
         logger: pino({ level: "silent" }),
         printQRInTerminal: false,
-        // Tambahkan opsi browser yang lebih spesifik agar WhatsApp tidak curiga
-        browser: ["Chrome (Linux)", "Chrome", "110.0.5481.177"],
-        connectTimeoutMs: 60000, // Tunggu 1 menit sebelum menyerah
+        browser: ["Ubuntu", "Chrome", "20.0.04"],
+        // Optimasi Jaringan
+        connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 0,
-        keepAliveIntervalMs: 10000
+        keepAliveIntervalMs: 10000,
+        emitOwnEvents: true
     });
 
     const nomorHP = "6285158738155";
-    let sedangMintaKode = false;
+    let sedangMinta = false;
 
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        if (qr && !sock.authState.creds.registered && !sedangMintaKode) {
-            sedangMintaKode = true;
-            
-            console.log("\n🌐 Jaringan terdeteksi. Menunggu 25 detik agar stabil...");
-            await delay(25000); 
+        if (qr && !sock.authState.creds.registered && !sedangMinta) {
+            sedangMinta = true;
+            console.log("\n🌐 Jaringan siap. Menunggu 30 detik agar stabil...");
+            await delay(30000); // Jeda lebih lama untuk Railway
 
             try {
-                console.log("📨 Mengambil Kode Pairing untuk " + nomorHP + "...");
+                console.log("📨 Mengirim permintaan kode ke " + nomorHP);
                 const code = await sock.requestPairingCode(nomorHP);
                 console.log("\n========================================");
                 console.log("🔥 KODE PAIRING ANDA: " + code);
-                console.log("========================================");
+                console.log("========================================\n");
             } catch (e) {
                 console.log("❌ Gagal: " + e.message);
-                sedangMintaKode = false;
+                sedangMinta = false;
             }
         }
 
         if (connection === "close") {
-            const statusCode = lastDisconnect?.error?.output?.statusCode;
-            console.log(`⚠️ Terputus (Status: ${statusCode}). Mengulang...`);
+            const reason = lastDisconnect?.error?.output?.statusCode;
+            console.log(`⚠️ Terputus (Status: ${reason}). Mengulang dalam 20 detik...`);
             
-            // Jika folder sesi rusak (401), lebih baik jangan langsung restart agar tidak loop
-            if (statusCode === DisconnectReason.loggedOut) {
-                console.log("Sesi dikeluarkan, silakan hapus folder session_fix_final.");
-            } else {
-                setTimeout(() => start(), 15000); // Jeda 15 detik sebelum coba lagi
+            // Reconnect hanya jika bukan karena logout
+            if (reason !== DisconnectReason.loggedOut) {
+                setTimeout(() => start(), 20000); // Jeda 20 detik
             }
         } else if (connection === "open") {
-            console.log("🎊 BOT BERHASIL TERHUBUNG!");
-            sedangMintaKode = false;
+            console.log("🎊 BOT TERHUBUNG!");
+            sedangMinta = false;
         }
     });
 
