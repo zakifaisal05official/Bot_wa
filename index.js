@@ -9,7 +9,8 @@ const {
 const pino = require("pino");
 const express = require("express");
 const QRCode = require("qrcode");
-const { handleMessages } = require('./handler'); // Pastikan file handler.js ada di folder yang sama
+// --- UPDATE IMPORT ---
+const { handleMessages, initQuizScheduler } = require('./handler'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -104,7 +105,7 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        // --- FITUR AUTO REJECT CALL (DITAMBAHKAN) ---
+        // --- FITUR AUTO REJECT CALL ---
         sock.ev.on('call', async (node) => {
             for (const call of node) {
                 if (call.status === 'offer') {
@@ -137,6 +138,9 @@ async function start() {
                 qrCodeData = ""; 
                 isConnected = true;
                 console.log("🎊 [BERHASIL] Bot sudah online!");
+                
+                // --- UPDATE: AKTIFKAN PENJADWALAN POLLING ---
+                initQuizScheduler(sock);
             }
         });
 
@@ -153,4 +157,3 @@ async function start() {
 }
 
 start();
- 
