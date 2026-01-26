@@ -1,7 +1,6 @@
 const db = require('./data');
 const { delay } = require("@whiskeysockets/baileys");
 const fs = require('fs');
-// --- TAMBAHKAN INI ---
 const { QUIZ_BANK } = require('./quiz'); 
 
 // ================= CONFIG =================
@@ -26,7 +25,18 @@ function getWeekDates() {
     return { dates, periode };
 }
 
-// --- TAMBAHKAN FUNGSI INI ---
+// --- FUNGSI DETEKSI TYPO ---
+function getClosestCommand(cmd) {
+    const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
+    if (validCommands.includes(cmd)) return null;
+    
+    // Cari yang kemiripannya tinggi (misal: !pq mirip !p atau !pr)
+    return validCommands.find(v => {
+        const distance = Math.abs(v.length - cmd.length);
+        return distance <= 1 && (v.startsWith(cmd.substring(0, 2)) || cmd.startsWith(v.substring(0, 2)));
+    });
+}
+
 async function initQuizScheduler(sock) {
     console.log("✅ Scheduler Polling Aktif (13:00)");
     setInterval(async () => {
@@ -56,47 +66,48 @@ async function handleMessages(sock, m) {
         const sender = msg.key.remoteJid;
         const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || "").trim();
         const textLower = body.toLowerCase();
-        
-        // Cek Admin dengan lebih akurat
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
 
-        // --- 1. FITUR EMERGENCY: RESET SESSION ---
+        // --- FITUR EMERGENCY: RESET SESSION ---
         if (body === '!reset-bot' && isAdmin) {
-            await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI TOTAL...*\nBot akan restart. Tunggu sebentar lalu cek web UI untuk scan ulang jika diperlukan." });
-            console.log("Sesi dihapus oleh admin via perintah !reset-bot");
-            
+            await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI TOTAL...*\nBot akan restart." });
             await delay(2000); 
             fs.rmSync('./auth_info', { recursive: true, force: true });
             process.exit(1);
         }
 
-        // --- 2. FITUR EDUKASI FORMAT (ANTI LUPA !) ---
-        // TAMBAHKAN 'polling' ke dalam triggers
+        // --- FITUR EDUKASI FORMAT & TYPO ---
         const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info', 'deadline', 'polling'];
         const firstWord = textLower.split(' ')[0];
         
+        // Cek tanpa tanda seru
         if (!body.startsWith('!') && triggers.includes(firstWord)) {
-            const pesanEdukasi = `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\n\n💡 Contoh: *!menu* atau *!pr*`;
-            return await sock.sendMessage(sender, { text: pesanEdukasi });
+            return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\n💡 Contoh: *!menu*` });
         }
 
-        // --- BALASAN OTOMATIS (DEFAULT) & INFO HUBUNGI ---
+        // Cek Typo (Jika pakai tanda seru tapi perintah tidak dikenal)
+        if (body.startsWith('!')) {
+            const cmdInput = body.split(' ')[0].toLowerCase();
+            const suggestion = getClosestCommand(cmdInput);
+            const validCmds = ['!p', '!pr', '!deadline', '!menu', '!update', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
+            
+            if (!validCmds.includes(cmdInput) && suggestion) {
+                return await sock.sendMessage(sender, { text: `🧐 *Perintah tidak dikenal.*\n\nMungkin maksud Anda: *${suggestion}* ?\nKetik *!menu* untuk melihat semua perintah.` });
+            }
+        }
+
         if (!body.startsWith('!')) {
             if (!sender.endsWith('@g.us')) {
-                const defaultMsg = `Halo! Ada yang bisa dibantu?\n\nKetik *!menu* untuk melihat daftar perintah.\nJika ada salah list tugas, coba hubungi nomor: *089531549103*`;
-                return await sock.sendMessage(sender, { text: defaultMsg });
+                return await sock.sendMessage(sender, { text: `Halo! Ada yang bisa dibantu?\n\nKetik *!menu* untuk melihat daftar perintah.` });
             }
             return;
         }
 
-        // Tandai pesan sebagai terbaca
         await sock.readMessages([msg.key]);
-
         const args = body.split(' ');
         const cmd = args[0].toLowerCase();
         const { dates, periode } = getWeekDates();
 
-        // Rekap Generator
         const formatRekap = () => {
             const currentData = db.getAll();
             let rekap = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n`;
@@ -115,27 +126,21 @@ async function handleMessages(sock, m) {
                 }
             });
 
-            // Menampilkan Deadline Kerja Kelompok
             rekap += `━━━━━━━━━━━━━━━━━━━━\n`;
-            rekap += `⏳ *DEADLINE / KELOMPOK:*\n${currentData.deadline || "Belum ada info deadline."}\n\n`;
-            rekap += `⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*\n\n_Gunakan *!pr* untuk cek secara mandiri._`;
+            rekap += `⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN:*\n${currentData.deadline || "Semua tugas sudah selesai."}\n\n`;
+            rekap += `⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
             return rekap;
         };
 
-        // --- FUNGSI PENGIRIMAN GRUP STABIL ---
         const sendToGroupSafe = async (content) => {
             try {
                 await sock.sendPresenceUpdate('composing', ID_GRUP_TUJUAN);
                 await delay(2000);
                 await sock.sendMessage(ID_GRUP_TUJUAN, content);
                 return true;
-            } catch (err) {
-                console.error("Gagal kirim ke grup:", err.message);
-                return false;
-            }
+            } catch (err) { return false; }
         };
 
-        // --- LOGIKA PERINTAH ---
         switch (cmd) {
             case '!p':
                 await sock.sendMessage(sender, { text: '✅ *Bot Aktif & Terkoneksi!*' });
@@ -147,37 +152,25 @@ async function handleMessages(sock, m) {
 
             case '!deadline':
                 if (args.length === 1) {
-                    const infoDl = db.getAll().deadline || "Belum ada info deadline.";
-                    await sock.sendMessage(sender, { text: `⏳ *INFO DEADLINE & KELOMPOK*\n\n${infoDl}` });
+                    const infoDl = db.getAll().deadline || "Semua tugas sudah selesai.";
+                    await sock.sendMessage(sender, { text: `⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN*\n\n${infoDl}` });
                 } else {
                     if (!isAdmin) return;
-                    const contentDl = body.slice(10).trim();
-                    db.updateTugas('deadline', contentDl);
-                    await sock.sendMessage(sender, { text: `✅ Info deadline berhasil diperbarui!` });
+                    db.updateTugas('deadline', body.slice(10).trim());
+                    await sock.sendMessage(sender, { text: `✅ Daftar tugas belum dikumpul diperbarui!` });
                 }
                 break;
 
             case '!menu':
-                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Info Kerja Kelompok\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling (Kirim poling acak)\n🔸 !info [pesan]\n🔸 !reset-bot\n\n📞 Salah list? Hubungi: 089531549103`;
+                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling\n🔸 !info [pesan]`;
                 await sock.sendMessage(sender, { text: menu });
                 break;
             
-            // --- TAMBAHKAN CASE INI ---
             case '!polling':
                 if (!isAdmin) return;
-                let question, options;
-                const qText = body.slice(9).trim();
-                if (qText.includes('|')) {
-                    const parts = qText.split('|');
-                    question = parts[0].trim();
-                    options = parts.slice(1).map(opt => opt.trim());
-                } else {
-                    const random = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
-                    question = random.question;
-                    options = random.options;
-                }
+                const random = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
                 await sock.sendMessage(ID_GRUP_TUJUAN, {
-                    poll: { name: `📊 *POLLING*\n${question}`, values: options, selectableCount: 1 }
+                    poll: { name: `📊 *POLLING*\n${random.question}`, values: random.options, selectableCount: 1 }
                 });
                 break;
 
@@ -185,56 +178,44 @@ async function handleMessages(sock, m) {
             case '!grup':
             case '!update':
             case '!hapus':
-                if (!isAdmin) return await sock.sendMessage(sender, { text: `🚫 *Akses Ditolak!* Perintah ini hanya untuk admin.` });
+                if (!isAdmin) return;
 
                 if (cmd === '!info') {
                     const infoMessage = body.slice(6).trim();
-                    if (!infoMessage) return await sock.sendMessage(sender, { text: '⚠️ Isi pesan info!' });
-                    const sukses = await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${infoMessage}\n\n_— Pengurus_` });
-                    await sock.sendMessage(sender, { text: sukses ? '✅ Terkirim.' : '❌ Gagal kirim.' });
+                    if (!infoMessage) return;
+                    await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${infoMessage}\n\n_— Pengurus_` });
+                    await sock.sendMessage(sender, { text: '✅ Terkirim.' });
                 }
 
                 if (cmd === '!grup') {
-                    const sukses = await sendToGroupSafe({ text: formatRekap() });
-                    await sock.sendMessage(sender, { text: sukses ? '✅ Rekap terkirim.' : '❌ Gagal.' });
+                    await sendToGroupSafe({ text: formatRekap() });
+                    await sock.sendMessage(sender, { text: '✅ Rekap terkirim.' });
                 }
 
                 if (cmd === '!update') {
-                    const isOnlySave = textLower.includes('jadwal');
                     const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                     let targetDay = days.find(day => textLower.includes(day));
+                    if (!targetDay) return;
 
-                    if (!targetDay) return await sock.sendMessage(sender, { text: '⚠️ Format: !update [hari] [isi]' });
-
-                    let content = body.replace(/!update/i, '').replace(/jadwal/i, '').replace(new RegExp(targetDay, 'gi'), '').trim();
-                    if (!content) return await sock.sendMessage(sender, { text: '⚠️ Tugas tidak boleh kosong!' });
-
+                    let content = body.replace(/!update/i, '').replace(new RegExp(targetDay, 'gi'), '').trim();
                     db.updateTugas(targetDay, content);
-
-                    if (isOnlySave) {
-                        await sock.sendMessage(sender, { text: `✅ Berhasil disimpan (Lokal).` });
-                    } else {
-                        const sukses = await sendToGroupSafe({ text: `📝 *TUGAS BARU: ${targetDay.toUpperCase()}*\n\n${content}\n\n_Ketik !pr untuk melihat list lengkap._` });
-                        await sock.sendMessage(sender, { text: sukses ? `✅ Berhasil Update & Grup!` : `✅ Update Lokal Saja.` });
-                    }
+                    
+                    await sendToGroupSafe({ text: `📝 *TUGAS BARU: ${targetDay.toUpperCase()}*\n\n${content}` });
+                    await sock.sendMessage(sender, { text: `✅ Berhasil Update!` });
                 }
 
                 if (cmd === '!hapus') {
                     const keys = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'];
                     let targetKey = keys.find(key => textLower.includes(key));
-                    if (!targetKey) return await sock.sendMessage(sender, { text: '⚠️ Pilih hari atau deadline yang mau dihapus!' });
+                    if (!targetKey) return;
                     
-                    const resetValue = targetKey === 'deadline' ? "Belum ada info deadline." : "Belum ada tugas.";
-                    db.updateTugas(targetKey, resetValue);
+                    db.updateTugas(targetKey, targetKey === 'deadline' ? "Semua tugas sudah selesai." : "Belum ada tugas.");
                     await sock.sendMessage(sender, { text: `✅ Data *${targetKey}* telah dibersihkan.` });
                 }
                 break;
         }
-
-    } catch (err) {
-        console.error("Handler Error:", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
-// --- UPDATE EXPORT ---
 module.exports = { handleMessages, initQuizScheduler };
+                           
