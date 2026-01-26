@@ -2,6 +2,7 @@ const db = require('./data');
 const { delay } = require("@whiskeysockets/baileys");
 const fs = require('fs');
 const { QUIZ_BANK } = require('./quiz'); 
+const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 
 // ================= CONFIG =================
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155']; 
@@ -68,6 +69,56 @@ async function initQuizScheduler(sock) {
     }, 30000); 
 }
 
+// --- SCHEDULER JADWAL BESOK: Jam 17:00 WIB ---
+async function initJadwalBesokScheduler(sock) {
+    console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
+    let lastSentJadwal = "";
+
+    setInterval(async () => {
+        const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+        const jam = now.getHours();
+        const menit = now.getMinutes();
+        const hariIni = now.getDay(); 
+        const tanggalHariIni = now.getDate();
+
+        if (jam === 17 && menit === 0 && lastSentJadwal !== tanggalHariIni) {
+            let hariBesok = hariIni + 1;
+            // Hanya kirim jika besok Senin - Jumat (Minggu sore s/d Kamis sore)
+            if (hariBesok > 5 || hariBesok === 0) return; 
+
+            try {
+                const { dates } = getWeekDates();
+                const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                const daysKey = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+                
+                const rawMapel = JADWAL_PELAJARAN[hariBesok].split('\n');
+                const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
+                
+                const currentData = db.getAll();
+                const dataPR = (currentData[daysKey[hariBesok]] || "").toLowerCase();
+                const adaPR = dataPR !== "" && !dataPR.includes("belum ada tugas");
+
+                const jadwalFinal = rawMapel.map(mapel => {
+                    const status = adaPR ? "ada pr" : "gak ada pr";
+                    return `${mapel} ➝ ${status}`;
+                }).join('\n');
+
+                const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n` +
+                                    `📅 *${dayLabels[hariBesok].toUpperCase()}, ${dates[hariBesok - 1]}*\n` +
+                                    `━━━━━━━━━━━━━━━━━━━━\n\n` +
+                                    `${jadwalFinal}\n\n` +
+                                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                                    `💡 _"${motivasi}"_\n\n` +
+                                    `*Tetap semangat ya!* 😇`;
+
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: formatPesan });
+                lastSentJadwal = tanggalHariIni;
+                console.log(`[LOG] Jadwal besok terkirim otomatis.`);
+            } catch (err) { console.error(err); }
+        }
+    }, 30000); 
+}
+
 // ================= HANDLE MESSAGES =================
 async function handleMessages(sock, m) {
     try {
@@ -79,7 +130,6 @@ async function handleMessages(sock, m) {
         const textLower = body.toLowerCase();
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
 
-        // Pesan peringatan untuk non-admin
         const nonAdminMsg = "🚫 *AKSES DITOLAK*\n\nMaaf, fitur ini hanya bisa diakses oleh *Pengurus*. Kamu adalah pengguna biasa, silakan gunakan fitur pengguna seperti *!pr* atau *!deadline* saja ya! 😊";
 
         if (body === '!reset-bot') {
@@ -253,4 +303,4 @@ async function handleMessages(sock, m) {
     } catch (err) { console.error(err); }
 }
 
-module.exports = { handleMessages, initQuizScheduler };
+module.exports = { handleMessages, initQuizScheduler, initJadwalBesokScheduler };
