@@ -7,11 +7,11 @@ const defaultData = {
     rabu: "Belum ada tugas.",
     kamis: "Belum ada tugas.",
     jumat: "Belum ada tugas.",
+    deadline: "Belum ada info tugas.", // Tambahkan ini agar hasOwnProperty bernilai true
     terakhir_update: "-"
 };
 
 const database = {
-    // Memastikan file ada saat bot baru dinyalakan
     init: () => {
         if (!fs.existsSync(DATA_FILE)) {
             fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
@@ -25,7 +25,6 @@ const database = {
             const content = fs.readFileSync(DATA_FILE, 'utf-8');
             return JSON.parse(content);
         } catch (error) {
-            console.error("Gagal membaca database, menggunakan default.");
             return defaultData;
         }
     },
@@ -34,6 +33,7 @@ const database = {
         const data = database.getAll();
         const key = hari.toLowerCase();
         
+        // Sekarang key 'deadline' akan dikenali di sini
         if (data.hasOwnProperty(key)) {
             data[key] = isi;
             data.terakhir_update = new Date().toLocaleString('id-ID', { 
@@ -53,7 +53,5 @@ const database = {
     }
 };
 
-// Jalankan init otomatis saat modul dipanggil
 database.init();
-
 module.exports = database;
