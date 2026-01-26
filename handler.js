@@ -1,11 +1,13 @@
 const db = require('./data');
 const { delay } = require("@whiskeysockets/baileys");
+const fs = require('fs');
 
 // ================= CONFIG =================
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155']; 
 const NOMOR_PENGURUS = '089531549103';
-const NAMA_GRUP = '🎒Tugas & Jadwal Sekolah [Y.M.B] ✍️';
+const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
 
+// ================= UTIL: AUTO DATE LOGIC =================
 function getWeekDates() {
     const now = new Date();
     const dayOfWeek = now.getDay(); 
@@ -19,12 +21,8 @@ function getWeekDates() {
         d.setDate(monday.getDate() + i);
         dates.push(`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`);
     }
-    return dates;
-}
-
-// Fungsi deteksi typo sederhana
-function checkSimilarity(input, target) {
-    return target.includes(input) || input.includes(target);
+    const periode = `${dates[0]} - ${dates[4]}`;
+    return { dates, periode };
 }
 
 async function handleMessages(sock, m) {
@@ -34,11 +32,12 @@ async function handleMessages(sock, m) {
     const sender = msg.key.remoteJid;
     const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
     
-    // Memberi peringatan jika user lupa memakai tanda seru (!)
+    // --- EDUKASI FORMAT (Sama seperti kode lama) ---
     const textLower = body.toLowerCase();
-    const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'info'];
+    const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info'];
     if (!body.startsWith('!') && triggers.includes(textLower)) {
-        return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\nContoh: *!menu*` });
+        const pesanArahkan = `⚠️ *Format Salah!*\n\nUntuk menggunakan bot, kamu harus menggunakan tanda seru (*!*) di depan perintah.\n\n💡 Contoh: Ketik *!menu* untuk melihat bantuan.`;
+        return await sock.sendMessage(sender, { text: pesanArahkan });
     }
 
     if (!body.startsWith('!')) return;
@@ -47,109 +46,95 @@ async function handleMessages(sock, m) {
     const args = body.split(' ');
     const cmd = args[0].toLowerCase();
     const currentData = db.getAll();
-    const dates = getWeekDates();
+    const { dates, periode } = getWeekDates();
+
+    // Fungsi Format Rekap (Sesuai Screenshot & Kode Lama)
+    const formatRekap = () => {
+        let rekap = `📌 *Daftar List Tugas PR Minggu Ini* 📢\n➝ ${periode}\n\n`;
+        rekap += `_________________________________\n\n`;
+        
+        const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
+        const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+
+        days.forEach((day, i) => {
+            rekap += `📅 *${dayLabels[i]}* ➝ ${dates[i]}\n`;
+            if (currentData[day] === "Belum ada tugas." || !currentData[day] || currentData[day] === "") {
+                rekap += `➝ (Tidak ada PR)\n╰───➤ 👍\n\n`;
+            } else {
+                rekap += `➝ ${currentData[day]}\n\n`;
+            }
+        });
+        
+        rekap += `_________________________________\n\n`;
+        rekap += `*semangat menyelesaikan semua tugasnya! 🚀*`;
+        return rekap;
+    };
 
     await sock.readMessages([msg.key]);
 
     try {
-        // --- 1. CEK TYPO PERINTAH ---
-        const validCmds = ['!p', '!pr', '!menu', '!update', '!hapus', '!info'];
-        if (!validCmds.includes(cmd)) {
-            let suggestion = validCmds.find(v => checkSimilarity(cmd.replace('!', ''), v.replace('!', '')));
-            if (suggestion) {
-                return await sock.sendMessage(sender, { text: `⚠️ Perintah *${cmd}* tidak dikenal.\nMungkin maksud kamu: *${suggestion}*?` });
-            }
-        }
-
-        // --- 2. FITUR PUBLIK ---
+        // --- 1. FITUR UMUM ---
         if (cmd === '!p') {
-            await sock.sendPresenceUpdate('composing', sender);
-            await sock.sendMessage(sender, { text: '✅ *Bot Online & Responsif!*' });
+            return await sock.sendMessage(sender, { text: '✅ *Bot Aktif!*' });
         } 
         
         else if (cmd === '!pr') {
             await sock.sendPresenceUpdate('composing', sender);
-            await delay(2000); 
-
-            let rekap = `📌 *Daftar List Tugas PR Minggu Ini* 📢\n`;
-            rekap += `→ ${dates[0]} - ${dates[4]}\n\n`;
-            rekap += `_________________________________\n\n`;
-            
-            const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-            const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
-
-            days.forEach((day, i) => {
-                rekap += `📅 *${dayLabels[i]}* → ${dates[i]}\n`;
-                if (currentData[day] === "Belum ada tugas." || !currentData[day]) {
-                    rekap += i === 0 ? `→ (Tidak ada PR)\n╰───➤ 👍\n\n` : `Belum ada tugas.\n\n`;
-                } else {
-                    rekap += `→ ${currentData[day]}\n\n`;
-                }
-            });
-            
-            rekap += `_________________________________\n\n`;
-            rekap += `*semangat menyelesaikan semua tugasnya! 🚀*`;
-
-            await sock.sendMessage(sender, { text: rekap });
+            await delay(1500);
+            return await sock.sendMessage(sender, { text: formatRekap() });
         }
 
         else if (cmd === '!menu') {
-            await sock.sendPresenceUpdate('composing', sender);
-            const menuText = `╭───  *BOT TUGAS SEKOLAH* ────\n` +
-                `│\n` +
-                `│ 📝 *Menu Publik:*\n` +
-                `│ ➜ *!p* (Cek Status)\n` +
-                `│ ➜ *!pr* (Lihat List PR)\n` +
-                `│\n` +
-                `│ ⚙️ *Menu Admin:*\n` +
-                `│ ➜ *!update [hari] [isi]*\n` +
-                `│ ➜ *!hapus [hari]*\n` +
-                `│ ➜ *!info [pesan]*\n` +
-                `│\n` +
-                `╰──────────────────────────`;
-            await sock.sendMessage(sender, { text: menuText });
+            const menu = `📖 *Daftar Perintah Bot*\n\n🔹 !p ➜ Cek Status\n🔹 !pr ➜ Rekap PR (Japri)\n\n⚙️ *Khusus Pengurus List Tugas:*\n🔸 !grup ➜ Kirim Rekap ke Grup\n🔸 !info [pesan] ➜ Pengumuman Baru\n🔸 !update [hari] [isi] ➜ Update PR\n🔸 !hapus [hari] ➜ Kosongkan tugas`;
+            return await sock.sendMessage(sender, { text: menu });
         }
 
-        // --- 3. FITUR ADMIN ONLY ---
-        else if (['!update', '!hapus', '!info'].includes(cmd)) {
+        // --- 2. LOGIKA ADMIN (KIRIM KE GRUP) ---
+        const adminCommands = ['!grup', '!update', '!hapus', '!info'];
+        if (adminCommands.includes(cmd)) {
             if (!isAdmin) {
-                return await sock.sendMessage(sender, { text: `🚫 *AKSES DITOLAK*\n\nKhusus *Pengurus Kelas*.\nHubungi: wa.me/${NOMOR_PENGURUS}` });
+                return await sock.sendMessage(sender, { text: `🚫 *Akses Ditolak!*\n\nFitur ini hanya untuk *Pengurus List Tugas*.\n\n💡 Hubungi: *${NOMOR_PENGURUS}*` });
+            }
+
+            if (cmd === '!info') {
+                const pesanInfo = body.replace(/!info/i, '').trim();
+                if (!pesanInfo) return await sock.sendMessage(sender, { text: '⚠️ *Isi Infonya!*' });
+
+                const pengumuman = `📢 *PENGUMUMAN INFO BARU* 📢\n\n${pesanInfo}\n\n_________________________________\n_Info dari: Pengurus List Tugas_`;
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: pengumuman });
+                return await sock.sendMessage(sender, { text: '✅ Info telah dikirim ke grup.' });
+            }
+
+            if (cmd === '!grup') {
+                return await sock.sendMessage(ID_GRUP_TUJUAN, { text: formatRekap() });
             }
 
             if (cmd === '!update') {
                 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-                let day = days.find(d => body.toLowerCase().includes(d));
-                if (!day) return await sock.sendMessage(sender, { text: "⚠️ Contoh: !update senin Matematika hal 10" });
-                
-                let val = body.split(day)[1]?.trim();
-                if (!val) return await sock.sendMessage(sender, { text: "⚠️ Isi tugasnya tidak boleh kosong!" });
+                let targetDay = days.find(day => body.toLowerCase().includes(day));
+                if (!targetDay) return await sock.sendMessage(sender, { text: '⚠️ *Format Salah!* (Pilih Senin-Jumat)' });
 
-                db.updateTugas(day, val);
-                await sock.sendMessage(sender, { text: `✅ Berhasil update tugas hari *${day}*!` });
+                const content = body.split(targetDay)[1]?.trim();
+                if (!content) return await sock.sendMessage(sender, { text: '⚠️ *Isi tugasnya!*' });
+
+                db.updateTugas(targetDay, content);
+
+                const updateMsg = `📢 *UPDATE TUGAS PR: ${targetDay.toUpperCase()}*\n\n${content}\n\n_Cek list lengkap ketik *!pr*_`;
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: updateMsg });
+                return await sock.sendMessage(sender, { text: `✅ *Update Berhasil!*` });
             }
 
-            else if (cmd === '!hapus') {
+            if (cmd === '!hapus') {
                 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-                let day = days.find(d => body.toLowerCase().includes(d));
-                if (!day) return await sock.sendMessage(sender, { text: "⚠️ Contoh: !hapus senin" });
-
-                db.resetHari(day);
-                await sock.sendMessage(sender, { text: `🗑️ Data tugas hari *${day}* telah dihapus.` });
-            }
-
-            else if (cmd === '!info') {
-                const pesanInfo = body.replace(/!info/i, '').trim();
-                if (!pesanInfo) return await sock.sendMessage(sender, { text: '⚠️ Ketik pesan infonya!' });
-
-                const pengumuman = `📢 *PENGUMUMAN INFO BARU* 📢\n\n${pesanInfo}\n\n_________________________________\n_Info dari: Pengurus List Tugas_`;
-                await sock.sendMessage(sender, { text: pengumuman });
+                let targetDay = days.find(day => body.toLowerCase().includes(day));
+                if (!targetDay) return await sock.sendMessage(sender, { text: '⚠️ *Pilih hari!*' });
+                
+                db.resetHari(targetDay);
+                return await sock.sendMessage(sender, { text: `✅ *Dikosongkan!*` });
             }
         }
-        
     } catch (err) {
-        console.error("Error:", err);
-    } finally {
-        await sock.sendPresenceUpdate('paused', sender);
+        console.error(err);
     }
 }
 
