@@ -48,7 +48,6 @@ async function initQuizScheduler(sock) {
         const hariAngka = now.getDay(); 
         const tanggalHariIni = now.getDate();
 
-        // Kirim jam 13:00 WIB, hari Senin-Jumat, dan belum terkirim hari ini
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tanggalHariIni) {
             try {
                 const kuisHariIni = QUIZ_BANK[hariAngka];
@@ -80,7 +79,11 @@ async function handleMessages(sock, m) {
         const textLower = body.toLowerCase();
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
 
-        if (body === '!reset-bot' && isAdmin) {
+        // Pesan peringatan untuk non-admin
+        const nonAdminMsg = "🚫 *AKSES DITOLAK*\n\nMaaf, fitur ini hanya bisa diakses oleh *Pengurus*. Kamu adalah pengguna biasa, silakan gunakan fitur pengguna seperti *!pr* atau *!deadline* saja ya! 😊";
+
+        if (body === '!reset-bot') {
+            if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
             await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI TOTAL...*\nBot akan restart." });
             await delay(2000); 
             fs.rmSync('./auth_info', { recursive: true, force: true });
@@ -163,7 +166,7 @@ async function handleMessages(sock, m) {
                     const infoDl = db.getAll().deadline || "Semua tugas sudah selesai.";
                     await sock.sendMessage(sender, { text: `⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN*\n\n${infoDl}` });
                 } else {
-                    if (!isAdmin) return;
+                    if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                     db.updateTugas('deadline', body.slice(10).trim());
                     await sock.sendMessage(sender, { text: `✅ Daftar tugas belum dikumpul diperbarui!` });
                 }
@@ -175,7 +178,7 @@ async function handleMessages(sock, m) {
                 break;
             
             case '!polling':
-                if (!isAdmin) return;
+                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 const hNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"})).getDay();
                 const pool = QUIZ_BANK[hNow] || QUIZ_BANK[1];
                 const q = pool[Math.floor(Math.random() * pool.length)];
@@ -189,7 +192,7 @@ async function handleMessages(sock, m) {
             case '!update':
             case '!update_jadwal':
             case '!hapus':
-                if (!isAdmin) return;
+                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
 
                 if (cmd === '!info') {
                     const infoMessage = body.slice(6).trim();
