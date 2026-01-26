@@ -5,42 +5,42 @@ const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
+        // Tambahkan flag untuk performa rendah
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--no-first-run',
             '--no-zygote',
             '--single-process'
-        ]
+        ],
     }
 });
 
 let pairingCodeRequested = false;
 
-console.log("🚀 Menghubungkan... (Tunggu sekitar 1 menit)");
+console.log("🚀 Menjalankan Mesin Bot...");
 
 client.on('qr', async (qr) => {
     if (!pairingCodeRequested) {
-        pairingCodeRequested = true; 
-        const phoneNumber = "6285158738155"; 
+        pairingCodeRequested = true;
+        const phoneNumber = "6285158738155";
         
-        // Kasih jeda 30 detik agar halaman WA beneran kebuka sempurna
-        console.log("⏳ Menunggu WhatsApp Web stabil...");
+        console.log("⏳ Halaman WA terbuka. Menunggu 45 detik agar sinkron...");
         
+        // Jeda lebih lama (45 detik) agar Railway sempat render halaman
         setTimeout(async () => {
             try {
-                console.log(`📨 Meminta kode pairing untuk ${phoneNumber}...`);
+                console.log(`📨 Mengirim permintaan kode pairing ke ${phoneNumber}...`);
                 const code = await client.requestPairingCode(phoneNumber);
                 console.log("\n========================================");
                 console.log("🔥 KODE PAIRING ANDA: " + code);
                 console.log("========================================");
             } catch (err) {
-                console.log("❌ Gagal. Coba RESTART Service di Railway.");
-                pairingCodeRequested = false; // Reset agar bisa coba lagi
+                console.log("❌ Gagal lagi. Penyebab: Server Railway terlalu lambat.");
+                pairingCodeRequested = false; 
             }
-        }, 30000); 
+        }, 45000); 
     }
 });
 
