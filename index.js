@@ -1,55 +1,58 @@
-const { default: makeWASocket, useMultiFileAuthState, delay, DisconnectReason } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, delay } = require("@whiskeysockets/baileys");
 const pino = require("pino");
+// qrcode-terminal dihapus karena QR dimatikan
 
 async function start() {
-    // Kita gunakan nama folder sesi yang baru untuk membuang sesi rusak yang lama
-    const { state, saveCreds } = await useMultiFileAuthState('session_baru');
+    // Gunakan folder sesi baru 'session_final' agar tidak bentrok dengan yang error tadi
+    const { state, saveCreds } = await useMultiFileAuthState('session_final');
     
     const sock = makeWASocket({
         auth: state,
         logger: pino({ level: "silent" }),
-        printQRInTerminal: false,
+        printQRInTerminal: false, // QR SUDAH DIMATIKAN
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
     const nomorHP = "6285158738155";
-    let sudahMintaKode = false;
+    let sudahMinta = false; // Flag agar tidak spam permintaan kode
 
     sock.ev.on("connection.update", async (update) => {
-        const { connection, lastDisconnect, qr } = update;
+        const { qr, connection } = update;
 
-        if (qr && !sock.authState.creds.registered && !sudahMintaKode) {
-            sudahMintaKode = true;
-            console.log("\n----------------------------------------");
-            console.log("⏳ Menunggu stabilitas koneksi (15 detik)...");
-            await delay(15000); // Jeda lebih lama agar tidak looping disconnect
-
-            try {
-                console.log("📨 Meminta KODE PAIRING untuk: " + nomorHP);
-                const code = await sock.requestPairingCode(nomorHP);
-                console.log("\n========================================");
-                console.log("🔥 KODE PAIRING ANDA: " + code);
-                console.log("========================================");
-            } catch (e) {
-                console.log("❌ Gagal ambil kode, akan coba lagi nanti.");
-                sudahMintaKode = false;
-            }
+        // Jika ada sinyal QR (tapi tidak dicetak) dan belum terdaftar
+        if (qr && !sock.authState.creds.registered && !sudahMinta) {
+            sudahMinta = true; 
+            
+            const mintaKode = async () => {
+                try {
+                    console.log("\n⏳ Sedang meminta KODE PAIRING...");
+                    // Jeda sedikit lebih lama agar koneksi Railway stabil dulu
+                    await delay(10000); 
+                    const code = await sock.requestPairingCode(nomorHP);
+                    console.log("\n========================================");
+                    console.log("🔥 KODE PAIRING ANDA: " + code);
+                    console.log("========================================");
+                    console.log("Input di WA HP > Perangkat Tertaut");
+                    console.log("========================================\n");
+                } catch (e) {
+                    console.log("Gagal ambil kode, mencoba lagi...");
+                    sudahMinta = false;
+                    setTimeout(mintaKode, 15000);
+                }
+            };
+            mintaKode();
+        }
+        
+        if (connection === "open") {
+            console.log("🎊 TERHUBUNG!");
         }
 
         if (connection === "close") {
-            const reason = lastDisconnect?.error?.output?.statusCode;
-            // Hanya reconnect jika bukan karena logout atau alasan fatal
-            if (reason !== DisconnectReason.loggedOut) {
-                console.log("🔄 Koneksi terputus (Reason: " + reason + "), mencoba lagi...");
-                // Tambahkan jeda agar tidak spamming reconnect
-                setTimeout(() => start(), 5000);
-            }
-        } else if (connection === "open") {
-            console.log("🎊 BOT BERHASIL TERHUBUNG!");
+            console.log("🔄 Koneksi terputus, mencoba hubungkan kembali...");
+            start();
         }
     });
 
     sock.ev.on("creds.update", saveCreds);
 }
-
 start();
