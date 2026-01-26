@@ -7,37 +7,41 @@ const {
 const pino = require("pino");
 
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('session_data');
+    // Menyimpan sesi di folder 'auth_info'
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info');
     
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true, // Tetap cetak QR jika ingin scan
+        printQRInTerminal: true,
         logger: pino({ level: "silent" }),
-        browser: ["Ubuntu", "Chrome", "20.0.04"]
+        browser: ["Chrome (Linux)", "Chrome", "110.0.0"]
     });
 
-    // --- LOGIKA PAIRING CODE ---
+    // NOMOR HP KAMU
     const phoneNumber = "6285158738155";
+
+    // MINTA KODE PAIRING JIKA BELUM LOGIN
     if (!sock.authState.creds.registered) {
-        console.log(`\n⏳ Sedang meminta kode pairing untuk: ${phoneNumber}...`);
-        await delay(5000); // Tunggu sebentar agar koneksi siap
+        console.log(`\n⏳ Menghubungkan ke server WhatsApp...`);
+        await delay(6000); // Tunggu 6 detik agar koneksi stabil
+        
         try {
+            console.log(`📨 Meminta kode pairing untuk: ${phoneNumber}`);
             const code = await sock.requestPairingCode(phoneNumber);
             console.log("\n========================================");
             console.log("🔥 KODE PAIRING ANDA: " + code);
             console.log("========================================");
-            console.log("Input di WA HP > Perangkat Tertaut");
+            console.log("Masukkan di WA HP > Perangkat Tertaut");
             console.log("========================================\n");
         } catch (err) {
-            console.log("❌ Gagal meminta kode pairing: ", err.message);
+            console.log("❌ Gagal minta kode. Coba klik 'Redeploy' di Railway.");
         }
     }
 
-    sock.ev.on("connection.update", (update) => {
+    sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === "close") {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log("Koneksi terputus, mencoba hubungkan ulang...", shouldReconnect);
             if (shouldReconnect) startBot();
         } else if (connection === "open") {
             console.log("🎊 BOT BERHASIL AKTIF!");
@@ -46,13 +50,12 @@ async function startBot() {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // Handler pesan (sesuaikan dengan handler.js kamu)
+    // Baca Pesan
     sock.ev.on("messages.upsert", async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message || msg.key.fromMe) return;
-        console.log(`📩 Pesan dari ${msg.key.remoteJid}: ${msg.message.conversation || msg.message.extendedTextMessage?.text}`);
-        
-        // Catatan: Kamu perlu menyesuaikan handler.js kamu agar cocok dengan format Baileys
+        const m = messages[0];
+        if (!m.message || m.key.fromMe) return;
+        const text = m.message.conversation || m.message.extendedTextMessage?.text;
+        console.log(`📩 Pesan: ${text}`);
     });
 }
 
