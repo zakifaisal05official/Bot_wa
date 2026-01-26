@@ -14,7 +14,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 let qrCodeData = ""; 
 
-// Web Server untuk cek status & scan QR
+// Web Server status
 app.get("/", (req, res) => {
     if (qrCodeData) {
         res.send(`
@@ -23,11 +23,8 @@ app.get("/", (req, res) => {
                 <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#f0f2f5;font-family:sans-serif;margin:0;">
                     <div style="background:white;padding:30px;border-radius:20px;box-shadow:0 4px 15px rgba(0,0,0,0.1);text-align:center;">
                         <h2 style="color:#075e54;margin-bottom:20px;">Scan QR Bot WhatsApp</h2>
-                        <div style="background:#f9f9f9;padding:10px;border-radius:10px;display:inline-block;">
-                            <img src="${qrCodeData}" style="width:280px;height:280px;"/>
-                        </div>
+                        <img src="${qrCodeData}" style="width:280px;height:280px;border: 1px solid #eee; padding: 10px; border-radius: 10px;"/>
                         <p style="color:#666;margin-top:20px;">Gunakan WhatsApp di HP kamu untuk menautkan perangkat.</p>
-                        <p style="font-size:12px;color:#999;">Halaman ini akan otomatis kosong jika bot sudah terhubung.</p>
                     </div>
                 </body>
             </html>
@@ -36,10 +33,7 @@ app.get("/", (req, res) => {
         res.send(`
             <html>
                 <body style="display:flex;align-items:center;justify-content:center;height:100vh;background:#25d366;font-family:sans-serif;margin:0;color:white;text-align:center;">
-                    <div>
-                        <h1>✅ Bot Terhubung</h1>
-                        <p>Bot sedang aktif dan siap menerima pesan.</p>
-                    </div>
+                    <div><h1>✅ Bot Terhubung</h1><p>Bot sedang aktif dan siap menerima pesan.</p></div>
                 </body>
             </html>
         `);
@@ -49,45 +43,27 @@ app.get("/", (req, res) => {
 app.listen(port, () => console.log(`🌐 Web QR ready on port ${port}`));
 
 async function start() {
-    // 1. Ambil versi terbaru WhatsApp Web agar tidak gampang disconnect
     const { version } = await fetchLatestBaileysVersion();
-    
-    // 2. Load Sesi (Disimpan di folder 'auth_info')
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
     const sock = makeWASocket({
         version,
         auth: {
             creds: state.creds,
-            // Cache untuk mempercepat pengambilan kunci sinyal
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
         },
         logger: pino({ level: "silent" }),
-        printQRInTerminal: true, // Tetap muncul di log buat jaga-jaga
+        printQRInTerminal: true,
         browser: ["Chrome (Linux)", "Chrome", "110.0.0"],
-        patchMessageBeforeSending: (message) => {
-            const requiresPatch = !!(message.buttonsMessage || message.listMessage);
-            if (requiresPatch) {
-                message = {
-                    viewOnceMessage: {
-                        message: {
-                            messageContextInfo: {
-                                deviceListMetadata: {},
-                                deviceListMetadataVersion: 2,
-                            },
-                            ...message,
-                        },
-                    },
-                };
-            }
-            return message;
-        },
+        // --- TAMBAHAN UNTUK FIX SESSION ERROR ---
+        syncFullHistory: false, // Mempercepat koneksi awal
+        markOnlineOnConnect: true,
+        generateHighQualityLinkPreview: true,
+        getMessage: async (key) => { return { conversation: 'Refreshing session...' } } 
     });
 
-    // Simpan kredensial setiap kali diperbarui
     sock.ev.on("creds.update", saveCreds);
 
-    // Tangani pesan masuk
     sock.ev.on("messages.upsert", async (m) => {
         try {
             await handleMessages(sock, m);
@@ -96,26 +72,25 @@ async function start() {
         }
     });
 
-    // Logika Koneksi (Anti-Loop Restart)
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
             qrCodeData = await QRCode.toDataURL(qr);
-            console.log("👉 QR Code baru dibuat. Cek link website kamu.");
+            console.log("👉 QR Code baru tersedia di Web Dashboard.");
         }
 
         if (connection === "close") {
             const reason = lastDisconnect?.error?.output?.statusCode;
             console.log("⚠️ Koneksi terputus. Reason code:", reason);
 
-            if (reason === DisconnectReason.loggedOut) {
-                console.log("❌ Sesi Logout. Hapus folder 'auth_info' dan scan ulang.");
-                process.exit(); // Berhenti total agar user tahu harus ganti sesi
+            // Logika Reconnect Otomatis kecuali jika Logout
+            if (reason !== DisconnectReason.loggedOut) {
+                console.log("🔄 Menghubungkan kembali dalam 5 detik...");
+                setTimeout(() => start(), 5000);
             } else {
-                // Mencoba hubungkan kembali secara otomatis
-                console.log("🔄 Menghubungkan kembali...");
-                start();
+                console.log("❌ Sesi Logout. Hapus folder 'auth_info' dan scan ulang.");
+                process.exit();
             }
         } else if (connection === "open") {
             qrCodeData = ""; 
