@@ -8,44 +8,44 @@ const client = new Client({
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage'
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process'
         ]
     }
 });
 
 let pairingCodeRequested = false;
 
-console.log("🚀 Memulai Bot - Mode Pairing Code...");
+console.log("🚀 Menghubungkan... (Tunggu sekitar 1 menit)");
 
 client.on('qr', async (qr) => {
-    // Jika kode belum berhasil diminta, kita coba terus
     if (!pairingCodeRequested) {
+        pairingCodeRequested = true; 
         const phoneNumber = "6285158738155"; 
         
-        const requestPairing = async () => {
+        // Kasih jeda 30 detik agar halaman WA beneran kebuka sempurna
+        console.log("⏳ Menunggu WhatsApp Web stabil...");
+        
+        setTimeout(async () => {
             try {
-                console.log("⏳ Sedang meminta kode pairing... (Tunggu 10-20 detik)");
+                console.log(`📨 Meminta kode pairing untuk ${phoneNumber}...`);
                 const code = await client.requestPairingCode(phoneNumber);
-                
                 console.log("\n========================================");
                 console.log("🔥 KODE PAIRING ANDA: " + code);
                 console.log("========================================");
-                console.log("Masukkan di WA HP > Perangkat Tertaut");
-                console.log("========================================\n");
-                
-                pairingCodeRequested = true;
             } catch (err) {
-                console.log("⚠️ Gagal minta kode, mencoba lagi dalam 10 detik...");
-                setTimeout(requestPairing, 10000); // Coba lagi tiap 10 detik
+                console.log("❌ Gagal. Coba RESTART Service di Railway.");
+                pairingCodeRequested = false; // Reset agar bisa coba lagi
             }
-        };
-
-        requestPairing();
+        }, 30000); 
     }
 });
 
 client.on('ready', () => {
-    console.log('🎊 BOT SUDAH AKTIF!');
+    console.log('🎊 BOT BERHASIL AKTIF!');
 });
 
 client.on('message', async (msg) => {
