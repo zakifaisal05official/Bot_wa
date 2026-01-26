@@ -2,55 +2,50 @@ const { default: makeWASocket, useMultiFileAuthState, delay, DisconnectReason } 
 const pino = require("pino");
 
 async function start() {
-    // GANTI LAGI NAMA FOLDER SESI (Wajib agar Railway buat storage baru)
-    const { state, saveCreds } = await useMultiFileAuthState('sesi_total_reset');
+    // GANTI NAMA FOLDER KE 'session_final_banget'
+    const { state, saveCreds } = await useMultiFileAuthState('session_final_banget');
     
     const sock = makeWASocket({
         auth: state,
         logger: pino({ level: "silent" }),
         printQRInTerminal: false,
-        browser: ["Ubuntu", "Chrome", "20.0.04"],
-        // Optimasi Jaringan
+        browser: ["Chrome (Linux)", "Chrome", "110.0.0"],
+        // Optimasi agar koneksi lebih kuat
         connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 0,
-        keepAliveIntervalMs: 10000,
-        emitOwnEvents: true
+        keepAliveIntervalMs: 30000
     });
 
     const nomorHP = "6285158738155";
-    let sedangMinta = false;
+    let sudahMinta = false;
 
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        if (qr && !sock.authState.creds.registered && !sedangMinta) {
-            sedangMinta = true;
-            console.log("\n🌐 Jaringan siap. Menunggu 30 detik agar stabil...");
-            await delay(30000); // Jeda lebih lama untuk Railway
+        if (qr && !sock.authState.creds.registered && !sudahMinta) {
+            sudahMinta = true;
+            console.log("\n🌐 Jaringan siap. Menunggu 40 detik agar stabil...");
+            await delay(40000); // Beri waktu ekstra untuk Railway
 
             try {
-                console.log("📨 Mengirim permintaan kode ke " + nomorHP);
+                console.log("📨 Mengambil Kode Pairing untuk " + nomorHP);
                 const code = await sock.requestPairingCode(nomorHP);
                 console.log("\n========================================");
                 console.log("🔥 KODE PAIRING ANDA: " + code);
                 console.log("========================================\n");
             } catch (e) {
                 console.log("❌ Gagal: " + e.message);
-                sedangMinta = false;
+                sudahMinta = false;
             }
         }
 
         if (connection === "close") {
             const reason = lastDisconnect?.error?.output?.statusCode;
-            console.log(`⚠️ Terputus (Status: ${reason}). Mengulang dalam 20 detik...`);
-            
-            // Reconnect hanya jika bukan karena logout
+            console.log(`⚠️ Putus (Status: ${reason}). Mengulang dalam 30 detik...`);
             if (reason !== DisconnectReason.loggedOut) {
-                setTimeout(() => start(), 20000); // Jeda 20 detik
+                setTimeout(() => start(), 30000); 
             }
         } else if (connection === "open") {
             console.log("🎊 BOT TERHUBUNG!");
-            sedangMinta = false;
         }
     });
 
