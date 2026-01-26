@@ -1,6 +1,8 @@
 const db = require('./data');
 const { delay } = require("@whiskeysockets/baileys");
 const fs = require('fs');
+// --- TAMBAHKAN INI ---
+const { QUIZ_BANK } = require('./quiz'); 
 
 // ================= CONFIG =================
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155']; 
@@ -22,6 +24,28 @@ function getWeekDates() {
     }
     const periode = `${dates[0]} - ${dates[4]}`;
     return { dates, periode };
+}
+
+// --- TAMBAHKAN FUNGSI INI ---
+async function initQuizScheduler(sock) {
+    console.log("✅ Scheduler Polling Aktif (13:00)");
+    setInterval(async () => {
+        const now = new Date();
+        const jam = now.getHours();
+        const menit = now.getMinutes();
+        const hari = now.getDay(); 
+
+        if (jam === 13 && menit === 0 && hari >= 1 && hari <= 5) {
+            const randomQuiz = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
+            await sock.sendMessage(ID_GRUP_TUJUAN, {
+                poll: {
+                    name: `🕒 *PULANG SEKOLAH CHECK (9G)*\n${randomQuiz.question}`,
+                    values: randomQuiz.options,
+                    selectableCount: 1
+                }
+            });
+        }
+    }, 60000); 
 }
 
 async function handleMessages(sock, m) {
@@ -47,7 +71,8 @@ async function handleMessages(sock, m) {
         }
 
         // --- 2. FITUR EDUKASI FORMAT (ANTI LUPA !) ---
-        const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info', 'deadline'];
+        // TAMBAHKAN 'polling' ke dalam triggers
+        const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info', 'deadline', 'polling'];
         const firstWord = textLower.split(' ')[0];
         
         if (!body.startsWith('!') && triggers.includes(firstWord)) {
@@ -133,8 +158,27 @@ async function handleMessages(sock, m) {
                 break;
 
             case '!menu':
-                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Info Kerja Kelompok\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !info [pesan]\n🔸 !reset-bot\n\n📞 Salah list? Hubungi: 089531549103`;
+                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Info Kerja Kelompok\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling (Kirim poling acak)\n🔸 !info [pesan]\n🔸 !reset-bot\n\n📞 Salah list? Hubungi: 089531549103`;
                 await sock.sendMessage(sender, { text: menu });
+                break;
+            
+            // --- TAMBAHKAN CASE INI ---
+            case '!polling':
+                if (!isAdmin) return;
+                let question, options;
+                const qText = body.slice(9).trim();
+                if (qText.includes('|')) {
+                    const parts = qText.split('|');
+                    question = parts[0].trim();
+                    options = parts.slice(1).map(opt => opt.trim());
+                } else {
+                    const random = QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
+                    question = random.question;
+                    options = random.options;
+                }
+                await sock.sendMessage(ID_GRUP_TUJUAN, {
+                    poll: { name: `📊 *POLLING 9G*\n${question}`, values: options, selectableCount: 1 }
+                });
                 break;
 
             case '!info':
@@ -192,4 +236,5 @@ async function handleMessages(sock, m) {
     }
 }
 
-module.exports = { handleMessages };
+// --- UPDATE EXPORT ---
+module.exports = { handleMessages, initQuizScheduler };
