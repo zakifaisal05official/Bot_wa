@@ -7,7 +7,7 @@ async function start() {
     const sock = makeWASocket({
         auth: state,
         logger: pino({ level: "silent" }),
-        browser: ["Chrome (Linux)", "Chrome", "1.0.0"]
+        browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
     const nomorHP = "6285158738155";
@@ -15,23 +15,25 @@ async function start() {
     sock.ev.on("connection.update", async (update) => {
         const { qr, connection } = update;
 
-        if (qr) {
+        if (qr && !sock.authState.creds.registered) {
             console.clear();
-            console.log("✅ QR MUNCUL (Bisa di-scan):");
+            console.log("✅ QR MUNCUL:");
             qrcode.generate(qr, { small: true });
 
-            if (!sock.authState.creds.registered) {
-                console.log("\n⏳ Menyiapkan KODE PAIRING...");
-                await delay(5000);
+            const mintaKode = async () => {
                 try {
+                    console.log("\n⏳ Sedang meminta KODE PAIRING...");
+                    await delay(7000);
                     const code = await sock.requestPairingCode(nomorHP);
                     console.log("\n========================================");
                     console.log("🔥 KODE PAIRING ANDA: " + code);
                     console.log("========================================");
                 } catch (e) {
-                    console.log("Gagal ambil kode, silakan scan QR saja.");
+                    console.log("Gagal ambil kode, mencoba lagi...");
+                    setTimeout(mintaKode, 10000);
                 }
-            }
+            };
+            mintaKode();
         }
         
         if (connection === "open") console.log("🎊 TERHUBUNG!");
@@ -39,5 +41,4 @@ async function start() {
 
     sock.ev.on("creds.update", saveCreds);
 }
-
 start();
