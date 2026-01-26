@@ -97,13 +97,22 @@ async function start() {
             logger: pino({ level: "silent" }),
             printQRInTerminal: true,
             browser: ["Ubuntu", "Chrome", "20.0.04"],
-            // Penting agar bot bisa membaca pesan grup dengan baik
             getMessage: async (key) => {
                 return { conversation: 'bot-checking' }
             }
         });
 
         sock.ev.on("creds.update", saveCreds);
+
+        // --- FITUR AUTO REJECT CALL (DITAMBAHKAN) ---
+        sock.ev.on('call', async (node) => {
+            for (const call of node) {
+                if (call.status === 'offer') {
+                    await sock.rejectCall(call.id, call.from);
+                    console.log(`📞 Panggilan dari ${call.from} otomatis ditolak.`);
+                }
+            }
+        });
 
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
@@ -131,7 +140,6 @@ async function start() {
             }
         });
 
-        // --- BAGIAN YANG DIPERBAIKI ---
         sock.ev.on("messages.upsert", async (m) => {
             if (m.type === 'notify') {
                 await handleMessages(sock, m);
