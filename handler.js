@@ -1,5 +1,6 @@
 const db = require('./data');
 const { delay } = require("@whiskeysockets/baileys");
+const fs = require('fs');
 
 // ================= CONFIG =================
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155']; 
@@ -29,23 +30,33 @@ async function handleMessages(sock, m) {
     if (!msg.message || msg.key.fromMe) return;
 
     const sender = msg.key.remoteJid;
-    // Mengambil teks dari berbagai tipe pesan
     const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || "").trim();
     const textLower = body.toLowerCase();
-    
-    // --- 1. FITUR EDUKASI FORMAT (ANTI TYPO/LUPA !) ---
+    const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
+
+    // --- 1. FITUR EMERGENCY: RESET SESSION ---
+    if (body === '!reset-bot' && isAdmin) {
+        await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI DAN MERESTART BOT...*\nSilakan tunggu 1 menit lalu scan ulang di dashboard web." });
+        try {
+            fs.rmSync('./auth_info', { recursive: true, force: true });
+            console.log("Sesi dihapus oleh admin.");
+            process.exit(1);
+        } catch (e) {
+            return await sock.sendMessage(sender, { text: "Gagal menghapus folder. Silakan hapus manual di Railway." });
+        }
+    }
+
+    // --- 2. FITUR EDUKASI FORMAT (ANTI TYPO/LUPA !) ---
     const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info'];
-    // Jika kata pertama ada di daftar trigger tapi TIDAK diawali !
     const firstWord = textLower.split(' ')[0];
+    
     if (!body.startsWith('!') && triggers.includes(firstWord)) {
-        const pesanEdukasi = `⚠️ *Format Salah!*\n\nUntuk menggunakan bot, kamu harus menggunakan tanda seru (*!*) di depan perintah.\n\n💡 Contoh: Ketik *!menu* atau *!pr*`;
+        const pesanEdukasi = `⚠️ *Format Salah!*\n\nUntuk menggunakan bot, gunakan tanda seru (*!*) di depan perintah.\n\n💡 Contoh: Ketik *!menu* atau *!pr*`;
         return await sock.sendMessage(sender, { text: pesanEdukasi });
     }
 
-    // Jika pesan tidak diawali !, abaikan saja
     if (!body.startsWith('!')) return;
 
-    const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
     const args = body.split(' ');
     const cmd = args[0].toLowerCase();
     const currentData = db.getAll();
@@ -71,19 +82,17 @@ async function handleMessages(sock, m) {
         return rekap;
     };
 
-    // Fungsi Pengiriman Grup yang Lebih Kuat (Anti Session Error)
+    // Fungsi Pengiriman Grup dengan Jeda Lebih Lama (Anti-Freeze)
     const sendToGroupSafe = async (content) => {
         try {
-            // Pancing metadata grup dulu
             await sock.groupMetadata(ID_GRUP_TUJUAN);
             await sock.sendPresenceUpdate('composing', ID_GRUP_TUJUAN);
-            await delay(2000); // Beri waktu buat enkripsi nyambung
+            await delay(4000); // Jeda 4 detik agar enkripsi stabil
             await sock.sendMessage(ID_GRUP_TUJUAN, content);
             return true;
         } catch (err) {
             console.log("Percobaan 1 Gagal, Mencoba Re-sync...");
             try {
-                // Pancing dengan fetch semua grup
                 await sock.groupFetchAllParticipating();
                 await delay(2000);
                 await sock.sendMessage(ID_GRUP_TUJUAN, content);
@@ -108,27 +117,24 @@ async function handleMessages(sock, m) {
         }
 
         if (cmd === '!menu') {
-            const menu = `📖 *Daftar Perintah Bot*\n\n🔹 !p ➜ Cek Status\n🔹 !pr ➜ Rekap PR\n\n⚙️ *Khusus Pengurus:*\n🔸 !grup ➜ Kirim Rekap ke Grup\n🔸 !update [hari] [isi] ➜ Simpan & Kirim\n🔸 !update jadwal [hari] [isi] ➜ Simpan Saja\n🔸 !hapus [hari] ➜ Kosongkan Tugas\n🔸 !info [pesan] ➜ Pengumuman Grup`;
+            const menu = `📖 *Daftar Perintah Bot*\n\n🔹 !p ➜ Cek Status\n🔹 !pr ➜ Rekap PR\n\n⚙️ *Khusus Pengurus:*\n🔸 !grup ➜ Kirim Rekap ke Grup\n🔸 !update [hari] [isi] ➜ Simpan & Kirim\n🔸 !update jadwal [hari] [isi] ➜ Simpan Saja\n🔸 !hapus [hari] ➜ Kosongkan Tugas\n🔸 !info [pesan] ➜ Pengumuman Grup\n🔸 !reset-bot ➜ Hapus Sesi & Restart`;
             return await sock.sendMessage(sender, { text: menu });
         }
 
         // --- FITUR ADMIN ---
         if (['!grup', '!update', '!hapus', '!info'].includes(cmd)) {
-            if (!isAdmin) {
-                return await sock.sendMessage(sender, { text: `🚫 *Akses Ditolak!*\n\nHubungi: *${NOMOR_PENGURUS}*` });
-            }
+            if (!isAdmin) return await sock.sendMessage(sender, { text: `🚫 *Akses Ditolak!*` });
 
             if (cmd === '!info') {
                 const info = body.slice(6).trim();
-                if (!info) return await sock.sendMessage(sender, { text: '⚠️ Isi infonya!' });
-                const msgInfo = { text: `📢 *INFO BARU* 📢\n\n${info}\n\n_________________________________` };
-                const sukses = await sendToGroupSafe(msgInfo);
-                return await sock.sendMessage(sender, { text: sukses ? '✅ Terkirim ke grup.' : '❌ Gagal (Session Error). Tolong Tag Bot di grup dulu.' });
+                if (!info) return await sock.sendMessage(sender, { text: '⚠️ Isi pesannya!' });
+                const sukses = await sendToGroupSafe({ text: `📢 *INFO BARU* 📢\n\n${info}\n\n_________________________________` });
+                return await sock.sendMessage(sender, { text: sukses ? '✅ Terkirim ke grup.' : '❌ Gagal. Sesi rusak, ketik *!reset-bot* untuk memperbaiki.' });
             }
 
             if (cmd === '!grup') {
                 const sukses = await sendToGroupSafe({ text: formatRekap() });
-                return await sock.sendMessage(sender, { text: sukses ? '✅ Rekap terkirim.' : '❌ Gagal (Session Error).' });
+                return await sock.sendMessage(sender, { text: sukses ? '✅ Rekap terkirim.' : '❌ Gagal mengirim.' });
             }
 
             if (cmd === '!update') {
@@ -136,7 +142,7 @@ async function handleMessages(sock, m) {
                 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                 let targetDay = days.find(day => textLower.includes(day));
 
-                if (!targetDay) return await sock.sendMessage(sender, { text: '⚠️ Pilih hari! (Senin-Jumat)' });
+                if (!targetDay) return await sock.sendMessage(sender, { text: '⚠️ Pilih hari!' });
 
                 let content = body.replace(/!update/i, '').replace(/jadwal/i, '').replace(new RegExp(targetDay, 'gi'), '').trim();
                 if (!content) return await sock.sendMessage(sender, { text: '⚠️ Isi tugasnya!' });
@@ -144,11 +150,10 @@ async function handleMessages(sock, m) {
                 db.updateTugas(targetDay, content);
 
                 if (isOnlySave) {
-                    return await sock.sendMessage(sender, { text: `✅ Berhasil Disimpan Lokal!` });
+                    return await sock.sendMessage(sender, { text: `✅ Tersimpan.` });
                 } else {
-                    const updateMsg = { text: `📢 *UPDATE TUGAS PR: ${targetDay.toUpperCase()}*\n\n${content}\n\n_Cek list lengkap ketik *!pr*_` };
-                    const sukses = await sendToGroupSafe(updateMsg);
-                    return await sock.sendMessage(sender, { text: sukses ? `✅ Update & Kirim Berhasil!` : `✅ Update Lokal Berhasil, tapi Gagal Kirim Grup (Session Error).` });
+                    const sukses = await sendToGroupSafe({ text: `📢 *UPDATE TUGAS: ${targetDay.toUpperCase()}*\n\n${content}\n\n_Cek list lengkap ketik *!pr*_` });
+                    return await sock.sendMessage(sender, { text: sukses ? `✅ Update Berhasil!` : `✅ Tersimpan lokal, Gagal ke grup.` });
                 }
             }
 
