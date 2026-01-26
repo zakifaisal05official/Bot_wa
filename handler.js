@@ -27,10 +27,9 @@ function getWeekDates() {
 
 // --- FUNGSI DETEKSI TYPO ---
 function getClosestCommand(cmd) {
-    const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
+    const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
     if (validCommands.includes(cmd)) return null;
     
-    // Cari yang kemiripannya tinggi (misal: !pq mirip !p atau !pr)
     return validCommands.find(v => {
         const distance = Math.abs(v.length - cmd.length);
         return distance <= 1 && (v.startsWith(cmd.substring(0, 2)) || cmd.startsWith(v.substring(0, 2)));
@@ -68,7 +67,6 @@ async function handleMessages(sock, m) {
         const textLower = body.toLowerCase();
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
 
-        // --- FITUR EMERGENCY: RESET SESSION ---
         if (body === '!reset-bot' && isAdmin) {
             await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI TOTAL...*\nBot akan restart." });
             await delay(2000); 
@@ -76,20 +74,17 @@ async function handleMessages(sock, m) {
             process.exit(1);
         }
 
-        // --- FITUR EDUKASI FORMAT & TYPO ---
-        const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info', 'deadline', 'polling'];
+        const triggers = ['p', 'pr', 'menu', 'update', 'update_jadwal', 'hapus', 'grup', 'info', 'deadline', 'polling'];
         const firstWord = textLower.split(' ')[0];
         
-        // Cek tanpa tanda seru
         if (!body.startsWith('!') && triggers.includes(firstWord)) {
             return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\n💡 Contoh: *!menu*` });
         }
 
-        // Cek Typo (Jika pakai tanda seru tapi perintah tidak dikenal)
         if (body.startsWith('!')) {
             const cmdInput = body.split(' ')[0].toLowerCase();
             const suggestion = getClosestCommand(cmdInput);
-            const validCmds = ['!p', '!pr', '!deadline', '!menu', '!update', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
+            const validCmds = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
             
             if (!validCmds.includes(cmdInput) && suggestion) {
                 return await sock.sendMessage(sender, { text: `🧐 *Perintah tidak dikenal.*\n\nMungkin maksud Anda: *${suggestion}* ?\nKetik *!menu* untuk melihat semua perintah.` });
@@ -162,7 +157,7 @@ async function handleMessages(sock, m) {
                 break;
 
             case '!menu':
-                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling\n🔸 !info [pesan]`;
+                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !update_jadwal [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling\n🔸 !info [pesan]`;
                 await sock.sendMessage(sender, { text: menu });
                 break;
             
@@ -177,6 +172,7 @@ async function handleMessages(sock, m) {
             case '!info':
             case '!grup':
             case '!update':
+            case '!update_jadwal':
             case '!hapus':
                 if (!isAdmin) return;
 
@@ -194,14 +190,37 @@ async function handleMessages(sock, m) {
 
                 if (cmd === '!update') {
                     const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-                    let targetDay = days.find(day => textLower.includes(day));
-                    if (!targetDay) return;
+                    const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+                    let dayIdx = days.findIndex(day => textLower.includes(day));
+                    if (dayIdx === -1) return;
+
+                    let targetDay = days[dayIdx];
+                    let labelDay = dayLabels[dayIdx];
+                    let dateDay = dates[dayIdx];
 
                     let content = body.replace(/!update/i, '').replace(new RegExp(targetDay, 'gi'), '').trim();
                     db.updateTugas(targetDay, content);
                     
-                    await sendToGroupSafe({ text: `📝 *TUGAS BARU: ${targetDay.toUpperCase()}*\n\n${content}` });
+                    // STRUKTUR PESAN GRUP SESUAI PERMINTAAN
+                    const pesanGrup = `📌 *Daftar tugas/ pr di Minggu ini* 📢\n` +
+                                     `➝ ${periode}\n\n` +
+                                     `---------------------------------------------------------------------------------\n\n\n` +
+                                     `*\`📅 ${labelDay}\`* ➝ ${dateDay}\n\n` +
+                                     `${content}`;
+
+                    await sendToGroupSafe({ text: pesanGrup });
                     await sock.sendMessage(sender, { text: `✅ Berhasil Update!` });
+                }
+
+                if (cmd === '!update_jadwal') {
+                    const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
+                    let targetDay = days.find(day => textLower.includes(day));
+                    if (!targetDay) return;
+
+                    let content = body.replace(/!update_jadwal/i, '').replace(new RegExp(targetDay, 'gi'), '').trim();
+                    db.updateTugas(targetDay, content);
+                    
+                    await sock.sendMessage(sender, { text: `✅ Berhasil simpan ke data (tanpa kirim ke grup).` });
                 }
 
                 if (cmd === '!hapus') {
@@ -218,4 +237,3 @@ async function handleMessages(sock, m) {
 }
 
 module.exports = { handleMessages, initQuizScheduler };
-                           
