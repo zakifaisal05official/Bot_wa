@@ -9,7 +9,6 @@ const ID_GRUP_TUJUAN = '120363403625197368@g.us';
 
 // ================= UTIL: AUTO DATE LOGIC =================
 function getWeekDates() {
-    // Sinkronisasi waktu Jakarta untuk penentuan tanggal
     const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
     const dayOfWeek = now.getDay(); 
     const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
@@ -37,25 +36,22 @@ function getClosestCommand(cmd) {
     });
 }
 
-// --- PERBAIKAN SCHEDULER: Sesuai Jam 13:00 WIB & Sesuai Hari ---
+// --- PERBAIKAN SCHEDULER: Jam 13:00 WIB & Ambil Sesuai Hari ---
 async function initQuizScheduler(sock) {
     console.log("✅ Scheduler Polling Aktif (13:00 WIB)");
     let lastSentDate = ""; 
 
     setInterval(async () => {
-        // Ambil waktu spesifik Asia/Jakarta
         const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
         const jam = now.getHours();
         const menit = now.getMinutes();
-        const hariAngka = now.getDay(); // 1 = Senin, 5 = Jumat
+        const hariAngka = now.getDay(); 
         const tanggalHariIni = now.getDate();
 
-        // Cek jika Jam 13:00, Hari Senin-Jumat, dan Belum kirim hari ini
+        // Kirim jam 13:00 WIB, hari Senin-Jumat, dan belum terkirim hari ini
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tanggalHariIni) {
             try {
-                // Ambil list kuis berdasarkan hari
                 const kuisHariIni = QUIZ_BANK[hariAngka];
-                
                 if (kuisHariIni && kuisHariIni.length > 0) {
                     const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
                     await sock.sendMessage(ID_GRUP_TUJUAN, {
@@ -66,16 +62,14 @@ async function initQuizScheduler(sock) {
                         }
                     });
                     lastSentDate = tanggalHariIni; 
-                    console.log(`[LOG] Kuis hari ke-${hariAngka} terkirim jam 13:00 WIB`);
+                    console.log(`[LOG] Polling otomatis hari ke-${hariAngka} terkirim.`);
                 }
-            } catch (err) {
-                console.error("Gagal kirim kuis otomatis:", err);
-            }
+            } catch (err) { console.error(err); }
         }
-    }, 30000); // Cek setiap 30 detik
+    }, 30000); 
 }
 
-// ================= HANDLE MESSAGES (TETAP SAMA) =================
+// ================= HANDLE MESSAGES =================
 async function handleMessages(sock, m) {
     try {
         const msg = m.messages[0];
@@ -182,8 +176,9 @@ async function handleMessages(sock, m) {
             
             case '!polling':
                 if (!isAdmin) return;
-                const random = QUIZ_BANK[new Date().getDay()] || QUIZ_BANK[1];
-                const q = random[Math.floor(Math.random() * random.length)];
+                const hNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"})).getDay();
+                const pool = QUIZ_BANK[hNow] || QUIZ_BANK[1];
+                const q = pool[Math.floor(Math.random() * pool.length)];
                 await sock.sendMessage(ID_GRUP_TUJUAN, {
                     poll: { name: `📊 *POLLING*\n${q.question}`, values: q.options, selectableCount: 1 }
                 });
