@@ -1,5 +1,8 @@
 const fs = require('fs');
-const DATA_FILE = './data.json';
+const path = require('path');
+
+// Diarahkan ke Mount Path volume kamu di Railway
+const DATA_FILE = '/app/auth_info/data.json';
 
 const defaultData = {
     senin: "Belum ada tugas.",
@@ -7,15 +10,25 @@ const defaultData = {
     rabu: "Belum ada tugas.",
     kamis: "Belum ada tugas.",
     jumat: "Belum ada tugas.",
-    deadline: "Belum ada info tugas.", // Tambahkan ini agar hasOwnProperty bernilai true
+    deadline: "Belum ada info tugas.",
     terakhir_update: "-"
 };
 
 const database = {
     init: () => {
-        if (!fs.existsSync(DATA_FILE)) {
-            fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
-            console.log("📁 Database JSON baru berhasil dibuat.");
+        try {
+            const dir = path.dirname(DATA_FILE);
+            // Memastikan folder /app/auth_info ada
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+
+            if (!fs.existsSync(DATA_FILE)) {
+                fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
+                console.log("📁 Database JSON baru berhasil dibuat di Volume.");
+            }
+        } catch (error) {
+            console.error("❌ Gagal inisialisasi database:", error);
         }
     },
 
@@ -33,7 +46,6 @@ const database = {
         const data = database.getAll();
         const key = hari.toLowerCase();
         
-        // Sekarang key 'deadline' akan dikenali di sini
         if (data.hasOwnProperty(key)) {
             data[key] = isi;
             data.terakhir_update = new Date().toLocaleString('id-ID', { 
