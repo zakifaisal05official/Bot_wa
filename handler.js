@@ -4,7 +4,7 @@ const { delay } = require("@whiskeysockets/baileys");
 // ================= CONFIG =================
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155']; 
 const NOMOR_PENGURUS = '089531549103';
-const ID_GRUP_TUJUAN = '120363403625197368@g.us'; // Pastikan ID ini benar
+const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
 
 // ================= UTIL: AUTO DATE LOGIC =================
 function getWeekDates() {
@@ -32,6 +32,7 @@ async function handleMessages(sock, m) {
     const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
     const textLower = body.toLowerCase();
     
+    // --- EDUKASI FORMAT ---
     const triggers = ['p', 'pr', 'menu', 'update', 'hapus', 'grup', 'info'];
     if (!body.startsWith('!') && triggers.includes(textLower)) {
         return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\nContoh: *!menu*` });
@@ -64,9 +65,11 @@ async function handleMessages(sock, m) {
         return rekap;
     };
 
-    await sock.readMessages([msg.key]);
-
     try {
+        // Mark as Read
+        await sock.readMessages([msg.key]);
+
+        // --- 1. FITUR UMUM ---
         if (cmd === '!p') return await sock.sendMessage(sender, { text: '✅ *Bot Aktif!*' });
 
         if (cmd === '!pr') {
@@ -80,20 +83,25 @@ async function handleMessages(sock, m) {
             return await sock.sendMessage(sender, { text: menu });
         }
 
-        // --- LOGIKA ADMIN ---
+        // --- 2. LOGIKA ADMIN ---
         if (['!grup', '!update', '!hapus', '!info'].includes(cmd)) {
             if (!isAdmin) return await sock.sendMessage(sender, { text: `🚫 *Akses Ditolak!*` });
+
+            // Fix Session: Kirim presence ke grup sebelum kirim pesan
+            await sock.sendPresenceUpdate('composing', ID_GRUP_TUJUAN);
+            await delay(500);
 
             if (cmd === '!info') {
                 const pesanInfo = body.slice(6).trim();
                 if (!pesanInfo) return await sock.sendMessage(sender, { text: '⚠️ Isi pesannya!' });
                 const pengumuman = `📢 *INFO BARU* 📢\n\n${pesanInfo}\n\n_________________________________`;
-                await sock.sendMessage(ID_GRUP_TUJUAN, { text: pengumuman }); // KIRIM KE GRUP
+                
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: pengumuman });
                 return await sock.sendMessage(sender, { text: '✅ Terkirim ke grup.' });
             }
 
             if (cmd === '!grup') {
-                return await sock.sendMessage(ID_GRUP_TUJUAN, { text: formatRekap() }); // KIRIM KE GRUP
+                return await sock.sendMessage(ID_GRUP_TUJUAN, { text: formatRekap() });
             }
 
             if (cmd === '!update') {
@@ -109,10 +117,10 @@ async function handleMessages(sock, m) {
                 db.updateTugas(targetDay, content);
 
                 if (isOnlySave) {
-                    return await sock.sendMessage(sender, { text: `✅ Berhasil Disimpan!` });
+                    return await sock.sendMessage(sender, { text: `✅ Berhasil Disimpan secara lokal!` });
                 } else {
                     const updateMsg = `📢 *UPDATE TUGAS PR: ${targetDay.toUpperCase()}*\n\n${content}\n\n_Cek list lengkap ketik *!pr*_`;
-                    await sock.sendMessage(ID_GRUP_TUJUAN, { text: updateMsg }); // KIRIM KE GRUP
+                    await sock.sendMessage(ID_GRUP_TUJUAN, { text: updateMsg });
                     return await sock.sendMessage(sender, { text: `✅ Berhasil Update & Kirim ke Grup!` });
                 }
             }
@@ -126,7 +134,12 @@ async function handleMessages(sock, m) {
             }
         }
     } catch (err) {
-        console.error("Error:", err);
+        console.error("Error Detail:", err);
+        // Jika error session, beri tahu admin lewat console/log
+        if (err.message.includes('session')) {
+            console.log("Koneksi ke grup bermasalah, mencoba pancing metadata...");
+            await sock.groupMetadata(ID_GRUP_TUJUAN).catch(() => {});
+        }
     }
 }
 
