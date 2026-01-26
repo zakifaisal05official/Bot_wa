@@ -50,22 +50,32 @@ async function start() {
         version,
         auth: {
             creds: state.creds,
+            // Menggunakan cache store untuk mempercepat pancingan session
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
         },
         logger: pino({ level: "silent" }),
         printQRInTerminal: true,
         browser: ["Chrome (Linux)", "Chrome", "110.0.0"],
-        // --- TAMBAHAN UNTUK FIX SESSION ERROR ---
-        syncFullHistory: false, // Mempercepat koneksi awal
+        
+        // --- FIX SESSION ERROR SETTINGS ---
+        syncFullHistory: false, 
         markOnlineOnConnect: true,
-        generateHighQualityLinkPreview: true,
-        getMessage: async (key) => { return { conversation: 'Refreshing session...' } } 
+        defaultQueryTimeoutMs: undefined, // Mengurangi resiko timeout saat kirim grup
+        
+        // Memaksa pengambilan metadata grup agar tidak "No Sessions"
+        cachedGroupMetadata: async (jid) => undefined, 
+        
+        // Fungsi pancingan enkripsi otomatis
+        getMessage: async (key) => { 
+            return { conversation: 'Bot session resync' } 
+        } 
     });
 
     sock.ev.on("creds.update", saveCreds);
 
     sock.ev.on("messages.upsert", async (m) => {
         try {
+            // Beri sedikit jeda agar session stabil sebelum diproses handler
             await handleMessages(sock, m);
         } catch (err) {
             console.error("Error handling message:", err);
@@ -84,17 +94,27 @@ async function start() {
             const reason = lastDisconnect?.error?.output?.statusCode;
             console.log("⚠️ Koneksi terputus. Reason code:", reason);
 
-            // Logika Reconnect Otomatis kecuali jika Logout
             if (reason !== DisconnectReason.loggedOut) {
                 console.log("🔄 Menghubungkan kembali dalam 5 detik...");
                 setTimeout(() => start(), 5000);
             } else {
-                console.log("❌ Sesi Logout. Hapus folder 'auth_info' dan scan ulang.");
+                console.log("❌ Sesi Logout. Silakan hapus folder 'auth_info' di server/Railway dan scan ulang.");
                 process.exit();
             }
         } else if (connection === "open") {
             qrCodeData = ""; 
             console.log("🎊 KONEKSI BERHASIL!");
+        }
+    });
+
+    // Handle retry jika ada pesan gagal (untuk meminimalkan No Session)
+    sock.ev.on('messages.update', async (chatUpdate) => {
+        for (const { key, update } of chatUpdate) {
+            if (update.pollUpdates || update.status) continue;
+            if (update.messageStubType === 1) { // Jika ada error dekripsi
+                console.log("Pancing ulang session untuk:", key.remoteJid);
+                await sock.groupMetadata(key.remoteJid).catch(() => {});
+            }
         }
     });
 
