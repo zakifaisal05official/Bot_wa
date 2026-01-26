@@ -9,8 +9,9 @@ const {
 const pino = require("pino");
 const express = require("express");
 const QRCode = require("qrcode");
-// --- UPDATE IMPORT ---
-const { handleMessages, initQuizScheduler } = require('./handler'); 
+
+// --- UPDATE IMPORT (Menambahkan initJadwalBesokScheduler) ---
+const { handleMessages, initQuizScheduler, initJadwalBesokScheduler } = require('./handler'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -139,8 +140,9 @@ async function start() {
                 isConnected = true;
                 console.log("🎊 [BERHASIL] Bot sudah online!");
                 
-                // --- UPDATE: AKTIFKAN PENJADWALAN POLLING ---
+                // --- UPDATE: AKTIFKAN PENJADWALAN POLLING & JADWAL BESOK ---
                 initQuizScheduler(sock);
+                initJadwalBesokScheduler(sock); // Menambahkan scheduler jam 17:00 WIB
             }
         });
 
