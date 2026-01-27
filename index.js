@@ -106,12 +106,18 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        // --- FITUR AUTO REJECT CALL ---
+        // --- FITUR AUTO REJECT CALL DENGAN NOTIF CHAT ---
         sock.ev.on('call', async (node) => {
             for (const call of node) {
                 if (call.status === 'offer') {
                     await sock.rejectCall(call.id, call.from);
-                    console.log(`📞 Panggilan dari ${call.from} otomatis ditolak.`);
+                    const callerId = call.from.split('@')[0];
+                    console.log(`📞 Panggilan dari ${callerId} otomatis ditolak.`);
+                    
+                    // Balasan otomatis ke chat penelpon
+                    await sock.sendMessage(call.from, { 
+                        text: "⚠️ *BOT TIDAK MENERIMA PANGGILAN*\n\nMaaf, bot otomatis menolak telepon/video call. Silakan hubungi via chat saja." 
+                    });
                 }
             }
         });
