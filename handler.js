@@ -37,9 +37,9 @@ function getClosestCommand(cmd) {
     });
 }
 
-// --- PERBAIKAN SCHEDULER: Jam 13:00 WIB & Ambil Sesuai Hari ---
+// --- PERBAIKAN SCHEDULER: Jam 14:00 WIB (SESUAI REQUEST) ---
 async function initQuizScheduler(sock) {
-    console.log("✅ Scheduler Polling Aktif (13:00 WIB)");
+    console.log("✅ Scheduler Polling Aktif (14:00 WIB)");
     let lastSentDate = ""; 
 
     setInterval(async () => {
@@ -49,7 +49,7 @@ async function initQuizScheduler(sock) {
         const hariAngka = now.getDay(); 
         const tanggalHariIni = now.getDate();
 
-        if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tanggalHariIni) {
+        if (jam === 14 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tanggalHariIni) {
             try {
                 const kuisHariIni = QUIZ_BANK[hariAngka];
                 if (kuisHariIni && kuisHariIni.length > 0) {
@@ -62,14 +62,14 @@ async function initQuizScheduler(sock) {
                         }
                     });
                     lastSentDate = tanggalHariIni; 
-                    console.log(`[LOG] Polling otomatis hari ke-${hariAngka} terkirim.`);
+                    console.log(`[LOG] Polling otomatis terkirim.`);
                 }
             } catch (err) { console.error(err); }
         }
     }, 30000); 
 }
 
-// --- SCHEDULER JADWAL BESOK: Jam 17:00 WIB ---
+// --- SCHEDULER JADWAL BESOK: Jam 17:00 WIB (FIXED LOGIC) ---
 async function initJadwalBesokScheduler(sock) {
     console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
     let lastSentJadwal = "";
@@ -83,8 +83,8 @@ async function initJadwalBesokScheduler(sock) {
 
         if (jam === 17 && menit === 0 && lastSentJadwal !== tanggalHariIni) {
             let hariBesok = hariIni + 1;
-            // Hanya kirim jika besok Senin - Jumat (Minggu sore s/d Kamis sore)
-            if (hariBesok > 5 || hariBesok === 0) return; 
+            if (hariBesok > 6) hariBesok = 0;
+            if (hariBesok < 1 || hariBesok > 5) return; 
 
             try {
                 const { dates } = getWeekDates();
@@ -95,10 +95,17 @@ async function initJadwalBesokScheduler(sock) {
                 const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
                 
                 const currentData = db.getAll();
-                const dataPR = (currentData[daysKey[hariBesok]] || "").toLowerCase();
-                const adaPR = dataPR !== "" && !dataPR.includes("belum ada tugas");
+                const dataPRBesok = (currentData[daysKey[hariBesok]] || "").toLowerCase();
 
                 const jadwalFinal = rawMapel.map(mapel => {
+                    // Membersihkan emoji untuk pencarian nama mapel murni
+                    const mapelMurni = mapel.replace(/[^\w\s]/gi, '').toLowerCase().trim();
+                    
+                    // Logic: Cek apakah nama mapel ada di dalam tulisan database
+                    const adaPR = dataPRBesok !== "" && 
+                                 !dataPRBesok.includes("belum ada tugas") && 
+                                 dataPRBesok.includes(mapelMurni);
+
                     const status = adaPR ? "ada pr" : "gak ada pr";
                     return `${mapel} ➝ ${status}`;
                 }).join('\n');
