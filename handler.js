@@ -3,7 +3,7 @@ const { delay } = require("@whiskeysockets/baileys");
 const fs = require('fs');
 const { QUIZ_BANK } = require('./quiz'); 
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
-// Import tambahan untuk mendukung logika struktur mapel
+// Import ini wajib ada agar fitur urutan mapel jalan
 const { MAPEL_CONFIG, STRUKTUR_JADWAL, LABELS } = require('./pelajaran');
 
 // ================= CONFIG =================
@@ -175,23 +175,23 @@ async function handleMessages(sock, m) {
         const cmd = args[0].toLowerCase();
         const { dates, periode } = getWeekDates();
 
-        // --- INTERNAL LOGIC: PROSES TUGAS MENGIKUTI STRUKTUR ---
-        const processTaskLogic = (dayKey, input, datesArray) => {
-            const daysMapping = { 'senin': 0, 'selasa': 1, 'rabu': 2, 'kamis': 3, 'jumat': 4 };
+        // --- LOGIKA INTERNAL PROSES TUGAS (URUTAN MAPEL) ---
+        const getProcessedTask = (dayKey, input) => {
+            const dayMap = { 'senin': 0, 'selasa': 1, 'rabu': 2, 'kamis': 3, 'jumat': 4 };
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
             let currentData = db.get(dayKey) || "";
             let organized = [];
             
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
-                const namaEmoji = MAPEL_CONFIG[mKey];
+                const emojiMapel = MAPEL_CONFIG[mKey];
                 if (input.toLowerCase().includes(mKey.toLowerCase())) {
-                    let detail = input.toLowerCase().split(mKey.toLowerCase())[1].split('label:')[0].trim();
-                    let selectedLabel = LABELS['biasa'];
-                    for (let lb in LABELS) { if (input.toLowerCase().includes(lb)) { selectedLabel = LABELS[lb]; break; } }
-                    organized.push(`• ${namaEmoji}\n➝ ${detail}\n--} ${selectedLabel} |\n⏰ Deadline: ${dayLabels[daysMapping[dayKey]]}, ${datesArray[daysMapping[dayKey]]}`);
+                    let desc = input.toLowerCase().split(mKey.toLowerCase())[1].split('label:')[0].trim();
+                    let lbl = LABELS['biasa'];
+                    for (let l in LABELS) { if (input.toLowerCase().includes(l)) { lbl = LABELS[l]; break; } }
+                    organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${lbl} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
                 } else {
-                    const existing = currentData.split('\n\n').find(s => s.includes(namaEmoji));
-                    if (existing) organized.push(existing);
+                    const exist = currentData.split('\n\n').find(s => s.includes(emojiMapel));
+                    if (exist) organized.push(exist);
                 }
             });
             return organized.join('\n\n');
@@ -201,18 +201,16 @@ async function handleMessages(sock, m) {
             const currentData = db.getAll();
             let rekap = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n`;
             rekap += `\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-            
             const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
             days.forEach((day, i) => {
                 rekap += `📅 *${dayLabels[i]}* (${dates[i]})\n`;
                 let tugas = currentData[day];
-                if (!tgs || tgs.includes("Belum ada tugas") || tgs === "") {
+                if (!tugas || tugas.includes("Belum ada tugas") || tugas === "") {
                     rekap += `└─ ✅ _Tidak ada PR_\n\n`;
                 } else {
-                    // Tampilan tetap menggunakan struktur jadwal yang tersimpan
-                    rekap += `${tgs}\n\n`;
+                    rekap += `${tugas}\n\n`;
                 }
             });
 
@@ -267,65 +265,67 @@ async function handleMessages(sock, m) {
                 break;
 
             case '!info':
-                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const infoMessage = body.slice(6).trim();
-                if (!infoMessage) return;
-                await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${infoMessage}\n\n_— Pengurus_` });
-                await sock.sendMessage(sender, { text: '✅ Terkirim.' });
-                break;
-
             case '!grup':
-                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                await sendToGroupSafe({ text: formatRekap() });
-                await sock.sendMessage(sender, { text: '✅ Rekap terkirim.' });
-                break;
-
             case '!update':
             case '!update_jadwal':
-                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-                const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
-                let dayIdx = days.findIndex(day => textLower.includes(day));
-                if (dayIdx === -1) return;
-
-                let targetDay = days[dayIdx];
-                // Proses menggunakan logika struktur mapel & label
-                let result = processTaskLogic(targetDay, body, dates);
-                db.updateTugas(targetDay, result);
-                
-                if (cmd === '!update') {
-                    const pesanGrup = `📌 *Daftar tugas/ pr di Minggu ini* 📢\n` +
-                                     `➝ ${periode}\n\n` +
-                                     `---------------------------------------------------------------------------------\n\n\n` +
-                                     `*\`📅 ${dayLabels[dayIdx]}\`* ➝ ${dates[dayIdx]}\n\n` +
-                                     `${result}`;
-
-                    await sendToGroupSafe({ text: pesanGrup });
-                }
-                await sock.sendMessage(sender, { text: `✅ Berhasil Update ${dayLabels[dayIdx]}!` });
-                break;
-
             case '!hapus':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const keys = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'];
-                let targetKey = keys.find(key => textLower.includes(key));
-                if (!targetKey) return;
 
-                if (targetKey === 'deadline') {
-                    db.updateTugas('deadline', "Semua tugas sudah selesai.");
-                } else {
-                    // Fitur hapus cerdas: bisa hapus satu mapel saja
-                    let mapelKeys = Object.keys(MAPEL_CONFIG);
-                    let targetMapel = mapelKeys.find(m => textLower.includes(m.toLowerCase()));
-                    if (targetMapel) {
-                        let current = db.get(targetKey) || "";
-                        let filtered = current.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
-                        db.updateTugas(targetKey, filtered || "Belum ada tugas.");
-                    } else {
-                        db.updateTugas(targetKey, "Belum ada tugas.");
-                    }
+                if (cmd === '!info') {
+                    const infoMessage = body.slice(6).trim();
+                    if (!infoMessage) return;
+                    await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${infoMessage}\n\n_— Pengurus_` });
+                    await sock.sendMessage(sender, { text: '✅ Terkirim.' });
                 }
-                await sock.sendMessage(sender, { text: `✅ Data terhapus.` });
+
+                if (cmd === '!grup') {
+                    await sendToGroupSafe({ text: formatRekap() });
+                    await sock.sendMessage(sender, { text: '✅ Rekap terkirim.' });
+                }
+
+                if (cmd === '!update' || cmd === '!update_jadwal') {
+                    const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
+                    const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+                    let dayIdx = days.findIndex(day => textLower.includes(day));
+                    if (dayIdx === -1) return;
+
+                    let targetDay = days[dayIdx];
+                    // Menggunakan logika baru untuk urutan mapel
+                    let result = getProcessedTask(targetDay, body);
+                    db.updateTugas(targetDay, result);
+                    
+                    if (cmd === '!update') {
+                        const pesanGrup = `📌 *Daftar tugas/ pr di Minggu ini* 📢\n` +
+                                         `➝ ${periode}\n\n` +
+                                         `---------------------------------------------------------------------------------\n\n\n` +
+                                         `*\`📅 ${dayLabels[dayIdx]}\`* ➝ ${dates[dayIdx]}\n\n` +
+                                         `${result}`;
+
+                        await sendToGroupSafe({ text: pesanGrup });
+                    }
+                    await sock.sendMessage(sender, { text: `✅ Berhasil Update!` });
+                }
+
+                if (cmd === '!hapus') {
+                    const keys = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'];
+                    let targetKey = keys.find(key => textLower.includes(key));
+                    if (!targetKey) return;
+                    
+                    if (targetKey !== 'deadline') {
+                        let mapelKeys = Object.keys(MAPEL_CONFIG);
+                        let targetMapel = mapelKeys.find(m => textLower.includes(m.toLowerCase()));
+                        if (targetMapel) {
+                            let current = db.get(targetKey) || "";
+                            let filtered = current.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
+                            db.updateTugas(targetKey, filtered || "Belum ada tugas.");
+                        } else {
+                            db.updateTugas(targetKey, "Belum ada tugas.");
+                        }
+                    } else {
+                        db.updateTugas('deadline', "Semua tugas sudah selesai.");
+                    }
+                    await sock.sendMessage(sender, { text: `✅ Data terhapus.` });
+                }
                 break;
         }
     } catch (err) { console.error(err); }
