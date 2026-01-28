@@ -36,32 +36,51 @@ const database = {
         try {
             if (!fs.existsSync(DATA_FILE)) return defaultData;
             const content = fs.readFileSync(DATA_FILE, 'utf-8');
-            return JSON.parse(content);
+            
+            // Pengaman: Jika file kosong, kembalikan defaultData
+            if (!content.trim()) return defaultData;
+            
+            const parsed = JSON.parse(content);
+            
+            // Pengaman: Gabungkan data yang ada dengan defaultData agar tidak ada property yang undefined
+            return { ...defaultData, ...parsed };
         } catch (error) {
+            console.error("⚠️ Error saat membaca database, menggunakan data default.");
             return defaultData;
         }
     },
 
     updateTugas: (hari, isi) => {
-        const data = database.getAll();
-        const key = hari.toLowerCase();
-        
-        if (data.hasOwnProperty(key)) {
-            data[key] = isi;
-            data.terakhir_update = new Date().toLocaleString('id-ID', { 
-                timeZone: 'Asia/Jakarta',
-                dateStyle: 'medium',
-                timeStyle: 'short'
-            });
-            fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-            return true;
+        try {
+            const data = database.getAll();
+            const key = hari.toLowerCase();
+            
+            // Tetap menggunakan hasOwnProperty sesuai struktur asli Anda
+            if (data.hasOwnProperty(key) || key === 'deadline') {
+                data[key] = isi;
+                data.terakhir_update = new Date().toLocaleString('id-ID', { 
+                    timeZone: 'Asia/Jakarta',
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+                fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error("❌ Gagal update tugas:", error);
+            return false;
         }
-        return false;
     },
 
     resetSemua: () => {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
-        return true;
+        try {
+            fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
+            return true;
+        } catch (error) {
+            console.error("❌ Gagal reset database:", error);
+            return false;
+        }
     }
 };
 
