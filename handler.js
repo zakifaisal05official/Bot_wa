@@ -5,7 +5,7 @@ const { QUIZ_BANK } = require('./quiz');
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 
 // ================= CONFIG =================
-const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155']; 
+const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155' , '241849843351688']; 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
 
 // ================= UTIL: AUTO DATE LOGIC =================
