@@ -175,12 +175,9 @@ async function handleMessages(sock, m) {
         const cmd = args[0].toLowerCase();
         const { dates, periode } = getWeekDates();
 
-        // --- LOGIKA INTERNAL PROSES TUGAS (PERBAIKAN ERROR PADA db.getAll) ---
         const getProcessedTask = (dayKey, input) => {
             const dayMap = { 'senin': 0, 'selasa': 1, 'rabu': 2, 'kamis': 3, 'jumat': 4 };
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
-            
-            // Perbaikan utama: Menggunakan db.getAll() karena db.get tidak tersedia di data.js kamu
             let allData = db.getAll();
             let currentData = allData[dayKey] || "";
             let organized = [];
@@ -290,9 +287,21 @@ async function handleMessages(sock, m) {
                     const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                     const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
                     let dayIdx = days.findIndex(day => textLower.includes(day));
-                    if (dayIdx === -1) return;
+                    
+                    if (dayIdx === -1) {
+                        return await sock.sendMessage(sender, { text: "❌ *HARI TIDAK DITEMUKAN*\nContoh: *!update senin PAIBP hal 10*" });
+                    }
 
                     let targetDay = days[dayIdx];
+                    const availableMapels = STRUKTUR_JADWAL[targetDay];
+                    const mapelDitemukan = availableMapels.find(m => textLower.includes(m.toLowerCase()));
+
+                    if (!mapelDitemukan) {
+                        return await sock.sendMessage(sender, { 
+                            text: `❌ *MAPEL SALAH/TYPO*\n\nMapel hari *${dayLabels[dayIdx]}* adalah:\n> ${availableMapels.join(', ')}\n\n_Pastikan penulisan sesuai kata kunci!_` 
+                        });
+                    }
+
                     let result = getProcessedTask(targetDay, body);
                     db.updateTugas(targetDay, result);
                     
@@ -305,13 +314,16 @@ async function handleMessages(sock, m) {
 
                         await sendToGroupSafe({ text: pesanGrup });
                     }
-                    await sock.sendMessage(sender, { text: `✅ Berhasil Update!` });
+                    await sock.sendMessage(sender, { text: `✅ Berhasil Update mapel *${mapelDitemukan.toUpperCase()}*!` });
                 }
 
                 if (cmd === '!hapus') {
                     const keys = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'];
                     let targetKey = keys.find(key => textLower.includes(key));
-                    if (!targetKey) return;
+                    
+                    if (!targetKey) {
+                        return await sock.sendMessage(sender, { text: "❌ *FORMAT SALAH*\nContoh: *!hapus senin* atau *!hapus senin PAIBP*" });
+                    }
                     
                     if (targetKey !== 'deadline') {
                         let mapelKeys = Object.keys(MAPEL_CONFIG);
@@ -320,17 +332,19 @@ async function handleMessages(sock, m) {
                             let currentData = db.getAll()[targetKey] || "";
                             let filtered = currentData.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
                             db.updateTugas(targetKey, filtered || "Belum ada tugas.");
+                            await sock.sendMessage(sender, { text: `✅ Tugas *${targetMapel}* berhasil dihapus.` });
                         } else {
                             db.updateTugas(targetKey, "Belum ada tugas.");
+                            await sock.sendMessage(sender, { text: `✅ Semua data hari *${targetKey}* dihapus.` });
                         }
                     } else {
                         db.updateTugas('deadline', "Semua tugas sudah selesai.");
+                        await sock.sendMessage(sender, { text: `✅ Data deadline dibersihkan.` });
                     }
-                    await sock.sendMessage(sender, { text: `✅ Data terhapus.` });
                 }
                 break;
         }
     } catch (err) { console.error(err); }
 }
 
-module.exports = { handleMessages, initQuizScheduler, initJadwalBesokScheduler };
+module.exports = { handleMessages, initQuizScheduler, initJadwalBesokScheduler };              
