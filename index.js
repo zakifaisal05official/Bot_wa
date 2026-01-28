@@ -9,8 +9,9 @@ const {
 const pino = require("pino");
 const express = require("express");
 const QRCode = require("qrcode");
+const os = require("os"); // TAMBAHAN: Untuk cek RAM
 
-// --- UPDATE IMPORT (Menambahkan initJadwalBesokScheduler) ---
+// --- UPDATE IMPORT ---
 const { handleMessages, initQuizScheduler, initJadwalBesokScheduler } = require('./handler'); 
 
 const app = express();
@@ -22,6 +23,13 @@ let sock;
 // --- 1. WEB SERVER UI ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
+
+    // Hitung Statistik RAM & Sistem
+    const totalRAM = (os.totalmem() / (1024 * 1024 * 1024)).toFixed(2);
+    const freeRAM = (os.freemem() / (1024 * 1024 * 1024)).toFixed(2);
+    const usedRAM = (totalRAM - freeRAM).toFixed(2);
+    const uptime = (os.uptime() / 3600).toFixed(1);
+
     if (isConnected) {
         return res.send(`
             <html>
@@ -30,9 +38,10 @@ app.get("/", (req, res) => {
                     <meta name="viewport" content="width=device-width, initial-scale=1">
                     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
                     <style>
-                        body { background: #075e54; display: flex; align-items: center; justify-content: center; height: 100vh; color: white; margin: 0; font-family: sans-serif; }
-                        .card { background: white; color: #333; border-radius: 15px; padding: 2rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+                        body { background: #075e54; display: flex; align-items: center; justify-content: center; min-height: 100vh; color: white; margin: 0; font-family: sans-serif; }
+                        .card { background: white; color: #333; border-radius: 15px; padding: 2rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 90%; max-width: 450px; }
                         .dot { height: 15px; width: 15px; background-color: #25d366; border-radius: 50%; display: inline-block; margin-right: 10px; animation: pulse 1.5s infinite; }
+                        .info-box { background: #f8f9fa; border-radius: 10px; padding: 10px; margin-top: 10px; text-align: left; font-size: 0.9rem; }
                         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
                     </style>
                 </head>
@@ -43,8 +52,13 @@ app.get("/", (req, res) => {
                             <h2 class="mb-0">BOT ONLINE</h2>
                         </div>
                         <p class="text-muted">Sesi aktif. Bot siap menerima perintah.</p>
+                        <div class="info-box">
+                            <p class="mb-1"><strong>Memory:</strong> ${usedRAM}GB / ${totalRAM}GB</p>
+                            <p class="mb-1"><strong>Server Uptime:</strong> ${uptime} Jam</p>
+                            <p class="mb-0"><strong>Platform:</strong> ${os.platform()} (${os.arch()})</p>
+                        </div>
                         <hr>
-                        <button class="btn btn-success w-100" onclick="location.reload()">Cek Status Lagi</button>
+                        <button class="btn btn-success w-100" onclick="location.reload()">Refresh Info</button>
                     </div>
                 </body>
             </html>
@@ -164,4 +178,4 @@ async function start() {
     }
 }
 
-start();
+start();                                             
