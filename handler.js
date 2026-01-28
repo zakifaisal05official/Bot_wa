@@ -175,11 +175,14 @@ async function handleMessages(sock, m) {
         const cmd = args[0].toLowerCase();
         const { dates, periode } = getWeekDates();
 
-        // --- LOGIKA INTERNAL PROSES TUGAS (URUTAN MAPEL) ---
+        // --- LOGIKA INTERNAL PROSES TUGAS (PERBAIKAN ERROR PADA db.getAll) ---
         const getProcessedTask = (dayKey, input) => {
             const dayMap = { 'senin': 0, 'selasa': 1, 'rabu': 2, 'kamis': 3, 'jumat': 4 };
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
-            let currentData = db.get(dayKey) || "";
+            
+            // Perbaikan utama: Menggunakan db.getAll() karena db.get tidak tersedia di data.js kamu
+            let allData = db.getAll();
+            let currentData = allData[dayKey] || "";
             let organized = [];
             
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
@@ -290,7 +293,6 @@ async function handleMessages(sock, m) {
                     if (dayIdx === -1) return;
 
                     let targetDay = days[dayIdx];
-                    // Menggunakan logika baru untuk urutan mapel
                     let result = getProcessedTask(targetDay, body);
                     db.updateTugas(targetDay, result);
                     
@@ -315,8 +317,8 @@ async function handleMessages(sock, m) {
                         let mapelKeys = Object.keys(MAPEL_CONFIG);
                         let targetMapel = mapelKeys.find(m => textLower.includes(m.toLowerCase()));
                         if (targetMapel) {
-                            let current = db.get(targetKey) || "";
-                            let filtered = current.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
+                            let currentData = db.getAll()[targetKey] || "";
+                            let filtered = currentData.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
                             db.updateTugas(targetKey, filtered || "Belum ada tugas.");
                         } else {
                             db.updateTugas(targetKey, "Belum ada tugas.");
