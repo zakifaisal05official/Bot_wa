@@ -39,7 +39,7 @@ function getClosestCommand(cmd) {
     });
 }
 
-// --- PERBAIKAN SCHEDULER: Jam 14:00 WIB (SESUAI REQUEST) ---
+// --- PERBAIKAN SCHEDULER: Jam 14:00 WIB ---
 async function initQuizScheduler(sock) {
     console.log("✅ Scheduler Polling Aktif (14:00 WIB)");
     let lastSentDate = ""; 
@@ -71,7 +71,7 @@ async function initQuizScheduler(sock) {
     }, 30000); 
 }
 
-// --- SCHEDULER JADWAL BESOK: Jam 17:00 WIB (FIXED LOGIC) ---
+// --- SCHEDULER JADWAL BESOK: Jam 17:00 WIB ---
 async function initJadwalBesokScheduler(sock) {
     console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
     let lastSentJadwal = "";
@@ -96,7 +96,7 @@ async function initJadwalBesokScheduler(sock) {
                 const rawMapel = JADWAL_PELAJARAN[hariBesok].split('\n');
                 const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
                 
-                const currentData = db.getAll();
+                const currentData = db.getAll() || {};
                 const dataPRBesok = (currentData[daysKey[hariBesok]] || "").toLowerCase();
 
                 const jadwalFinal = rawMapel.map(mapel => {
@@ -147,7 +147,7 @@ async function handleMessages(sock, m) {
         }
 
         const triggers = ['p', 'pr', 'menu', 'update', 'update_jadwal', 'hapus', 'grup', 'info', 'deadline', 'polling'];
-        const firstWord = textLower.split(' ')[0];
+        const firstWord = textLower.split(' ')[0].replace('!', '');
         
         if (!body.startsWith('!') && triggers.includes(firstWord)) {
             return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\n💡 Contoh: *!menu*` });
@@ -178,16 +178,20 @@ async function handleMessages(sock, m) {
         const getProcessedTask = (dayKey, input) => {
             const dayMap = { 'senin': 0, 'selasa': 1, 'rabu': 2, 'kamis': 3, 'jumat': 4 };
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
-            let allData = db.getAll();
+            let allData = db.getAll() || {};
             let currentData = allData[dayKey] || "";
             let organized = [];
             
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
                 const emojiMapel = MAPEL_CONFIG[mKey];
                 if (input.toLowerCase().includes(mKey.toLowerCase())) {
-                    let desc = input.toLowerCase().split(mKey.toLowerCase())[1].split('label:')[0].trim();
+                    let parts = input.toLowerCase().split(mKey.toLowerCase());
+                    let desc = (parts[1] && parts[1].trim() !== "") ? parts[1].split('label:')[0].trim() : "";
+                    
+                    if (desc === "") return; // Jangan tambahkan jika admin tidak menulis tugas
+
                     let lbl = LABELS['biasa'];
-                    for (let l in LABELS) { if (input.toLowerCase().includes(l)) { lbl = LABELS[l]; break; } }
+                    for (let l in LABELS) { if (input.toLowerCase().includes(l.toLowerCase())) { lbl = LABELS[l]; break; } }
                     organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${lbl} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
                 } else {
                     const exist = currentData.split('\n\n').find(s => s.includes(emojiMapel));
@@ -198,7 +202,7 @@ async function handleMessages(sock, m) {
         };
 
         const formatRekap = () => {
-            const currentData = db.getAll();
+            const currentData = db.getAll() || {};
             let rekap = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n`;
             rekap += `\n━━━━━━━━━━━━━━━━━━━━\n\n`;
             const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
@@ -240,7 +244,7 @@ async function handleMessages(sock, m) {
 
             case '!deadline':
                 if (args.length === 1) {
-                    const infoDl = db.getAll().deadline || "Semua tugas sudah selesai.";
+                    const infoDl = (db.getAll() || {}).deadline || "Semua tugas sudah selesai.";
                     await sock.sendMessage(sender, { text: `⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN*\n\n${infoDl}` });
                 } else {
                     if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
@@ -298,8 +302,14 @@ async function handleMessages(sock, m) {
 
                     if (!mapelDitemukan) {
                         return await sock.sendMessage(sender, { 
-                            text: `❌ *MAPEL SALAH/TYPO*\n\nMapel hari *${dayLabels[dayIdx]}* adalah:\n> ${availableMapels.join(', ')}\n\n_Pastikan penulisan sesuai kata kunci!_` 
+                            text: `❌ *MAPEL SALAH/TYPO*\n\nMapel hari *${dayLabels[dayIdx]}* adalah:\n> ${availableMapels.join(', ')}` 
                         });
+                    }
+
+                    // VALIDASI: Admin harus mengisi tugas
+                    const checkPart = body.toLowerCase().split(mapelDitemukan.toLowerCase());
+                    if (!checkPart[1] || checkPart[1].trim() === "") {
+                        return await sock.sendMessage(sender, { text: `⚠️ *DETAIL TUGAS KOSONG*\nHarap tulis detail tugas setelah nama mapel.` });
                     }
 
                     let result = getProcessedTask(targetDay, body);
@@ -329,8 +339,8 @@ async function handleMessages(sock, m) {
                         let mapelKeys = Object.keys(MAPEL_CONFIG);
                         let targetMapel = mapelKeys.find(m => textLower.includes(m.toLowerCase()));
                         if (targetMapel) {
-                            let currentData = db.getAll()[targetKey] || "";
-                            let filtered = currentData.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
+                            let currentDataH = (db.getAll() || {})[targetKey] || "";
+                            let filtered = currentDataH.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
                             db.updateTugas(targetKey, filtered || "Belum ada tugas.");
                             await sock.sendMessage(sender, { text: `✅ Tugas *${targetMapel}* berhasil dihapus.` });
                         } else {
@@ -344,7 +354,7 @@ async function handleMessages(sock, m) {
                 }
                 break;
         }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("CRITICAL ERROR:", err); }
 }
 
-module.exports = { handleMessages, initQuizScheduler, initJadwalBesokScheduler };              
+module.exports = { handleMessages, initQuizScheduler, initJadwalBesokScheduler };
