@@ -163,6 +163,8 @@ async function start() {
                 // --- UPDATE: AKTIFKAN PENJADWALAN POLLING & JADWAL BESOK ---
                 initQuizScheduler(sock);
                 initJadwalBesokScheduler(sock); // Menambahkan scheduler jam 17:00 WIB
+                initSmartFeedbackScheduler(sock);
+                
             }
         });
 
