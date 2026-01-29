@@ -9,10 +9,16 @@ const {
 const pino = require("pino");
 const express = require("express");
 const QRCode = require("qrcode");
-const os = require("os"); // TAMBAHAN: Untuk cek RAM
+const os = require("os"); 
 
-// --- UPDATE IMPORT ---
-const { handleMessages, initQuizScheduler, initJadwalBesokScheduler } = require('./handler'); 
+// --- UPDATE IMPORT (DITAMBAHKAN AGAR TIDAK CRASH) ---
+const { 
+    handleMessages, 
+    initQuizScheduler, 
+    initJadwalBesokScheduler, 
+    initSmartFeedbackScheduler, // Ditambahkan
+    kuisAktif                   // Ditambahkan untuk mencatat vote
+} = require('./handler'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,7 +30,6 @@ let sock;
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
 
-    // Hitung Statistik RAM & Sistem
     const totalRAM = (os.totalmem() / (1024 * 1024 * 1024)).toFixed(2);
     const freeRAM = (os.freemem() / (1024 * 1024 * 1024)).toFixed(2);
     const usedRAM = (totalRAM - freeRAM).toFixed(2);
@@ -120,15 +125,22 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        // --- FITUR AUTO REJECT CALL DENGAN NOTIF CHAT ---
+        // --- HANDLE VOTE POLLING (Agar Feedback Otomatis Jalan) ---
+        sock.ev.on('messages.update', async (updates) => {
+            for (const update of updates) {
+                if (update.update.pollUpdates && kuisAktif.msgId === update.key.id) {
+                    const pollUpdate = update.update.pollUpdates[0];
+                    kuisAktif.votes[pollUpdate.voterJid] = pollUpdate.selectedOptions;
+                }
+            }
+        });
+
         sock.ev.on('call', async (node) => {
             for (const call of node) {
                 if (call.status === 'offer') {
                     await sock.rejectCall(call.id, call.from);
                     const callerId = call.from.split('@')[0];
                     console.log(`📞 Panggilan dari ${callerId} otomatis ditolak.`);
-                    
-                    // Balasan otomatis ke chat penelpon
                     await sock.sendMessage(call.from, { 
                         text: "⚠️ *BOT TIDAK MENERIMA PANGGILAN*\n\nMaaf, bot otomatis menolak telepon/video call. Silakan hubungi via chat saja." 
                     });
@@ -147,24 +159,18 @@ async function start() {
             if (connection === "close") {
                 isConnected = false;
                 const reason = lastDisconnect?.error?.output?.statusCode;
-                console.log("Koneksi terputus. Alasan:", reason);
-                
                 if (reason !== DisconnectReason.loggedOut) {
-                    console.log("Mencoba menyambungkan kembali dalam 5 detik...");
                     setTimeout(start, 5000);
-                } else {
-                    console.log("Sesi Logout. Silakan hapus folder auth_info dan scan ulang.");
                 }
             } else if (connection === "open") {
                 qrCodeData = ""; 
                 isConnected = true;
                 console.log("🎊 [BERHASIL] Bot sudah online!");
                 
-                // --- UPDATE: AKTIFKAN PENJADWALAN POLLING & JADWAL BESOK ---
+                // AKTIFKAN SEMUA SCHEDULER
                 initQuizScheduler(sock);
-                initJadwalBesokScheduler(sock); // Menambahkan scheduler jam 17:00 WIB
-                initSmartFeedbackScheduler(sock);
-                
+                initJadwalBesokScheduler(sock);
+                initSmartFeedbackScheduler(sock); 
             }
         });
 
@@ -180,4 +186,4 @@ async function start() {
     }
 }
 
-start();                                             
+start();
