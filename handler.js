@@ -36,7 +36,7 @@ function getWeekDates() {
 }
 
 function getClosestCommand(cmd) {
-    const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
+    const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim'];
     if (validCommands.includes(cmd)) return null;
     return validCommands.find(v => {
         const distance = Math.abs(v.length - cmd.length);
@@ -190,7 +190,7 @@ async function handleMessages(sock, m) {
             process.exit(1);
         }
 
-        const triggers = ['p', 'pr', 'menu', 'update', 'update_jadwal', 'hapus', 'grup', 'info', 'deadline', 'polling'];
+        const triggers = ['p', 'pr', 'menu', 'update', 'update_jadwal', 'hapus', 'grup', 'info', 'deadline', 'polling', 'polling_kirim'];
         const firstWord = textLower.split(' ')[0].replace('!', '');
         if (!body.startsWith('!') && triggers.includes(firstWord)) {
             return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\n💡 Contoh: *!menu*` });
@@ -199,7 +199,7 @@ async function handleMessages(sock, m) {
         if (body.startsWith('!')) {
             const cmdInput = body.split(' ')[0].toLowerCase();
             const suggestion = getClosestCommand(cmdInput);
-            const validCmds = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot'];
+            const validCmds = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim'];
             if (!validCmds.includes(cmdInput) && suggestion) {
                 return await sock.sendMessage(sender, { text: `🧐 *Perintah tidak dikenal.*\n\nMungkin maksud Anda: *${suggestion}* ?\nKetik *!menu* untuk melihat semua perintah.` });
             }
@@ -282,7 +282,7 @@ async function handleMessages(sock, m) {
                 }
                 break;
             case '!menu':
-                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !update_jadwal [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling\n🔸 !info [pesan]`;
+                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !update_jadwal [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling\n🔸 !polling_kirim [hari]\n🔸 !info [pesan]`;
                 await sock.sendMessage(sender, { text: menu });
                 break;
             case '!polling':
@@ -296,6 +296,26 @@ async function handleMessages(sock, m) {
                 });
                 kuisAktif = { msgId: sMsg.key.id, data: q, votes: {} };
                 break;
+
+            case '!polling_kirim':
+                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
+                try {
+                    const daysMap = { 'minggu': 0, 'senin': 1, 'selasa': 2, 'rabu': 3, 'kamis': 4, 'jumat': 5, 'sabtu': 6 };
+                    let hariInput = args[1] ? args[1].toLowerCase() : null;
+                    let targetDay = hariInput !== null ? daysMap[hariInput] : getWIBDate().getDay();
+                    if (targetDay === undefined) return await sock.sendMessage(sender, { text: "❌ *HARI SALAH*\nGunakan: !polling_kirim jumat" });
+                    const kuisTerpilih = QUIZ_BANK[targetDay];
+                    if (kuisTerpilih && kuisTerpilih.length > 0) {
+                        const randomQuiz = kuisTerpilih[Math.floor(Math.random() * kuisTerpilih.length)];
+                        const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
+                            poll: { name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`, values: randomQuiz.options, selectableCount: 1 }
+                        });
+                        kuisAktif = { msgId: sentMsg.key.id, data: randomQuiz, votes: {} };
+                        await sock.sendMessage(sender, { text: `✅ Berhasil kirim poling manual.` });
+                    }
+                } catch (err) { console.error("Manual Polling Error:", err); }
+                break;
+
             case '!info':
             case '!grup':
             case '!update':
