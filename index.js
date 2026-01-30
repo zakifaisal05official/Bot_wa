@@ -10,14 +10,15 @@ const pino = require("pino");
 const express = require("express");
 const QRCode = require("qrcode");
 const os = require("os"); 
+const path = require("path");
 
-// --- UPDATE IMPORT (DITAMBAHKAN AGAR TIDAK CRASH) ---
+// --- IMPORT DARI HANDLER ---
 const { 
     handleMessages, 
     initQuizScheduler, 
     initJadwalBesokScheduler, 
-    initSmartFeedbackScheduler, // Ditambahkan
-    kuisAktif                   // Ditambahkan untuk mencatat vote
+    initSmartFeedbackScheduler,
+    kuisAktif
 } = require('./handler'); 
 
 const app = express();
@@ -25,14 +26,19 @@ const port = process.env.PORT || 3000;
 let qrCodeData = ""; 
 let isConnected = false; 
 let sock; 
+let isStarting = false; // Flag untuk mencegah multiple instansi start()
 
 // --- 1. WEB SERVER UI ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
 
-    const totalRAM = (os.totalmem() / (1024 * 1024 * 1024)).toFixed(2);
-    const freeRAM = (os.freemem() / (1024 * 1024 * 1024)).toFixed(2);
-    const usedRAM = (totalRAM - freeRAM).toFixed(2);
+    // Kalkulasi RAM yang lebih akurat
+    const totalMemBytes = os.totalmem();
+    const freeMemBytes = os.freemem();
+    const usedMemBytes = totalMemBytes - freeMemBytes;
+    
+    const totalRAM = (totalMemBytes / (1024 ** 3)).toFixed(2);
+    const usedRAM = (usedMemBytes / (1024 ** 3)).toFixed(2);
     const uptime = (os.uptime() / 3600).toFixed(1);
 
     if (isConnected) {
@@ -105,9 +111,13 @@ app.listen(port, "0.0.0.0", () => {
 // --- 2. LOGIKA WHATSAPP ---
 
 async function start() {
+    if (isStarting) return; // Cegah double start
+    isStarting = true;
+
     try {
         const { version } = await fetchLatestBaileysVersion();
-        const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+        // Menggunakan path absolute untuk menghindari EBUSY di beberapa environment
+        const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'auth_info'));
 
         sock = makeWASocket({
             version,
@@ -116,8 +126,8 @@ async function start() {
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
             },
             logger: pino({ level: "silent" }),
-            printQRInTerminal: true,
-            browser: ["Ubuntu", "Chrome", "20.0.04"],
+            printQRInTerminal: false, // Diubah ke false (sudah dihandle via Web UI)
+            browser: ["Ubuntu", "Chrome", "20.0.0.4"],
             getMessage: async (key) => {
                 return { conversation: undefined }
             }
@@ -125,12 +135,14 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        // --- HANDLE VOTE POLLING (Agar Feedback Otomatis Jalan) ---
+        // --- HANDLE VOTE POLLING ---
         sock.ev.on('messages.update', async (updates) => {
             for (const update of updates) {
-                if (update.update.pollUpdates && kuisAktif.msgId === update.key.id) {
+                if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
                     const pollUpdate = update.update.pollUpdates[0];
-                    kuisAktif.votes[pollUpdate.voterJid] = pollUpdate.selectedOptions;
+                    if (pollUpdate) {
+                        kuisAktif.votes[pollUpdate.voterJid] = pollUpdate.selectedOptions;
+                    }
                 }
             }
         });
@@ -138,12 +150,14 @@ async function start() {
         sock.ev.on('call', async (node) => {
             for (const call of node) {
                 if (call.status === 'offer') {
-                    await sock.rejectCall(call.id, call.from);
-                    const callerId = call.from.split('@')[0];
-                    console.log(`📞 Panggilan dari ${callerId} otomatis ditolak.`);
-                    await sock.sendMessage(call.from, { 
-                        text: "⚠️ *BOT TIDAK MENERIMA PANGGILAN*\n\nMaaf, bot otomatis menolak telepon/video call. Silakan hubungi via chat saja." 
-                    });
+                    try {
+                        await sock.rejectCall(call.id, call.from);
+                        const callerId = call.from.split('@')[0];
+                        console.log(`📞 Panggilan dari ${callerId} otomatis ditolak.`);
+                        await sock.sendMessage(call.from, { 
+                            text: "⚠️ *BOT TIDAK MENERIMA PANGGILAN*\n\nMaaf, bot otomatis menolak telepon/video call. Silakan hubungi via chat saja." 
+                        });
+                    } catch (e) { /* ignore */ }
                 }
             }
         });
@@ -158,16 +172,26 @@ async function start() {
 
             if (connection === "close") {
                 isConnected = false;
+                qrCodeData = "";
+                isStarting = false;
                 const reason = lastDisconnect?.error?.output?.statusCode;
+                
+                console.log(`📡 Koneksi Terput as. Alasan: ${reason}`);
+                
                 if (reason !== DisconnectReason.loggedOut) {
+                    console.log("🔄 Mencoba menyambung kembali dalam 5 detik...");
                     setTimeout(start, 5000);
+                } else {
+                    console.log("❌ Sesi keluar. Silakan hapus folder auth_info dan scan ulang.");
                 }
             } else if (connection === "open") {
                 qrCodeData = ""; 
                 isConnected = true;
+                isStarting = false;
                 console.log("🎊 [BERHASIL] Bot sudah online!");
                 
-                // AKTIFKAN SEMUA SCHEDULER
+                // Beri jeda 2 detik agar state benar-benar stabil sebelum scheduler jalan
+                await delay(2000);
                 initQuizScheduler(sock);
                 initJadwalBesokScheduler(sock);
                 initSmartFeedbackScheduler(sock); 
@@ -176,14 +200,20 @@ async function start() {
 
         sock.ev.on("messages.upsert", async (m) => {
             if (m.type === 'notify') {
-                await handleMessages(sock, m);
+                try {
+                    await handleMessages(sock, m);
+                } catch (err) {
+                    console.error("❌ Error saat handle pesan:", err);
+                }
             }
         });
 
     } catch (err) {
         console.error("❌ ERROR UTAMA:", err);
+        isStarting = false;
         setTimeout(start, 5000);
     }
 }
 
+// Jalankan bot
 start();
