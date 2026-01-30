@@ -48,15 +48,15 @@ const QUIZ_BANK = {
             ]
         }
     ],
-    5: [ // JUMAT (KHUSUS JAM 11:00)
+  5: [ // JUMAT (KHUSUS JAM 11:00)
         { 
-            question: "Belajar apa aja hari ini? Ada Bahasa Inggris, Bahasa Cirebon, atau lanjut Gladi Kotor lagi di lapangan?", 
-            options: ["Bahasa Inggris", "Bahasa Cirebon", "Gladi Kotor Lapangan", "Gabungan semuanya"],
+            question: "Friday Check! 🕒 Belajar apa aja hari ini? Ada B. Inggris, B. Cirebon, atau lagi pada santai?", 
+            options: ["Bahasa Inggris", "Bahasa Cirebon", "Gladi Lapangan", "Jamkos / Gak Belajar"],
             feedbacks: [
-                "Nice! Bahasa Inggris itu bekal penting buat kalian nanti pas udah lulus. 🇺🇸",
-                "Lestarikan budaya lokal! Bahasa Cirebon itu unik dan harus kita jaga bareng-bareng ya. 🦐",
-                "Semangat gladi kotornya! Lapangan emang panas tapi usaha kalian pasti membuahkan hasil buat kenangan terakhir! 🔥",
-                "Wah produktif banget Jumat ini! Jangan lupa minum air putih biar gak drop sebelum weekend! 🥤"
+                "Nice! Bahasa Inggris itu modal keren buat kalian setelah lulus nanti. Semangat belajarnya! 🇺🇸📚",
+                "Lestarikan budaya lokal! Bahasa Cirebon itu jati diri kita, jangan sampai lupa bahasa daerah sendiri ya. 🦐✨",
+                "Semangat gladi nya! Lapangan emang panas, tapi keringat kalian hari ini adalah sejarah buat masa depan! 🔥",
+                "WADUH! Menikmati masa-masa terakhir di sekolah ya? Meskipun jamkos, tetep jangan bikin keributan di kelas ya kawan! 🤫☕"
             ]
         }
     ]
