@@ -12,8 +12,13 @@ const ID_GRUP_TUJUAN = '120363403625197368@g.us';
 let kuisAktif = { msgId: null, data: null, votes: {} };
 
 // ================= UTIL: AUTO DATE LOGIC =================
+function getWIBDate() {
+    // Memaksa waktu ke Asia/Jakarta untuk server USA
+    return new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+}
+
 function getWeekDates() {
-    const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+    const now = getWIBDate();
     const dayOfWeek = now.getDay(); 
     const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
     const monday = new Date(now);
@@ -40,19 +45,19 @@ function getClosestCommand(cmd) {
 
 // --- SCHEDULER: Polling ---
 async function initQuizScheduler(sock) {
-    console.log("✅ Scheduler Polling Aktif");
+    console.log("✅ Scheduler Polling Aktif (Sen-Kam 14:00, Jum 11:00 WIB)");
     let lastSentDate = ""; 
 
     setInterval(async () => {
-        const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+        const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
         const hariAngka = now.getDay(); 
-        const tanggalHariIni = now.getDate();
+        const tglID = `${now.getDate()}-${now.getMonth()}`;
 
         const targetJam = (hariAngka === 5) ? 11 : 14;
 
-        if (jam === targetJam && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tanggalHariIni) {
+        if (jam === targetJam && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
                 const kuisHariIni = QUIZ_BANK[hariAngka];
                 if (kuisHariIni && kuisHariIni.length > 0) {
@@ -65,11 +70,11 @@ async function initQuizScheduler(sock) {
                         }
                     });
                     kuisAktif = { msgId: sentMsg.key.id, data: randomQuiz, votes: {} };
-                    lastSentDate = tanggalHariIni; 
+                    lastSentDate = tglID; 
                 }
             } catch (err) { console.error("Quiz Error:", err); }
         }
-    }, 40000); // Interval 40 detik agar tidak double hit di menit yang sama
+    }, 35000); 
 }
 
 // --- SCHEDULER: Feedback ---
@@ -78,15 +83,15 @@ async function initSmartFeedbackScheduler(sock) {
     let lastResultDate = "";
 
     setInterval(async () => {
-        const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+        const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
         const hari = now.getDay();
-        const tgl = now.getDate();
+        const tglID = `${now.getDate()}-${now.getMonth()}`;
 
         const jamRespon = (hari === 5) ? 13 : 16;
 
-        if (jam === jamRespon && menit === 0 && lastResultDate !== tgl) {
+        if (jam === jamRespon && menit === 0 && lastResultDate !== tglID) {
             if (kuisAktif.msgId && kuisAktif.data) {
                 try {
                     const counts = {};
@@ -115,12 +120,12 @@ async function initSmartFeedbackScheduler(sock) {
                                       `_Respon otomatis jam ${jamRespon}:00_`;
 
                     await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
-                    lastResultDate = tgl;
+                    lastResultDate = tglID;
                     kuisAktif.msgId = null;
                 } catch (err) { console.error("Feedback Error:", err); }
             }
         }
-    }, 40000);
+    }, 35000);
 }
 
 // --- SCHEDULER: Jadwal Besok ---
@@ -128,13 +133,13 @@ async function initJadwalBesokScheduler(sock) {
     console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
     let lastSentJadwal = "";
     setInterval(async () => {
-        const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+        const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
         const hariIni = now.getDay(); 
-        const tanggalHariIni = now.getDate();
+        const tglID = `${now.getDate()}-${now.getMonth()}`;
         
-        if (jam === 17 && menit === 0 && lastSentJadwal !== tanggalHariIni) {
+        if (jam === 17 && menit === 0 && lastSentJadwal !== tglID) {
             let hariBesok = (hariIni + 1) % 7;
             if (hariBesok < 1 || hariBesok > 5) return; 
             try {
@@ -158,10 +163,10 @@ async function initJadwalBesokScheduler(sock) {
 
                 const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${dates[hariBesok - 1]}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: formatPesan });
-                lastSentJadwal = tanggalHariIni;
+                lastSentJadwal = tglID;
             } catch (err) { console.error("Jadwal Besok Error:", err); }
         }
-    }, 40000); 
+    }, 35000); 
 }
 
 // --- MESSAGE HANDLER ---
@@ -180,11 +185,12 @@ async function handleMessages(sock, m) {
             if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
             await sock.sendMessage(sender, { text: "⚠️ *MENGHAPUS SESI TOTAL...*\nBot akan restart." });
             await delay(2000); 
-            if (fs.existsSync('./auth_info')) fs.rmSync('./auth_info', { recursive: true, force: true });
+            try {
+                if (fs.existsSync('./auth_info')) fs.rmSync('./auth_info', { recursive: true, force: true });
+            } catch (e) { console.error("Folder EBUSY, mematikan proses saja..."); }
             process.exit(1);
         }
 
-        // Cek Typo / Suggestion
         if (body.startsWith('!')) {
             const cmdInput = body.split(' ')[0].toLowerCase();
             const suggestion = getClosestCommand(cmdInput);
@@ -216,7 +222,6 @@ async function handleMessages(sock, m) {
 
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
                 const emojiMapel = MAPEL_CONFIG[mKey];
-                // Cek apakah mapel ini yang sedang di-update
                 if (input.toLowerCase().includes(mKey.toLowerCase())) {
                     let parts = input.split(new RegExp(mKey, 'i'));
                     let desc = parts[1] ? parts[1].split(/label:/i)[0].trim() : "";
@@ -227,7 +232,6 @@ async function handleMessages(sock, m) {
                     
                     organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${lbl} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
                 } else {
-                    // Ambil data lama jika ada
                     const sections = currentData.split('\n\n');
                     const exist = sections.find(s => s.includes(emojiMapel));
                     if (exist) organized.push(exist);
@@ -285,7 +289,8 @@ async function handleMessages(sock, m) {
                 break;
             case '!polling':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const hNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"})).getDay();
+                const nowWIB = getWIBDate();
+                const hNow = nowWIB.getDay();
                 const pool = QUIZ_BANK[hNow] || QUIZ_BANK[1];
                 const q = pool[Math.floor(Math.random() * pool.length)];
                 const sMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
@@ -312,17 +317,12 @@ async function handleMessages(sock, m) {
                 const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                 const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
                 let dayIdx = days.findIndex(day => textLower.includes(day));
-                
                 if (dayIdx === -1) return await sock.sendMessage(sender, { text: "❌ *HARI TIDAK DITEMUKAN*" });
-                
-                let targetDay = days[dayIdx];
-                const mapelDitemukan = STRUKTUR_JADWAL[targetDay].find(m => textLower.includes(m.toLowerCase()));
-                
+                let targetDayUpdate = days[dayIdx];
+                const mapelDitemukan = STRUKTUR_JADWAL[targetDayUpdate].find(m => textLower.includes(m.toLowerCase()));
                 if (!mapelDitemukan) return await sock.sendMessage(sender, { text: `❌ *MAPEL SALAH/TYPO*` });
-                
-                let resultUpdate = getProcessedTask(targetDay, body);
-                db.updateTugas(targetDay, resultUpdate);
-                
+                let resultUpdate = getProcessedTask(targetDayUpdate, body);
+                db.updateTugas(targetDayUpdate, resultUpdate);
                 if (cmd === '!update') {
                     const pesanGrup = `📌 *UPDATE TUGAS* 📢\n\n*📅 ${dayLabels[dayIdx]}* (${dates[dayIdx]})\n\n${resultUpdate}`;
                     await sendToGroupSafe({ text: pesanGrup });
@@ -331,19 +331,18 @@ async function handleMessages(sock, m) {
                 break;
             case '!hapus':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const targetKey = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'].find(key => textLower.includes(key));
-                if (!targetKey) return await sock.sendMessage(sender, { text: "❌ *Pilih hari!*" });
-
-                if (targetKey !== 'deadline') {
+                const targetKeyHapus = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'].find(key => textLower.includes(key));
+                if (!targetKeyHapus) return await sock.sendMessage(sender, { text: "❌ *Pilih hari!*" });
+                if (targetKeyHapus !== 'deadline') {
                     const targetMapel = Object.keys(MAPEL_CONFIG).find(m => textLower.includes(m.toLowerCase()));
                     if (targetMapel) {
-                        let current = (db.getAll() || {})[targetKey] || "";
+                        let current = (db.getAll() || {})[targetKeyHapus] || "";
                         let filtered = current.split('\n\n').filter(s => !s.includes(MAPEL_CONFIG[targetMapel])).join('\n\n');
-                        db.updateTugas(targetKey, filtered || "└─ ✅ _Tidak ada PR_");
+                        db.updateTugas(targetKeyHapus, filtered || "└─ ✅ _Tidak ada PR_");
                         await sock.sendMessage(sender, { text: `✅ Tugas *${targetMapel}* dihapus.` });
                     } else {
-                        db.updateTugas(targetKey, "└─ ✅ _Tidak ada PR_");
-                        await sock.sendMessage(sender, { text: `✅ Data hari ${targetKey} dibersihkan.` });
+                        db.updateTugas(targetKeyHapus, "└─ ✅ _Tidak ada PR_");
+                        await sock.sendMessage(sender, { text: `✅ Data hari ${targetKeyHapus} dibersihkan.` });
                     }
                 } else {
                     db.updateTugas('deadline', "Semua tugas sudah selesai.");
