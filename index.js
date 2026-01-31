@@ -91,7 +91,7 @@ app.get("/", (req, res) => {
     if (isConnected) {
         return res.send(`
             <html>
-                <head><title>Gemini Bot Monitor</title>${commonHead}</head>
+                <head><title>Monitor Bot Syteam</title>${commonHead}</head>
                 <body class="py-5">
                     <div class="container" style="max-width: 600px;">
                         <div class="card p-4">
