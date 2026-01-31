@@ -40,7 +40,7 @@ const addLog = (sender, text) => {
 
 app.use(express.urlencoded({ extended: true }));
 
-// --- 1. WEB SERVER UI (Monitor Log Version) ---
+// --- 1. WEB SERVER UI (Monitor Log & Booting UI) ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
 
@@ -57,13 +57,16 @@ app.get("/", (req, res) => {
         <style>
             body { background: #0b141a; color: #e9edef; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
             .card { background: #222e35; border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); color: #e9edef; }
-            .status-dot { height: 12px; width: 12px; background-color: #25d366; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 10px #25d366; }
+            .status-dot { height: 12px; width: 12px; background-color: #25d366; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 10px #25d366; animation: pulse 1.5s infinite; }
+            @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
             .info-box { background: #111b21; border-radius: 8px; padding: 15px; margin-top: 15px; border-left: 4px solid #00a884; }
             .log-container { background: #0b141a; border-radius: 8px; height: 300px; overflow-y: auto; padding: 10px; border: 1px solid #2a3942; }
             .log-item { border-bottom: 1px solid #2a3942; padding: 8px 0; font-size: 0.9rem; text-align: left; }
             .log-time { color: #8696a0; font-size: 0.75rem; }
             .btn-wa { background-color: #00a884; color: white; border: none; font-weight: 600; }
             .qr-container { background: white; padding: 15px; border-radius: 10px; display: inline-block; }
+            .booting-text { animation: blink 1s infinite; }
+            @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
         </style>
     `;
 
@@ -73,7 +76,7 @@ app.get("/", (req, res) => {
                 <div class="log-time">${log.time}</div>
                 <strong style="color: #00a884;">${log.sender}:</strong> ${log.text}
             </div>
-        `).join('') || '<div class="text-muted text-center py-5">Belum ada pesan masuk</div>';
+        `).join('') || '<div class="text-muted text-center py-5">Belum ada aktivitas</div>';
 
         return res.send(`
             <html>
@@ -103,7 +106,7 @@ app.get("/", (req, res) => {
                             </div>
 
                             <div class="mt-4 text-start">
-                                <h6 class="mb-2">Log Pesan WhatsApp (Real-time):</h6>
+                                <h6 class="mb-2">Log Pesan & Telepon (Real-time):</h6>
                                 <div class="log-container">
                                     ${logsHtml}
                                 </div>
@@ -133,7 +136,17 @@ app.get("/", (req, res) => {
             </html>
         `);
     } else {
-        res.send(`<body style="background:#0b141a;color:white;text-align:center;padding-top:100px;"><h3>Sedang Menghubungkan...</h3><p>Mohon tunggu sebentar.</p><script>setTimeout(()=>location.reload(), 5000);</script></body>`);
+        res.send(`
+            <html>
+                <head><title>Booting...</title>${commonHead}</head>
+                <body style="background:#0b141a;color:white;text-align:center;padding-top:150px;">
+                    <div class="spinner-border text-success mb-3" role="status"></div>
+                    <h3 class="booting-text">SYSTEM BOOTING...</h3>
+                    <p class="text-secondary">Sedang menginisialisasi kernel dan koneksi.</p>
+                    <script>setTimeout(()=>location.reload(), 3000);</script>
+                </body>
+            </html>
+        `);
     }
 });
 
@@ -145,15 +158,21 @@ app.get("/restart", async (req, res) => {
     
     if (sock) {
         try {
-            sock.ev.removeAllListeners(); // Hapus listener agar tidak bentrok
+            sock.ev.removeAllListeners(); 
             sock.end();
             sock = null;
         } catch (e) { /* ignore */ }
     }
     
-    res.send("<script>alert('Bot sedang direstart, mohon tunggu 5 detik...'); window.location.href='/';</script>");
+    res.send(`
+        <body style="background:#0b141a; color:white; text-align:center; padding-top:200px; font-family:sans-serif;">
+            <h3>♻️ RESTARTING SYSTEM...</h3>
+            <p>Mohon tunggu sebentar, bot sedang memuat ulang.</p>
+            <script>setTimeout(() => { window.location.href='/'; }, 4000);</script>
+        </body>
+    `);
     
-    await delay(3000); // Jeda agar instansi lama benar-benar mati
+    await delay(3000); 
     start();
 });
 
@@ -200,9 +219,13 @@ async function start() {
         sock.ev.on('call', async (node) => {
             for (const call of node) {
                 if (call.status === 'offer') {
+                    const callerId = call.from.split('@')[0];
+                    
+                    // TAMBAHAN: Log telepon ke Dashboard
+                    addLog(callerId, "📞 Mencoba menelepon (Otomatis Ditolak)");
+
                     try {
                         await sock.rejectCall(call.id, call.from);
-                        const callerId = call.from.split('@')[0];
                         console.log(`📞 Panggilan dari ${callerId} otomatis ditolak.`);
                         await sock.sendMessage(call.from, { 
                             text: "⚠️ *BOT TIDAK MENERIMA PANGGILAN*\n\nMaaf, bot otomatis menolak telepon/video call. Silakan hubungi via chat saja." 
@@ -250,7 +273,7 @@ async function start() {
         sock.ev.on("messages.upsert", async (m) => {
             if (m.type === 'notify') {
                 const msg = m.messages[0];
-                if (!msg.message) return; // Mencegah error jika pesan kosong
+                if (!msg.message) return; 
 
                 const from = msg.pushName || msg.key.remoteJid.split('@')[0];
                 const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "[Media/Other]";
@@ -273,4 +296,3 @@ async function start() {
 }
 
 start();
-    
