@@ -12,7 +12,7 @@ const QRCode = require("qrcode");
 const os = require("os"); 
 const path = require("path");
 
-// --- IMPORT DARI HANDLER & SCHEDULER (Hanya bagian ini yang disesuaikan) ---
+// --- IMPORT DARI HANDLER & SCHEDULER ---
 const { handleMessages } = require('./handler'); 
 const { 
     initQuizScheduler, 
@@ -21,7 +21,6 @@ const {
     getWeekDates 
 } = require('./scheduler'); 
 
-// Objek kuisAktif harus didefinisikan agar bisa digunakan bersama antara index, handler, dan scheduler
 let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null };
 
 const app = express();
@@ -29,50 +28,71 @@ const port = process.env.PORT || 3000;
 let qrCodeData = ""; 
 let isConnected = false; 
 let sock; 
-let isStarting = false; // Flag untuk mencegah multiple instansi start()
+let isStarting = false;
 
-// --- 1. WEB SERVER UI ---
+// Middleware untuk fitur broadcast
+app.use(express.urlencoded({ extended: true }));
+
+// --- 1. WEB SERVER UI (WhatsApp Style & New Features) ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
 
-    // Kalkulasi RAM yang lebih akurat
     const totalMemBytes = os.totalmem();
     const freeMemBytes = os.freemem();
     const usedMemBytes = totalMemBytes - freeMemBytes;
-    
     const totalRAM = (totalMemBytes / (1024 ** 3)).toFixed(2);
     const usedRAM = (usedMemBytes / (1024 ** 3)).toFixed(2);
     const uptime = (os.uptime() / 3600).toFixed(1);
 
+    const commonHead = `
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body { background: #0b141a; color: #e9edef; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+            .card { background: #222e35; border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); color: #e9edef; }
+            .status-dot { height: 12px; width: 12px; background-color: #25d366; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 10px #25d366; }
+            .info-box { background: #111b21; border-radius: 8px; padding: 15px; margin-top: 15px; border-left: 4px solid #00a884; }
+            .btn-wa { background-color: #00a884; color: white; border: none; font-weight: 600; }
+            .btn-wa:hover { background-color: #008f72; color: white; }
+            .qr-container { background: white; padding: 15px; border-radius: 10px; display: inline-block; }
+        </style>
+    `;
+
     if (isConnected) {
         return res.send(`
             <html>
-                <head>
-                    <title>Bot Status</title>
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-                    <style>
-                        body { background: #075e54; display: flex; align-items: center; justify-content: center; min-height: 100vh; color: white; margin: 0; font-family: sans-serif; }
-                        .card { background: white; color: #333; border-radius: 15px; padding: 2rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 90%; max-width: 450px; }
-                        .dot { height: 15px; width: 15px; background-color: #25d366; border-radius: 50%; display: inline-block; margin-right: 10px; animation: pulse 1.5s infinite; }
-                        .info-box { background: #f8f9fa; border-radius: 10px; padding: 10px; margin-top: 10px; text-align: left; font-size: 0.9rem; }
-                        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="card">
-                        <div class="d-flex align-items-center justify-content-center mb-3">
-                            <span class="dot"></span>
-                            <h2 class="mb-0">BOT ONLINE</h2>
+                <head><title>Gemini Bot Admin</title>${commonHead}</head>
+                <body class="py-5">
+                    <div class="container" style="max-width: 500px;">
+                        <div class="card p-4">
+                            <div class="d-flex align-items-center mb-4">
+                                <span class="status-dot"></span>
+                                <h4 class="mb-0">Bot Sistem Aktif</h4>
+                            </div>
+                            
+                            <div class="info-box">
+                                <small class="text-secondary d-block">Server Resource</small>
+                                <strong>${usedRAM}GB / ${totalRAM}GB</strong>
+                                <div class="mt-2 small">Uptime: ${uptime} Jam | OS: ${os.platform()}</div>
+                            </div>
+
+                            <div class="mt-4">
+                                <h6>Fitur Kontrol:</h6>
+                                <div class="d-grid gap-2">
+                                    <a href="/restart" onclick="return confirm('Restart bot sekarang?')" class="btn btn-outline-danger btn-sm">Restart Bot Instance</a>
+                                    <button class="btn btn-wa w-100 mt-2" onclick="location.reload()">Refresh Dashboard</button>
+                                </div>
+                            </div>
+
+                            <hr class="my-4 border-secondary">
+
+                            <h6>Kirim Broadcast Cepat:</h6>
+                            <form action="/broadcast" method="POST">
+                                <input type="text" name="jid" class="form-control mb-2 bg-dark text-white border-secondary" placeholder="Nomor (contoh: 62812xxx@s.whatsapp.net)" required>
+                                <textarea name="message" class="form-control mb-2 bg-dark text-white border-secondary" placeholder="Tulis pesan..." required></textarea>
+                                <button type="submit" class="btn btn-wa btn-sm w-100">Kirim Pesan</button>
+                            </form>
                         </div>
-                        <p class="text-muted">Sesi aktif. Bot siap menerima perintah.</p>
-                        <div class="info-box">
-                            <p class="mb-1"><strong>Memory:</strong> ${usedRAM}GB / ${totalRAM}GB</p>
-                            <p class="mb-1"><strong>Server Uptime:</strong> ${uptime} Jam</p>
-                            <p class="mb-0"><strong>Platform:</strong> ${os.platform()} (${os.arch()})</p>
-                        </div>
-                        <hr>
-                        <button class="btn btn-success w-100" onclick="location.reload()">Refresh Info</button>
                     </div>
                 </body>
             </html>
@@ -82,28 +102,39 @@ app.get("/", (req, res) => {
     if (qrCodeData) {
         res.send(`
             <html>
-                <head>
-                    <title>Scan WhatsApp</title>
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-                    <style>
-                        body { background: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
-                        .card { border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 30px; text-align: center; background: white; max-width: 400px; }
-                        img { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 10px; background: #fff; }
-                    </style>
-                </head>
-                <body>
-                    <div class="card">
-                        <h4 class="mb-4 text-primary">Scan QR Code</h4>
-                        <img src="${qrCodeData}" />
-                        <p class="mt-3 text-secondary small">Buka WhatsApp > Perangkat Tertaut > Scan QR ini</p>
+                <head><title>Link WhatsApp</title>${commonHead}</head>
+                <body class="d-flex align-items-center justify-content-center vh-100">
+                    <div class="card p-4 text-center" style="max-width: 380px;">
+                        <h5 class="mb-4">Hubungkan WhatsApp</h5>
+                        <div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div>
+                        <p class="text-secondary small">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk memulai bot.</p>
                         <script>setTimeout(() => { location.reload(); }, 15000);</script>
                     </div>
                 </body>
             </html>
         `);
     } else {
-        res.send(`<div style="text-align:center; padding-top: 50px; font-family:sans-serif;"><h3>Memuat QR Code...</h3><p>Tunggu sebentar atau refresh halaman.</p><script>setTimeout(() => { location.reload(); }, 5000);</script></div>`);
+        res.send(`<body style="background:#0b141a;color:white;text-align:center;padding-top:100px;"><h3>Menghubungkan...</h3><script>setTimeout(()=>location.reload(), 3000);</script></body>`);
+    }
+});
+
+// --- FITUR TAMBAHAN ---
+app.get("/restart", (req, res) => {
+    if (sock) sock.end();
+    isStarting = false;
+    isConnected = false;
+    qrCodeData = "";
+    setTimeout(() => start(), 3000);
+    res.send("<script>alert('Perintah restart dikirim.'); window.location.href='/';</script>");
+});
+
+app.post("/broadcast", async (req, res) => {
+    const { jid, message } = req.body;
+    if (isConnected && sock) {
+        await sock.sendMessage(jid, { text: message });
+        res.send("<script>alert('Pesan terkirim!'); window.location.href='/';</script>");
+    } else {
+        res.send("<script>alert('Bot belum terhubung!'); window.location.href='/';</script>");
     }
 });
 
@@ -112,14 +143,12 @@ app.listen(port, "0.0.0.0", () => {
 });
 
 // --- 2. LOGIKA WHATSAPP ---
-
 async function start() {
-    if (isStarting) return; // Cegah double start
+    if (isStarting) return;
     isStarting = true;
 
     try {
         const { version } = await fetchLatestBaileysVersion();
-        // Menggunakan path absolute untuk menghindari EBUSY di beberapa environment
         const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'auth_info'));
 
         sock = makeWASocket({
@@ -129,7 +158,7 @@ async function start() {
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
             },
             logger: pino({ level: "silent" }),
-            printQRInTerminal: false, // Diubah ke false (sudah dihandle via Web UI)
+            printQRInTerminal: false,
             browser: ["Ubuntu", "Chrome", "20.0.0.4"],
             getMessage: async (key) => {
                 return { conversation: undefined }
@@ -138,7 +167,6 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        // --- HANDLE VOTE POLLING ---
         sock.ev.on('messages.update', async (updates) => {
             for (const update of updates) {
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
@@ -179,7 +207,7 @@ async function start() {
                 isStarting = false;
                 const reason = lastDisconnect?.error?.output?.statusCode;
                 
-                console.log(`📡 Koneksi Terput as. Alasan: ${reason}`);
+                console.log(`📡 Koneksi Terputus. Alasan: ${reason}`);
                 
                 if (reason !== DisconnectReason.loggedOut) {
                     console.log("🔄 Mencoba menyambung kembali dalam 5 detik...");
@@ -193,7 +221,6 @@ async function start() {
                 isStarting = false;
                 console.log("🎊 [BERHASIL] Bot sudah online!");
                 
-                // Beri jeda 2 detik agar state benar-benar stabil sebelum scheduler jalan
                 await delay(2000);
                 initQuizScheduler(sock, kuisAktif);
                 initJadwalBesokScheduler(sock);
@@ -204,7 +231,6 @@ async function start() {
         sock.ev.on("messages.upsert", async (m) => {
             if (m.type === 'notify') {
                 try {
-                    // Menyertakan kuisAktif dan utils agar handler tetap bisa berjalan sesuai struktur aslinya
                     await handleMessages(sock, m, kuisAktif, { getWeekDates });
                 } catch (err) {
                     console.error("❌ Error saat handle pesan:", err);
@@ -219,5 +245,5 @@ async function start() {
     }
 }
 
-// Jalankan bot
 start();
+            
