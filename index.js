@@ -39,12 +39,27 @@ const addLog = (sender, text) => {
     if (messageLogs.length > 20) messageLogs.pop(); 
 };
 
+// --- FIX EBUSY: Fungsi pembersihan sesi yang aman ---
+const clearAuthSession = () => {
+    const sessionDir = path.join(__dirname, 'auth_info');
+    if (fs.existsSync(sessionDir)) {
+        try {
+            // Menggunakan rmSync dengan recursive dan force untuk Railway
+            fs.rmSync(sessionDir, { recursive: true, force: true });
+            console.log("Sesi lama berhasil dibersihkan secara aman.");
+        } catch (err) {
+            console.error("Gagal membersihkan sesi (Kemungkinan EBUSY):", err.message);
+        }
+    }
+};
+
 app.use(express.urlencoded({ extended: true }));
 
 // --- 1. WEB SERVER UI ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
-
+    const totalRAM = (os.totalmem() / (1024 ** 3)).toFixed(2);
+    const usedRAM = ((os.totalmem() - os.freemem()) / (1024 ** 3)).toFixed(2);
     const uptime = (os.uptime() / 3600).toFixed(1);
 
     const commonHead = `
@@ -56,79 +71,54 @@ app.get("/", (req, res) => {
             .status-dot { height: 12px; width: 12px; background-color: #25d366; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 10px #25d366; animation: pulse 1.5s infinite; }
             @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
             .log-container { background: #0b141a; border-radius: 8px; height: 300px; overflow-y: auto; padding: 10px; border: 1px solid #2a3942; }
-            .log-item { border-bottom: 1px solid #2a3942; padding: 8px 0; font-size: 0.85rem; text-align: left; }
-            .qr-container { background: white; padding: 15px; border-radius: 10px; display: inline-block; margin: 20px 0; }
+            .log-item { border-bottom: 1px solid #2a3942; padding: 8px 0; font-size: 0.85rem; }
+            .qr-container { background: white; padding: 15px; border-radius: 10px; display: inline-block; }
         </style>
     `;
 
     if (isConnected) {
-        const logsHtml = messageLogs.map(log => `
-            <div class="log-item">
-                <small style="color: #8696a0;">${log.time}</small><br>
-                <strong style="color: #00a884;">${log.sender}:</strong> ${log.text}
-            </div>
-        `).join('') || '<div class="text-muted text-center py-5">Belum ada aktivitas</div>';
-
         return res.send(`
-            <html>
-                <head><title>Bot Monitor</title>${commonHead}</head>
-                <body class="py-5">
-                    <div class="container" style="max-width: 500px;">
-                        <div class="card p-4 text-center">
-                            <div class="d-flex align-items-center justify-content-between mb-4">
-                                <div class="d-flex align-items-center"><span class="status-dot"></span><h4 class="mb-0">Bot Online</h4></div>
-                                <a href="/restart" class="btn btn-outline-danger btn-sm">Restart</a>
-                            </div>
-                            <div class="mt-4 text-start">
-                                <h6 class="mb-2">Log Aktivitas:</h6>
-                                <div class="log-container">${logsHtml}</div>
-                            </div>
-                            <button class="btn btn-success w-100 mt-3" onclick="location.reload()">Refresh</button>
-                        </div>
+            <html><head><title>Monitor Online</title>${commonHead}</head>
+            <body class="py-5"><div class="container" style="max-width: 500px;">
+                <div class="card p-4 text-center">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div class="d-flex align-items-center"><span class="status-dot"></span><h4 class="mb-0">Bot Online</h4></div>
+                        <a href="/restart" class="btn btn-outline-danger btn-sm">Restart</a>
                     </div>
-                </body>
-            </html>
+                    <div class="bg-dark p-2 rounded mb-3 text-start small">
+                        RAM: ${usedRAM}/${totalRAM} GB | Up: ${uptime} Jam
+                    </div>
+                    <div class="log-container text-start">
+                        ${messageLogs.map(l => `<div class="log-item"><strong>${l.sender}:</strong> ${l.text}</div>`).join('') || 'Menunggu pesan...'}
+                    </div>
+                    <button class="btn btn-success w-100 mt-3" onclick="location.reload()">Refresh</button>
+                </div>
+            </div></body></html>
         `);
     }
 
     if (qrCodeData) {
-        res.send(`
+        return res.send(`
             <html><head><title>Scan QR</title>${commonHead}</head>
-            <body class="d-flex align-items-center justify-content-center vh-100 text-center">
-                <div class="card p-4 mx-3">
-                    <h5 class="mb-2">Hubungkan WhatsApp</h5>
-                    <p class="small text-secondary">Silakan scan kode QR di bawah ini</p>
-                    <div class="qr-container"><img src="${qrCodeData}" class="img-fluid" style="min-width: 250px;"/></div>
-                    <p class="text-secondary small">QR akan diperbarui otomatis tiap 15 detik</p>
-                    <a href="/restart" class="btn btn-sm btn-link text-decoration-none">Gagal muncul? Klik Reset</a>
+            <body class="d-flex align-items-center justify-content-center vh-100">
+                <div class="card p-4 text-center">
+                    <h5 class="mb-3">Hubungkan WhatsApp</h5>
+                    <div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div>
+                    <p class="small text-secondary">Buka WhatsApp > Perangkat Tertaut > Scan QR ini</p>
                     <script>setTimeout(() => { location.reload(); }, 15000);</script>
                 </div>
             </body></html>
         `);
-    } else {
-        res.send(`
-            <html><head><title>Booting...</title>${commonHead}</head>
-            <body style="background:#0b141a;color:white;text-align:center;padding-top:150px;">
-                <div class="spinner-border text-success mb-3" style="width: 3rem; height: 3rem;"></div>
-                <h3>SEDANG MEMUAT QR...</h3>
-                <p class="text-secondary">Jika ini memakan waktu lebih dari 30 detik, silakan refresh.</p>
-                <script>setTimeout(()=>location.reload(), 5000);</script>
-            </body></html>
-        `);
     }
+
+    res.send(`<html><head>${commonHead}</head><body style="background:#0b141a;color:white;text-align:center;padding-top:150px;">
+        <div class="spinner-border text-success mb-3"></div><h3>BOOTING SYSTEM...</h3><script>setTimeout(()=>location.reload(), 3000);</script>
+    </body></html>`);
 });
 
-// --- FITUR RESTART & CLEAR SESSION ---
-app.get("/restart", async (req, res) => {
-    qrCodeData = "";
-    isConnected = false;
-    isStarting = false;
-    if (sock) {
-        try { sock.ev.removeAllListeners(); sock.end(); sock = null; } catch (e) { }
-    }
-    res.send("<body style='background:#0b141a;color:white;text-align:center;padding-top:100px;'><h3>System Resetting...</h3><script>setTimeout(()=>window.location.href='/', 3000)</script></body>");
-    await delay(2000);
-    start();
+app.get("/restart", (req, res) => {
+    res.send("Restarting... <script>setTimeout(()=>window.location.href='/', 4000);</script>");
+    process.exit(0); // Railway akan otomatis me-restart container secara bersih
 });
 
 app.listen(port, "0.0.0.0", () => {
@@ -142,8 +132,7 @@ async function start() {
 
     try {
         const { version } = await fetchLatestBaileysVersion();
-        const authPath = path.join(__dirname, 'auth_info');
-        const { state, saveCreds } = await useMultiFileAuthState(authPath);
+        const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'auth_info'));
 
         sock = makeWASocket({
             version,
@@ -152,19 +141,21 @@ async function start() {
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
             },
             logger: pino({ level: "silent" }),
-            printQRInTerminal: true, // Sekarang saya aktifkan juga di terminal agar kamu bisa cross-check
-            browser: ["Mac OS", "Chrome", "10.15.7"], // Menggunakan browser yang lebih umum agar cepat kirim QR
+            printQRInTerminal: false,
+            browser: ["Mac OS", "Chrome", "10.15.7"], // Menggunakan browser yang lebih umum
             getMessage: async (key) => { return { conversation: undefined } }
         });
 
         sock.ev.on("creds.update", saveCreds);
 
+        // Anti-Call Otomatis
         sock.ev.on('call', async (node) => {
             for (const call of node) {
                 if (call.status === 'offer') {
                     const callerId = call.from.split('@')[0];
-                    addLog(callerId, "📞 Telepon Ditolak");
-                    try { await sock.rejectCall(call.id, call.from); } catch (e) { }
+                    addLog(callerId, "📞 Telepon Ditolak Otomatis");
+                    await sock.rejectCall(call.id, call.from);
+                    await sock.sendMessage(call.from, { text: "⚠️ *BOT TIDAK MENERIMA PANGGILAN*" });
                 }
             }
         });
@@ -173,8 +164,8 @@ async function start() {
             const { connection, lastDisconnect, qr } = update;
 
             if (qr) {
-                console.log("👉 QR Code Berhasil Dihasilkan!");
                 qrCodeData = await QRCode.toDataURL(qr);
+                isConnected = false;
             }
 
             if (connection === "close") {
@@ -183,44 +174,56 @@ async function start() {
                 isStarting = false;
                 const reason = lastDisconnect?.error?.output?.statusCode;
                 
-                if (reason === DisconnectReason.loggedOut) {
-                    console.log("❌ Sesi Logout. Menghapus folder auth_info...");
-                    if (fs.existsSync(authPath)) fs.rmSync(authPath, { recursive: true, force: true });
-                }
+                console.log(`📡 Koneksi Tutup: ${reason}`);
                 
-                console.log(`📡 Koneksi Tutup (${reason}). Restarting...`);
-                setTimeout(start, 5000);
+                if (reason === DisconnectReason.loggedOut) {
+                    console.log("❌ Sesi Keluar. Menghapus data login...");
+                    clearAuthSession();
+                    setTimeout(start, 5000);
+                } else {
+                    // Coba sambung kembali secara otomatis untuk error non-logout
+                    setTimeout(start, 5000);
+                }
             } else if (connection === "open") {
                 qrCodeData = ""; 
                 isConnected = true;
                 isStarting = false;
-                console.log("🎊 Bot Online!");
-                await delay(2000);
-                initQuizScheduler(sock, kuisAktif);
-                initJadwalBesokScheduler(sock);
-                initSmartFeedbackScheduler(sock, kuisAktif); 
+                console.log("🎊 [BERHASIL] Bot Online!");
+                
+                await delay(3000); // Jeda stabilisasi
+                try {
+                    initQuizScheduler(sock, kuisAktif);
+                    initJadwalBesokScheduler(sock);
+                    initSmartFeedbackScheduler(sock, kuisAktif); 
+                } catch (e) {
+                    console.error("Gagal inisialisasi scheduler:", e.message);
+                }
             }
         });
 
         sock.ev.on("messages.upsert", async (m) => {
             if (m.type === 'notify') {
                 const msg = m.messages[0];
-                if (!msg.message) return;
+                if (!msg.message || msg.key.fromMe) return;
+
                 const from = msg.pushName || msg.key.remoteJid.split('@')[0];
                 const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "[Media]";
-                if (!msg.key.fromMe) addLog(from, text);
+                
+                addLog(from, text);
+
                 try {
                     await handleMessages(sock, m, kuisAktif, { getWeekDates });
-                } catch (err) { }
+                } catch (err) {
+                    console.error("❌ Error Message Handler:", err.message);
+                }
             }
         });
 
     } catch (err) {
-        console.error("CRITICAL ERROR:", err);
+        console.error("❌ ERROR UTAMA:", err.message);
         isStarting = false;
         setTimeout(start, 5000);
     }
 }
 
 start();
-              
