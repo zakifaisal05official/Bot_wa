@@ -1,4 +1,4 @@
-Ini udah bener kan 
+
 # Gunakan Node.js versi 20 (LTS Iron) agar kompatibel dengan Baileys terbaru
 FROM node:20-bookworm
 
