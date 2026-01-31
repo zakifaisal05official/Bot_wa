@@ -35,13 +35,14 @@ let isStarting = false;
 let logs = [];
 const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
-    logs.unshift(`[${time}] ${msg}`);
+    // Menambahkan span warna pada waktu agar lebih kontras
+    logs.unshift(`<span style="color: #00a884;">[${time}]</span> ${msg}`);
     if (logs.length > 50) logs.pop();
 };
 
 app.use(express.urlencoded({ extended: true }));
 
-// --- 1. WEB SERVER UI (MODERN DARK THEME) ---
+// --- 1. WEB SERVER UI (MODERN HIGH-CONTRAST DARK THEME) ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     const totalRAM = (os.totalmem() / (1024 ** 3)).toFixed(2);
@@ -52,18 +53,38 @@ app.get("/", (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>
-            body { background: #0b141a; color: #e9edef; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; }
-            .card { background: #222e35; border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-            .status-online { color: #25d366; font-weight: bold; }
-            .status-offline { color: #ea0038; font-weight: bold; }
-            .status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-            .dot-online { background-color: #25d366; box-shadow: 0 0 10px #25d366; animation: pulse 1.5s infinite; }
-            .dot-offline { background-color: #ea0038; }
+            body { background: #0b141a; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            .card { background: #1f2c33; border: 1px solid #2a3942; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            .status-online { color: #00ff73; font-weight: bold; text-shadow: 0 0 8px rgba(0,255,115,0.4); }
+            .status-offline { color: #ff3b3b; font-weight: bold; }
+            .status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+            .dot-online { background-color: #00ff73; box-shadow: 0 0 12px #00ff73; animation: pulse 1.5s infinite; }
+            .dot-offline { background-color: #ff3b3b; }
             @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-            .log-box { background: #111b21; border-radius: 8px; height: 250px; overflow-y: auto; padding: 15px; font-family: 'Courier New', monospace; font-size: 0.85rem; color: #8696a0; border: 1px solid #2a3942; }
+            
+            /* LOG BOX: Perbaikan kontras teks utama */
+            .log-box { 
+                background: #0c151b; 
+                border-radius: 8px; 
+                height: 300px; 
+                overflow-y: auto; 
+                padding: 15px; 
+                font-family: 'Consolas', 'Monaco', monospace; 
+                font-size: 0.9rem; 
+                color: #e9edef; 
+                border: 1px solid #374045;
+                line-height: 1.6;
+            }
+            
+            /* Info Stats Box: Teks Putih & Border Jelas */
+            .stats-item { background: #2a3942; border: 1px solid #374045 !important; color: #ffffff !important; }
+            .stats-item small { color: #00a884 !important; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+            
             .qr-container { background: white; padding: 20px; border-radius: 15px; display: inline-block; }
-            .btn-restart { background: #ea0038; color: white; border: none; font-weight: 600; }
-            .btn-restart:hover { background: #c2002f; color: white; }
+            .btn-restart { background: #ea0038; color: white; border: none; font-weight: 600; transition: 0.3s; }
+            .btn-restart:hover { background: #ff2b51; color: white; transform: scale(1.02); }
+            .btn-primary { background: #00a884; border: none; font-weight: 600; }
+            .btn-primary:hover { background: #008f70; }
         </style>
     `;
 
@@ -77,7 +98,7 @@ app.get("/", (req, res) => {
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <div>
                                     <h4 class="mb-0">WhatsApp Bot Monitor</h4>
-                                    <small class="text-secondary">v2.1 Stable Edition</small>
+                                    <small style="color: #8696a0;">v2.1 Stable Edition</small>
                                 </div>
                                 <div class="text-end">
                                     <span class="status-dot dot-online"></span>
@@ -87,28 +108,28 @@ app.get("/", (req, res) => {
 
                             <div class="row g-3 mb-4 text-center">
                                 <div class="col-4">
-                                    <div class="p-2 border border-secondary rounded">
-                                        <small class="d-block text-secondary">RAM Usage</small>
+                                    <div class="p-2 rounded stats-item">
+                                        <small class="d-block">RAM Usage</small>
                                         <strong>${usedRAM} / ${totalRAM} GB</strong>
                                     </div>
                                 </div>
                                 <div class="col-4">
-                                    <div class="p-2 border border-secondary rounded">
-                                        <small class="d-block text-secondary">Uptime</small>
+                                    <div class="p-2 rounded stats-item">
+                                        <small class="d-block">Uptime</small>
                                         <strong>${uptime} Jam</strong>
                                     </div>
                                 </div>
                                 <div class="col-4">
-                                    <div class="p-2 border border-secondary rounded">
-                                        <small class="d-block text-secondary">OS</small>
-                                        <strong>${os.platform()}</strong>
+                                    <div class="p-2 rounded stats-item">
+                                        <small class="d-block">OS</small>
+                                        <strong>${os.platform().toUpperCase()}</strong>
                                     </div>
                                 </div>
                             </div>
 
-                            <h6 class="mb-2">System & Message Logs:</h6>
+                            <h6 class="mb-2" style="color: #e9edef;">System & Message Logs:</h6>
                             <div class="log-box mb-4">
-                                ${logs.map(l => `<div>${l}</div>`).join('') || '<div>Menunggu aktivitas...</div>'}
+                                ${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Menunggu aktivitas...</div>'}
                             </div>
 
                             <div class="d-grid gap-2">
@@ -131,7 +152,7 @@ app.get("/", (req, res) => {
                     <div class="card p-4 text-center" style="max-width: 400px;">
                         <h4 class="mb-3">Link WhatsApp</h4>
                         <div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div>
-                        <p class="text-secondary">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk menghubungkan bot.</p>
+                        <p style="color: #8696a0;">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk menghubungkan bot.</p>
                         <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
                         <script>setTimeout(() => { location.reload(); }, 15000);</script>
                     </div>
@@ -146,8 +167,8 @@ app.get("/", (req, res) => {
             <body class="d-flex align-items-center justify-content-center vh-100 text-center">
                 <div>
                     <div class="spinner-grow text-success mb-3" role="status"></div>
-                    <h3>SYSTEM BOOTING...</h3>
-                    <p class="text-secondary">Sedang menyiapkan kernel dan koneksi WhatsApp.</p>
+                    <h3 style="letter-spacing: 2px;">SYSTEM BOOTING...</h3>
+                    <p style="color: #8696a0;">Sedang menyiapkan kernel dan koneksi WhatsApp.</p>
                 </div>
                 <script>setTimeout(() => { location.reload(); }, 4000);</script>
             </body>
@@ -291,4 +312,4 @@ async function start() {
     }
 }
 
-start();                            
+start();
