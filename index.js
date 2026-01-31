@@ -44,11 +44,12 @@ const clearAuthSession = () => {
     const sessionDir = path.join(__dirname, 'auth_info');
     if (fs.existsSync(sessionDir)) {
         try {
-            // Menggunakan rmSync dengan recursive dan force untuk Railway
+            // Gunakan rmSync dengan recursive dan force
             fs.rmSync(sessionDir, { recursive: true, force: true });
             console.log("Sesi lama berhasil dibersihkan secara aman.");
         } catch (err) {
-            console.error("Gagal membersihkan sesi (Kemungkinan EBUSY):", err.message);
+            console.error("Gagal membersihkan sesi (EBUSY):", err.message);
+            // Jika EBUSY di Railway, biarkan saja nanti process.exit yang selesaikan
         }
     }
 };
@@ -117,8 +118,9 @@ app.get("/", (req, res) => {
 });
 
 app.get("/restart", (req, res) => {
-    res.send("Restarting... <script>setTimeout(()=>window.location.href='/', 4000);</script>");
-    process.exit(0); // Railway akan otomatis me-restart container secara bersih
+    res.send("Restarting... <script>setTimeout(()=>window.location.href='/', 5000);</script>");
+    // Exit dengan delay agar response terkirim ke browser dulu
+    setTimeout(() => { process.exit(0); }, 1000);
 });
 
 app.listen(port, "0.0.0.0", () => {
@@ -142,7 +144,7 @@ async function start() {
             },
             logger: pino({ level: "silent" }),
             printQRInTerminal: false,
-            browser: ["Mac OS", "Chrome", "10.15.7"], // Menggunakan browser yang lebih umum
+            browser: ["Mac OS", "Chrome", "10.15.7"], 
             getMessage: async (key) => { return { conversation: undefined } }
         });
 
@@ -179,9 +181,9 @@ async function start() {
                 if (reason === DisconnectReason.loggedOut) {
                     console.log("❌ Sesi Keluar. Menghapus data login...");
                     clearAuthSession();
-                    setTimeout(start, 5000);
+                    // Jika logout, kita paksa exit agar Railway deploy ulang tanpa lock file
+                    process.exit(1);
                 } else {
-                    // Coba sambung kembali secara otomatis untuk error non-logout
                     setTimeout(start, 5000);
                 }
             } else if (connection === "open") {
@@ -190,7 +192,7 @@ async function start() {
                 isStarting = false;
                 console.log("🎊 [BERHASIL] Bot Online!");
                 
-                await delay(3000); // Jeda stabilisasi
+                await delay(3000); 
                 try {
                     initQuizScheduler(sock, kuisAktif);
                     initJadwalBesokScheduler(sock);
@@ -226,4 +228,4 @@ async function start() {
     }
 }
 
-start();
+start();                 
