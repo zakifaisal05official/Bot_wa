@@ -30,10 +30,17 @@ let isConnected = false;
 let sock; 
 let isStarting = false;
 
-// Middleware untuk fitur broadcast
+// --- SISTEM LOG PESAN ---
+let messageLogs = [];
+const addLog = (sender, text) => {
+    const time = new Date().toLocaleTimeString('id-ID');
+    messageLogs.unshift({ time, sender, text }); // Tambah ke atas
+    if (messageLogs.length > 20) messageLogs.pop(); // Batasi 20 log terakhir
+};
+
 app.use(express.urlencoded({ extended: true }));
 
-// --- 1. WEB SERVER UI (WhatsApp Style & New Features) ---
+// --- 1. WEB SERVER UI (Monitor Log Version) ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
 
@@ -52,48 +59,60 @@ app.get("/", (req, res) => {
             .card { background: #222e35; border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); color: #e9edef; }
             .status-dot { height: 12px; width: 12px; background-color: #25d366; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 10px #25d366; }
             .info-box { background: #111b21; border-radius: 8px; padding: 15px; margin-top: 15px; border-left: 4px solid #00a884; }
+            .log-container { background: #0b141a; border-radius: 8px; height: 300px; overflow-y: auto; padding: 10px; border: 1px solid #2a3942; }
+            .log-item { border-bottom: 1px solid #2a3942; padding: 8px 0; font-size: 0.9rem; }
+            .log-time { color: #8696a0; font-size: 0.75rem; }
             .btn-wa { background-color: #00a884; color: white; border: none; font-weight: 600; }
-            .btn-wa:hover { background-color: #008f72; color: white; }
             .qr-container { background: white; padding: 15px; border-radius: 10px; display: inline-block; }
         </style>
     `;
 
     if (isConnected) {
+        const logsHtml = messageLogs.map(log => `
+            <div class="log-item">
+                <div class="log-time">${log.time}</div>
+                <strong style="color: #00a884;">${log.sender}:</strong> ${log.text}
+            </div>
+        `).join('') || '<div class="text-muted text-center py-5">Belum ada pesan masuk</div>';
+
         return res.send(`
             <html>
-                <head><title>Gemini Bot Admin</title>${commonHead}</head>
+                <head><title>Gemini Bot Monitor</title>${commonHead}</head>
                 <body class="py-5">
-                    <div class="container" style="max-width: 500px;">
+                    <div class="container" style="max-width: 550px;">
                         <div class="card p-4">
-                            <div class="d-flex align-items-center mb-4">
-                                <span class="status-dot"></span>
-                                <h4 class="mb-0">Bot Sistem Aktif</h4>
+                            <div class="d-flex align-items-center justify-content-between mb-4">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-dot"></span>
+                                    <h4 class="mb-0">Bot Online</h4>
+                                </div>
+                                <a href="/restart" onclick="return confirm('Restart bot sekarang?')" class="btn btn-outline-danger btn-sm">Restart Bot</a>
                             </div>
                             
                             <div class="info-box">
-                                <small class="text-secondary d-block">Server Resource</small>
-                                <strong>${usedRAM}GB / ${totalRAM}GB</strong>
-                                <div class="mt-2 small">Uptime: ${uptime} Jam | OS: ${os.platform()}</div>
-                            </div>
-
-                            <div class="mt-4">
-                                <h6>Fitur Kontrol:</h6>
-                                <div class="d-grid gap-2">
-                                    <a href="/restart" onclick="return confirm('Restart bot sekarang?')" class="btn btn-outline-danger btn-sm">Restart Bot Instance</a>
-                                    <button class="btn btn-wa w-100 mt-2" onclick="location.reload()">Refresh Dashboard</button>
+                                <div class="row text-center">
+                                    <div class="col-6 border-end border-secondary">
+                                        <small class="text-secondary d-block">RAM Usage</small>
+                                        <strong>${usedRAM} / ${totalRAM} GB</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-secondary d-block">Uptime</small>
+                                        <strong>${uptime} Jam</strong>
+                                    </div>
                                 </div>
                             </div>
 
-                            <hr class="my-4 border-secondary">
+                            <div class="mt-4">
+                                <h6 class="mb-2">Log Pesan WhatsApp (Real-time):</h6>
+                                <div class="log-container">
+                                    ${logsHtml}
+                                </div>
+                            </div>
 
-                            <h6>Kirim Broadcast Cepat:</h6>
-                            <form action="/broadcast" method="POST">
-                                <input type="text" name="jid" class="form-control mb-2 bg-dark text-white border-secondary" placeholder="Nomor (contoh: 62812xxx@s.whatsapp.net)" required>
-                                <textarea name="message" class="form-control mb-2 bg-dark text-white border-secondary" placeholder="Tulis pesan..." required></textarea>
-                                <button type="submit" class="btn btn-wa btn-sm w-100">Kirim Pesan</button>
-                            </form>
+                            <button class="btn btn-wa w-100 mt-3" onclick="location.reload()">Refresh Log</button>
                         </div>
                     </div>
+                    <script>setTimeout(() => { location.reload(); }, 10000);</script>
                 </body>
             </html>
         `);
@@ -107,7 +126,7 @@ app.get("/", (req, res) => {
                     <div class="card p-4 text-center" style="max-width: 380px;">
                         <h5 class="mb-4">Hubungkan WhatsApp</h5>
                         <div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div>
-                        <p class="text-secondary small">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk memulai bot.</p>
+                        <p class="text-secondary small">Buka WhatsApp > Perangkat Tertaut > Scan QR ini.</p>
                         <script>setTimeout(() => { location.reload(); }, 15000);</script>
                     </div>
                 </body>
@@ -125,17 +144,7 @@ app.get("/restart", (req, res) => {
     isConnected = false;
     qrCodeData = "";
     setTimeout(() => start(), 3000);
-    res.send("<script>alert('Perintah restart dikirim.'); window.location.href='/';</script>");
-});
-
-app.post("/broadcast", async (req, res) => {
-    const { jid, message } = req.body;
-    if (isConnected && sock) {
-        await sock.sendMessage(jid, { text: message });
-        res.send("<script>alert('Pesan terkirim!'); window.location.href='/';</script>");
-    } else {
-        res.send("<script>alert('Bot belum terhubung!'); window.location.href='/';</script>");
-    }
+    res.send("<script>alert('Bot sedang direstart...'); window.location.href='/';</script>");
 });
 
 app.listen(port, "0.0.0.0", () => {
@@ -230,6 +239,13 @@ async function start() {
 
         sock.ev.on("messages.upsert", async (m) => {
             if (m.type === 'notify') {
+                // Ekstrak pesan untuk Log UI
+                const msg = m.messages[0];
+                const from = msg.pushName || msg.key.remoteJid.split('@')[0];
+                const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "[Media/Other]";
+                
+                if (!msg.key.fromMe) addLog(from, text); // Catat log jika bukan dari bot sendiri
+
                 try {
                     await handleMessages(sock, m, kuisAktif, { getWeekDates });
                 } catch (err) {
@@ -246,4 +262,3 @@ async function start() {
 }
 
 start();
-            
