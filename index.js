@@ -12,14 +12,17 @@ const QRCode = require("qrcode");
 const os = require("os"); 
 const path = require("path");
 
-// --- IMPORT DARI HANDLER ---
+// --- IMPORT DARI HANDLER & SCHEDULER (Hanya bagian ini yang disesuaikan) ---
+const { handleMessages } = require('./handler'); 
 const { 
-    handleMessages, 
     initQuizScheduler, 
     initJadwalBesokScheduler, 
     initSmartFeedbackScheduler,
-    kuisAktif
-} = require('./handler'); 
+    getWeekDates 
+} = require('./scheduler'); 
+
+// Objek kuisAktif harus didefinisikan agar bisa digunakan bersama antara index, handler, dan scheduler
+let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null };
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -192,16 +195,17 @@ async function start() {
                 
                 // Beri jeda 2 detik agar state benar-benar stabil sebelum scheduler jalan
                 await delay(2000);
-                initQuizScheduler(sock);
+                initQuizScheduler(sock, kuisAktif);
                 initJadwalBesokScheduler(sock);
-                initSmartFeedbackScheduler(sock); 
+                initSmartFeedbackScheduler(sock, kuisAktif); 
             }
         });
 
         sock.ev.on("messages.upsert", async (m) => {
             if (m.type === 'notify') {
                 try {
-                    await handleMessages(sock, m);
+                    // Menyertakan kuisAktif dan utils agar handler tetap bisa berjalan sesuai struktur aslinya
+                    await handleMessages(sock, m, kuisAktif, { getWeekDates });
                 } catch (err) {
                     console.error("❌ Error saat handle pesan:", err);
                 }
