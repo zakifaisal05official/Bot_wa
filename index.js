@@ -35,14 +35,14 @@ let isStarting = false;
 let logs = [];
 const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
-    // Menambahkan span warna pada waktu agar lebih kontras
-    logs.unshift(`<span style="color: #00a884;">[${time}]</span> ${msg}`);
+    // Menambahkan warna hijau pada timestamp agar kontras
+    logs.unshift(`<span style="color: #00ff73; font-weight: bold;">[${time}]</span> ${msg}`);
     if (logs.length > 50) logs.pop();
 };
 
 app.use(express.urlencoded({ extended: true }));
 
-// --- 1. WEB SERVER UI (MODERN HIGH-CONTRAST DARK THEME) ---
+// --- 1. WEB SERVER UI (HIGH CONTRAST EDITION) ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     const totalRAM = (os.totalmem() / (1024 ** 3)).toFixed(2);
@@ -55,14 +55,14 @@ app.get("/", (req, res) => {
         <style>
             body { background: #0b141a; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
             .card { background: #1f2c33; border: 1px solid #2a3942; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-            .status-online { color: #00ff73; font-weight: bold; text-shadow: 0 0 8px rgba(0,255,115,0.4); }
+            .status-online { color: #00ff73; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,115,0.5); }
             .status-offline { color: #ff3b3b; font-weight: bold; }
             .status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
             .dot-online { background-color: #00ff73; box-shadow: 0 0 12px #00ff73; animation: pulse 1.5s infinite; }
             .dot-offline { background-color: #ff3b3b; }
             @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
             
-            /* LOG BOX: Perbaikan kontras teks utama */
+            /* LOG BOX: Teks dibuat Putih Terang agar terlihat jelas */
             .log-box { 
                 background: #0c151b; 
                 border-radius: 8px; 
@@ -76,11 +76,11 @@ app.get("/", (req, res) => {
                 line-height: 1.6;
             }
             
-            /* Info Stats Box: Teks Putih & Border Jelas */
-            .stats-item { background: #2a3942; border: 1px solid #374045 !important; color: #ffffff !important; }
-            .stats-item small { color: #00a884 !important; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+            /* Stats Item: Dibuat lebih terang */
+            .stats-item { background: #2a3942; border: 1px solid #455a64 !important; color: #ffffff !important; }
+            .stats-item small { color: #00a884 !important; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; }
             
-            .qr-container { background: white; padding: 20px; border-radius: 15px; display: inline-block; }
+            .qr-container { background: white; padding: 20px; border-radius: 15px; display: inline-block; border: 5px solid #00a884; }
             .btn-restart { background: #ea0038; color: white; border: none; font-weight: 600; transition: 0.3s; }
             .btn-restart:hover { background: #ff2b51; color: white; transform: scale(1.02); }
             .btn-primary { background: #00a884; border: none; font-weight: 600; }
@@ -91,14 +91,14 @@ app.get("/", (req, res) => {
     if (isConnected) {
         return res.send(`
             <html>
-                <head><title>Syteam Monitor Bot</title>${commonHead}</head>
+                <head><title>System Monitor Bot</title>${commonHead}</head>
                 <body class="py-5">
                     <div class="container" style="max-width: 600px;">
                         <div class="card p-4">
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <div>
                                     <h4 class="mb-0">WhatsApp Bot Monitor</h4>
-                                    <small style="color: #8696a0;">v2.1 Stable Edition</small>
+                                    <small style="color: #8696a0;">v2.1 High Contrast Edition</small>
                                 </div>
                                 <div class="text-end">
                                     <span class="status-dot dot-online"></span>
@@ -110,24 +110,24 @@ app.get("/", (req, res) => {
                                 <div class="col-4">
                                     <div class="p-2 rounded stats-item">
                                         <small class="d-block">RAM Usage</small>
-                                        <strong>${usedRAM} / ${totalRAM} GB</strong>
+                                        <strong style="font-size: 1.1rem;">${usedRAM} / ${totalRAM} GB</strong>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="p-2 rounded stats-item">
                                         <small class="d-block">Uptime</small>
-                                        <strong>${uptime} Jam</strong>
+                                        <strong style="font-size: 1.1rem;">${uptime} Jam</strong>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="p-2 rounded stats-item">
                                         <small class="d-block">OS</small>
-                                        <strong>${os.platform().toUpperCase()}</strong>
+                                        <strong style="font-size: 1.1rem;">${os.platform().toUpperCase()}</strong>
                                     </div>
                                 </div>
                             </div>
 
-                            <h6 class="mb-2" style="color: #e9edef;">System & Message Logs:</h6>
+                            <h6 class="mb-2" style="color: #00a884; font-weight: bold;">System & Message Logs:</h6>
                             <div class="log-box mb-4">
                                 ${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Menunggu aktivitas...</div>'}
                             </div>
@@ -152,8 +152,8 @@ app.get("/", (req, res) => {
                     <div class="card p-4 text-center" style="max-width: 400px;">
                         <h4 class="mb-3">Link WhatsApp</h4>
                         <div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div>
-                        <p style="color: #8696a0;">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk menghubungkan bot.</p>
-                        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                        <p style="color: #e9edef; font-weight: 500;">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk menghubungkan bot.</p>
+                        <div class="spinner-border text-success" role="status"></div>
                         <script>setTimeout(() => { location.reload(); }, 15000);</script>
                     </div>
                 </body>
@@ -166,9 +166,9 @@ app.get("/", (req, res) => {
             <head><title>Booting...</title>${commonHead}</head>
             <body class="d-flex align-items-center justify-content-center vh-100 text-center">
                 <div>
-                    <div class="spinner-grow text-success mb-3" role="status"></div>
-                    <h3 style="letter-spacing: 2px;">SYSTEM BOOTING...</h3>
-                    <p style="color: #8696a0;">Sedang menyiapkan kernel dan koneksi WhatsApp.</p>
+                    <div class="spinner-grow text-success mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+                    <h3 style="letter-spacing: 2px; color: #00ff73;">SYSTEM BOOTING...</h3>
+                    <p style="color: #ffffff;">Sedang menyiapkan kernel dan koneksi WhatsApp.</p>
                 </div>
                 <script>setTimeout(() => { location.reload(); }, 4000);</script>
             </body>
@@ -176,19 +176,21 @@ app.get("/", (req, res) => {
     `);
 });
 
-// --- FITUR RESTART ---
+// --- FITUR RESTART (DENGAN JEDA AGAR TIDAK STUCK) ---
 app.get("/restart", (req, res) => {
     res.send(`
         <body style="background:#0b141a; color:white; text-align:center; padding-top:100px; font-family:sans-serif;">
-            <h3>♻️ Restarting Bot...</h3>
-            <p>Sistem akan mati dan menyala kembali otomatis dalam beberapa detik.</p>
-            <script>setTimeout(() => { window.location.href='/'; }, 8000);</script>
+            <h2 style="color: #00ff73;">♻️ Restarting Bot...</h2>
+            <p>Sistem dimatikan dan akan menyala kembali otomatis dalam hitungan detik.</p>
+            <p style="color: #8696a0;">Halaman akan refresh otomatis.</p>
+            <script>setTimeout(() => { window.location.href='/'; }, 10000);</script>
         </body>
     `);
     addLog("System restart dipicu oleh Dashboard Web.");
+    // Memberi jeda 3 detik sebelum exit agar respon HTML terkirim sempurna ke Railway
     setTimeout(() => {
         process.exit(0); 
-    }, 2000);
+    }, 3000);
 });
 
 app.listen(port, "0.0.0.0", () => {
@@ -313,3 +315,4 @@ async function start() {
 }
 
 start();
+                                        
