@@ -62,8 +62,9 @@ async function initListPrMingguanScheduler(sock) {
                     
                     teksPesan += `📌 *${dayLabels[i]}, ${dates[i-1]}*\n`;
                     const listMapel = rawMapel.map(mapel => {
-                        const mapelMurni = mapel.replace(/[^\w\s]/gi, '').toLowerCase().trim();
-                        const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && dataPRHariIni.includes(mapelMurni);
+                        // Perbaikan: Ambil nama mapel sebelum emoji untuk pencocokan database
+                        const mapelMurni = mapel.split(/[^\w\s]/)[0].toLowerCase().trim();
+                        const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && !dataPRHariIni.includes("tidak ada pr") && dataPRHariIni.includes(mapelMurni);
                         return `• ${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
                     }).join('\n');
                     
@@ -178,8 +179,9 @@ async function initJadwalBesokScheduler(sock) {
                 const currentData = db.getAll() || {};
                 const dataPRBesok = (currentData[daysKey[hariBesok]] || "").toLowerCase();
                 const jadwalFinal = rawMapel.map(mapel => {
-                    const mapelMurni = mapel.replace(/[^\w\s]/gi, '').toLowerCase().trim();
-                    const adaPR = dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && dataPRBesok.includes(mapelMurni);
+                    // Perbaikan: Ambil nama mapel saja (contoh: "PAI" atau "Bahasa Indonesia")
+                    const mapelMurni = mapel.split(/[^\w\s]/)[0].toLowerCase().trim();
+                    const adaPR = dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && !dataPRBesok.includes("tidak ada pr") && dataPRBesok.includes(mapelMurni);
                     return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
                 }).join('\n');
                 const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${dates[hariBesok - 1]}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
@@ -197,3 +199,4 @@ module.exports = {
     initListPrMingguanScheduler, 
     getWeekDates 
 };
+                                     
