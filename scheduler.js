@@ -1,6 +1,5 @@
 const { QUIZ_BANK } = require('./quiz'); 
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
-const { MAPEL_CONFIG } = require('./pelajaran'); 
 const db = require('./data');
 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
@@ -53,15 +52,13 @@ async function sendJadwalBesokManual(sock) {
         const dataPRBesok = (currentData[daysKey[hariBesok]] || "").toLowerCase();
 
         const jadwalFinal = rawMapel.map(mapel => {
-            // Mencari Key asli (misal: PAIBP) berdasarkan emoji/teks di jadwal (misal: PAI 🕌)
-            const mapelKey = Object.keys(MAPEL_CONFIG).find(key => mapel.includes(MAPEL_CONFIG[key]));
+            // Perbaikan logika: Ambil kata pertama (nama mapel murni) untuk dicocokkan ke Database
+            const mapelMurni = mapel.split(' ')[0].replace(/[^\w\s]/g, '').toLowerCase().trim();
             
-            let adaPR = false;
-            if (mapelKey && dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas")) {
-                // Karena !update_jadwal menyimpan nama mapel murni (PAIBP) di dalam teks rekap,
-                // kita cari apakah mapelKey ada di dalam dataPRBesok.
-                adaPR = dataPRBesok.includes(mapelKey.toLowerCase());
-            }
+            // Cek apakah nama mapel tersebut ada di dalam teks database PR
+            const adaPR = dataPRBesok !== "" && 
+                          !dataPRBesok.includes("belum ada tugas") && 
+                          dataPRBesok.includes(mapelMurni);
 
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
         }).join('\n');
@@ -94,11 +91,10 @@ async function initListPrMingguanScheduler(sock) {
                     
                     teksPesan += `📌 *${dayLabels[i]}, ${dates[i-1]}*\n`;
                     const listMapel = rawMapel.map(mapel => {
-                        const mapelKey = Object.keys(MAPEL_CONFIG).find(key => mapel.includes(MAPEL_CONFIG[key]));
-                        let adaPR = false;
-                        if (mapelKey && dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas")) {
-                            adaPR = dataPRHariIni.includes(mapelKey.toLowerCase());
-                        }
+                        const mapelMurni = mapel.split(' ')[0].replace(/[^\w\s]/g, '').toLowerCase().trim();
+                        const adaPR = dataPRHariIni !== "" && 
+                                      !dataPRHariIni.includes("belum ada tugas") && 
+                                      dataPRHariIni.includes(mapelMurni);
                         return `• ${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
                     }).join('\n');
                     
@@ -194,4 +190,3 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-            
