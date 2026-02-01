@@ -19,8 +19,9 @@ const {
     initQuizScheduler, 
     initJadwalBesokScheduler, 
     initSmartFeedbackScheduler,
-    initListPrMingguanScheduler, // Tambahkan import fungsi baru
-    getWeekDates 
+    initListPrMingguanScheduler,
+    getWeekDates,
+    sendJadwalBesokManual // Pastikan ini ter-import untuk digunakan di handler
 } = require('./scheduler'); 
 
 let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null };
@@ -43,13 +44,12 @@ const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
     logs.unshift(`<span style="color: #00a884;">[${time}]</span> ${msg}`);
     stats.totalLog++;
-    // Auto-clear log jika lebih dari 100 agar website tidak error/berat
     if (logs.length > 100) logs.pop();
 };
 
 app.use(express.urlencoded({ extended: true }));
 
-// --- 1. WEB SERVER UI (MODERN HIGH-CONTRAST DARK THEME) ---
+// --- 1. WEB SERVER UI ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     const totalRAM = (os.totalmem() / (1024 ** 3)).toFixed(2);
@@ -102,7 +102,6 @@ app.get("/", (req, res) => {
                                     <span class="status-online">CONNECTED</span>
                                 </div>
                             </div>
-
                             <div class="row g-2 mb-4 text-center">
                                 <div class="col-3">
                                     <div class="p-2 rounded stats-item">
@@ -129,12 +128,10 @@ app.get("/", (req, res) => {
                                     </div>
                                 </div>
                             </div>
-
                             <h6 class="mb-2" style="color: #e9edef;">Live Activity Log:</h6>
                             <div class="log-box mb-4">
                                 ${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Waiting for data...</div>'}
                             </div>
-
                             <button class="btn-refresh" onclick="location.reload()">REFRESH DASHBOARD</button>
                         </div>
                     </div>
@@ -173,7 +170,6 @@ app.listen(port, "0.0.0.0", () => {
 });
 
 // --- 2. LOGIKA UTAMA BOT ---
-
 async function start() {
     if (isStarting) return;
     isStarting = true;
@@ -191,14 +187,11 @@ async function start() {
             logger: pino({ level: "silent" }),
             printQRInTerminal: false,
             browser: ["Ubuntu", "Chrome", "20.0.0.4"],
-            getMessage: async (key) => {
-                return { conversation: undefined }
-            }
+            getMessage: async (key) => { return { conversation: undefined } }
         });
 
         sock.ev.on("creds.update", saveCreds);
 
-        // Handle Polling
         sock.ev.on('messages.update', async (updates) => {
             for (const update of updates) {
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
@@ -211,52 +204,39 @@ async function start() {
             }
         });
 
-        // Anti-Call
         sock.ev.on('call', async (node) => {
             for (const call of node) {
                 if (call.status === 'offer') {
-                    const callerId = call.from.split('@')[0];
-                    addLog(`Panggilan masuk ditolak: ${callerId}`);
-                    try {
-                        await sock.rejectCall(call.id, call.from);
-                    } catch (e) { /* ignore */ }
+                    addLog(`Panggilan masuk ditolak: ${call.from.split('@')[0]}`);
+                    try { await sock.rejectCall(call.id, call.from); } catch (e) { }
                 }
             }
         });
 
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
-
             if (qr) {
                 qrCodeData = await QRCode.toDataURL(qr);
                 isConnected = false;
                 addLog("QR Code baru dihasilkan.");
             }
-
             if (connection === "close") {
                 isConnected = false;
                 qrCodeData = "";
                 isStarting = false;
                 const reason = lastDisconnect?.error?.output?.statusCode;
-                
                 addLog(`Terputus. Alasan: ${reason}`);
-                
-                if (reason !== DisconnectReason.loggedOut) {
-                    setTimeout(start, 5000);
-                } else {
-                    addLog("Sesi Logout! Silakan scan ulang.");
-                }
+                if (reason !== DisconnectReason.loggedOut) { setTimeout(start, 5000); }
             } else if (connection === "open") {
                 qrCodeData = ""; 
                 isConnected = true;
                 isStarting = false;
                 addLog("Bot Terhubung!");
-                
                 await delay(2000);
                 initQuizScheduler(sock, kuisAktif);
                 initJadwalBesokScheduler(sock);
                 initSmartFeedbackScheduler(sock, kuisAktif); 
-                initListPrMingguanScheduler(sock); // Jalankan List PR Mingguan (Sabtu 10:00)
+                initListPrMingguanScheduler(sock);
                 addLog("Sistem Aktif 100%");
             }
         });
@@ -266,12 +246,15 @@ async function start() {
                 const msg = m.messages[0];
                 if (!msg.message || msg.key.fromMe) return;
 
-                stats.pesanMasuk++; // Fitur statistik pesan
-                const from = msg.pushName || msg.key.remoteJid.split('@')[0];
-                addLog(`Pesan: ${from}`);
+                stats.pesanMasuk++;
+                addLog(`Pesan: ${msg.pushName || msg.key.remoteJid.split('@')[0]}`);
 
                 try {
-                    await handleMessages(sock, m, kuisAktif, { getWeekDates });
+                    // Penambahan sendJadwalBesokManual ke parameter utils
+                    await handleMessages(sock, m, kuisAktif, { 
+                        getWeekDates, 
+                        sendJadwalBesokManual 
+                    });
                 } catch (err) {
                     console.error("❌ Error Handler:", err);
                 }
