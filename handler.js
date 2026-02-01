@@ -118,9 +118,9 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                 break;
             case '!data':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                if (utils.sendJadwalBesokManual) {
+                if (utils && typeof utils.sendJadwalBesokManual === 'function') {
                     await utils.sendJadwalBesokManual(sock);
-                    await sock.sendMessage(sender, { text: "✅ *Perintah diterima. Jadwal persiapan besok sedang dikirim ke grup!*" });
+                    await sock.sendMessage(sender, { text: "✅ *Berhasil! Jadwal persiapan besok sudah dikirim ke grup.*" });
                 }
                 break;
             case '!polling':
@@ -163,4 +163,4 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-        
+    
