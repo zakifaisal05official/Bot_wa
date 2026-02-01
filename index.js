@@ -24,6 +24,9 @@ const {
 
 let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null };
 
+// Tambahan Variabel Statistik
+let stats = { incoming: 0, system: 0 };
+
 const app = express();
 const port = process.env.PORT || 3000;
 let qrCodeData = ""; 
@@ -37,6 +40,7 @@ const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
     logs.unshift(`<span style="color: #00a884;">[${time}]</span> ${msg}`);
     if (logs.length > 50) logs.pop();
+    stats.system++; // Hitung setiap log sistem
 };
 
 app.use(express.urlencoded({ extended: true }));
@@ -72,21 +76,95 @@ app.get("/", (req, res) => {
     `;
 
     if (isConnected) {
-        return res.send(`<html><head><title>Monitor Bot Syteam</title>${commonHead}</head><body class="py-5"><div class="container" style="max-width: 600px;"><div class="card p-4"><div class="d-flex justify-content-between align-items-center mb-4"><div><h4 class="mb-0">WhatsApp Bot Monitor</h4><small style="color: #8696a0;">v2.1 Stable Edition</small></div><div class="text-end"><span class="status-dot dot-online"></span><span class="status-online">ONLINE</span></div></div><div class="row g-3 mb-4 text-center"><div class="col-4"><div class="p-2 rounded stats-item"><small class="d-block">RAM Usage</small><strong>${usedRAM} / ${totalRAM} GB</strong></div></div><div class="col-4"><div class="p-2 rounded stats-item"><small class="d-block">Uptime</small><strong>${uptime} Jam</strong></div></div><div class="col-4"><div class="p-2 rounded stats-item"><small class="d-block">OS</small><strong>${os.platform().toUpperCase()}</strong></div></div></div><h6 class="mb-2" style="color: #e9edef;">System & Message Logs:</h6><div class="log-box mb-4">${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Menunggu aktivitas...</div>'}</div><div class="d-grid gap-2"><button class="btn btn-primary" onclick="location.reload()">Refresh Log</button><a href="/restart" onclick="return confirm('Apakah Anda yakin ingin me-restart bot?')" class="btn btn-restart">Restart System</a></div></div></div><script>setTimeout(() => { location.reload(); }, 10000);</script></body></html>`);
+        return res.send(`
+            <html>
+                <head><title>Monitor Bot Syteam</title>${commonHead}</head>
+                <body class="py-5">
+                    <div class="container" style="max-width: 600px;">
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h4 class="mb-0">WhatsApp Bot Monitor</h4>
+                                    <small style="color: #8696a0;">v2.1 Stable Edition</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="status-dot dot-online"></span>
+                                    <span class="status-online">ONLINE</span>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-4 text-center">
+                                <div class="col-6 col-md-3">
+                                    <div class="p-2 rounded stats-item">
+                                        <small class="d-block">RAM</small>
+                                        <strong>${usedRAM}GB</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-2 rounded stats-item">
+                                        <small class="d-block">Uptime</small>
+                                        <strong>${uptime}H</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-2 rounded stats-item">
+                                        <small class="d-block">In Chat</small>
+                                        <strong>${stats.incoming}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="p-2 rounded stats-item">
+                                        <small class="d-block">Logs</small>
+                                        <strong>${stats.system}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="mb-2" style="color: #e9edef;">System & Message Logs:</h6>
+                            <div class="log-box mb-4">
+                                ${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Menunggu aktivitas...</div>'}
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" onclick="location.reload()">Refresh Log</button>
+                                <a href="/restart" onclick="return confirm('Apakah Anda yakin ingin me-restart bot?')" class="btn btn-restart">Restart System</a>
+                            </div>
+                        </div>
+                    </div>
+                    <script>setTimeout(() => { location.reload(); }, 10000);</script>
+                </body>
+            </html>
+        `);
     }
 
     if (qrCodeData) {
-        return res.send(`<html><head><title>Scan WhatsApp</title>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100"><div class="card p-4 text-center" style="max-width: 400px;"><h4 class="mb-3">Link WhatsApp</h4><div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div><p style="color: #8696a0;">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk menghubungkan bot.</p><div class="spinner-border text-primary spinner-border-sm" role="status"></div><script>setTimeout(() => { location.reload(); }, 15000);</script></div></body></html>`);
+        return res.send(`
+            <html>
+                <head><title>Scan WhatsApp</title>${commonHead}</head>
+                <body class="d-flex align-items-center justify-content-center vh-100">
+                    <div class="card p-4 text-center" style="max-width: 400px;">
+                        <h4 class="mb-3">Link WhatsApp</h4>
+                        <div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div>
+                        <p style="color: #8696a0;">Buka WhatsApp > Perangkat Tertaut > Scan QR ini.</p>
+                        <script>setTimeout(() => { location.reload(); }, 15000);</script>
+                    </div>
+                </body>
+            </html>
+        `);
     }
 
-    res.send(`<html><head><title>Booting...</title>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100 text-center"><div><div class="spinner-grow text-success mb-3" role="status"></div><h3 style="letter-spacing: 2px;">SYSTEM BOOTING...</h3><p style="color: #8696a0;">Sedang menyiapkan kernel dan koneksi WhatsApp.</p></div><script>setTimeout(() => { location.reload(); }, 4000);</script></body></html>`);
+    res.send(`
+        <html><head><title>Booting...</title>${commonHead}</head>
+        <body class="d-flex align-items-center justify-content-center vh-100 text-center">
+            <div><div class="spinner-grow text-success mb-3" role="status"></div><h3>SYSTEM BOOTING...</h3></div>
+            <script>setTimeout(() => { location.reload(); }, 4000);</script>
+        </body></html>
+    `);
 });
 
-// --- FITUR RESTART ---
 app.get("/restart", (req, res) => {
-    res.send(`<body style="background:#0b141a; color:white; text-align:center; padding-top:100px; font-family:sans-serif;"><h3>♻️ Restarting Bot...</h3><p>Sistem akan mati dan menyala kembali otomatis dalam beberapa detik.</p><script>setTimeout(() => { window.location.href='/'; }, 8000);</script></body>`);
-    addLog("System restart dipicu oleh Dashboard Web.");
-    setTimeout(() => { process.exit(0); }, 2000);
+    res.send(`<body style="background:#0b141a; color:white; text-align:center; padding-top:100px;"><h3>♻️ Restarting...</h3><script>setTimeout(() => { window.location.href='/'; }, 8000);</script></body>`);
+    setTimeout(() => process.exit(0), 2000);
 });
 
 app.listen(port, "0.0.0.0", () => {
@@ -94,15 +172,13 @@ app.listen(port, "0.0.0.0", () => {
 });
 
 // --- 2. LOGIKA UTAMA BOT ---
-
 async function start() {
     if (isStarting) return;
     isStarting = true;
 
     try {
         const { version } = await fetchLatestBaileysVersion();
-        const authPath = path.join(__dirname, 'auth_info');
-        const { state, saveCreds } = await useMultiFileAuthState(authPath);
+        const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'auth_info'));
 
         sock = makeWASocket({
             version,
@@ -113,77 +189,38 @@ async function start() {
             logger: pino({ level: "silent" }),
             printQRInTerminal: false,
             browser: ["Ubuntu", "Chrome", "20.0.0.4"],
-            getMessage: async (key) => { return { conversation: undefined } }
         });
 
         sock.ev.on("creds.update", saveCreds);
 
-        sock.ev.on('messages.update', async (updates) => {
-            for (const update of updates) {
-                if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
-                    const pollUpdate = update.update.pollUpdates[0];
-                    if (pollUpdate) {
-                        kuisAktif.votes[pollUpdate.voterJid] = pollUpdate.selectedOptions;
-                        addLog(`Vote masuk dari: ${pollUpdate.voterJid.split('@')[0]}`);
-                    }
-                }
-            }
-        });
-
-        sock.ev.on('call', async (node) => {
-            for (const call of node) {
-                if (call.status === 'offer') {
-                    const callerId = call.from.split('@')[0];
-                    addLog(`Panggilan masuk ditolak dari: ${callerId}`);
-                    try {
-                        await sock.rejectCall(call.id, call.from);
-                        await sock.sendMessage(call.from, { text: "⚠️ *PANGGILAN DITOLAK*\nMaaf, bot tidak melayani telepon/video call." });
-                    } catch (e) { }
-                }
-            }
-        });
-
         sock.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect, qr } = update;
-
             if (qr) {
                 qrCodeData = await QRCode.toDataURL(qr);
                 isConnected = false;
                 addLog("QR Code baru dihasilkan.");
             }
-
             if (connection === "close") {
                 isConnected = false;
                 qrCodeData = "";
                 isStarting = false;
                 const reason = lastDisconnect?.error?.output?.statusCode;
-                
-                addLog(`Koneksi terputus. Alasan: ${reason}`);
-                
                 if (reason !== DisconnectReason.loggedOut) {
-                    console.log("🔄 Reconnecting...");
                     setTimeout(start, 5000);
                 } else {
-                    addLog("🚨 Logged Out! Menghapus file sesi agar tidak stuck...");
-                    // HAPUS FILE SESI DI VOLUME SECARA OTOMATIS
-                    try {
-                        fs.rmSync(authPath, { recursive: true, force: true });
-                        addLog("✅ File sesi berhasil dibersihkan. Memulai ulang...");
-                    } catch (e) {
-                        addLog("❌ Gagal hapus folder: " + e.message);
-                    }
+                    addLog("Sesi Logout! Membersihkan auth_info...");
+                    fs.rmSync(path.join(__dirname, 'auth_info'), { recursive: true, force: true });
                     setTimeout(start, 3000);
                 }
             } else if (connection === "open") {
                 qrCodeData = ""; 
                 isConnected = true;
                 isStarting = false;
-                addLog("Bot Terhubung! Menyiapkan Scheduler...");
+                addLog("Bot Terhubung!");
                 await delay(2000);
                 initQuizScheduler(sock, kuisAktif);
                 initJadwalBesokScheduler(sock);
                 initSmartFeedbackScheduler(sock, kuisAktif); 
-                addLog("Semua sistem aktif 100%.");
             }
         });
 
@@ -191,23 +228,23 @@ async function start() {
             if (m.type === 'notify') {
                 const msg = m.messages[0];
                 if (!msg.message || msg.key.fromMe) return;
+                
+                stats.incoming++; // Tambah hitungan pesan
                 const from = msg.pushName || msg.key.remoteJid.split('@')[0];
                 const content = msg.message.conversation || msg.message.extendedTextMessage?.text || "[Media]";
-                addLog(`Pesan dari ${from}: ${content.substring(0, 30)}...`);
+                addLog(`Pesan: ${from} -> ${content.substring(0, 20)}`);
+
                 try {
                     await handleMessages(sock, m, kuisAktif, { getWeekDates });
-                } catch (err) {
-                    console.error("❌ Error Handler:", err);
-                }
+                } catch (err) { console.error(err); }
             }
         });
 
     } catch (err) {
-        addLog(`FATAL ERROR: ${err.message}`);
         isStarting = false;
         setTimeout(start, 5000);
     }
 }
 
 start();
-    
+                                            
