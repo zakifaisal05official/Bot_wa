@@ -130,8 +130,9 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             case '!data':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 if (utils && typeof utils.sendJadwalBesokManual === 'function') {
-                    await utils.sendJadwalBesokManual(sock);
-                    await sock.sendMessage(sender, { text: "✅ *Berhasil! Jadwal persiapan besok sudah dikirim ke grup.*" });
+                    // Kita tambahkan parameter 'sender' agar dikirim ke chat pribadi kamu
+                    await utils.sendJadwalBesokManual(sock, sender);
+                    await sock.sendMessage(sender, { text: "✅ *Laporan jadwal besok sudah saya kirim ke sini ya!*" });
                 }
                 break;
             case '!polling':
