@@ -49,17 +49,16 @@ async function sendJadwalBesokManual(sock, targetJid) {
         const rawMapel = JADWAL_PELAJARAN[hariBesok].split('\n');
         const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
         const currentData = db.getAll() || {};
-        const dataPRBesok = (currentData[daysKey[hariBesok]] || "").toLowerCase();
+        const dataPRBesok = (currentData[daysKey[hariBesok]] || "");
 
         const jadwalFinal = rawMapel.map(mapel => {
-            // Ambil nama depan murni (contoh: PAI, IPA, Bahasa)
-            const namaDepan = mapel.split(' ')[0].replace(/[^\w\s]/g, '').toLowerCase().trim();
+            // Ambil EMOJI dari jadwal (misal: 🕌 atau 🔬)
+            const emojiOnly = mapel.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/u);
             
             let adaPR = false;
-            if (dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas")) {
-                // Gunakan RegExp dengan word boundary (\b) agar pencocokan akurat 100%
-                const regex = new RegExp(`\\b${namaDepan}\\b`, 'i');
-                adaPR = regex.test(dataPRBesok);
+            if (dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && emojiOnly) {
+                // Cek apakah emoji tersebut ada di dalam teks database PR
+                adaPR = dataPRBesok.includes(emojiOnly[0]);
             }
 
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
@@ -67,7 +66,7 @@ async function sendJadwalBesokManual(sock, targetJid) {
 
         const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${dates[hariBesok - 1]}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
         
-        // Kirim ke targetJid (Japri Admin) jika ada, jika tidak kirim ke Grup (untuk scheduler otomatis)
+        // Kirim ke Japri jika ada targetJid, jika tidak ke grup
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
     } catch (err) { console.error("Jadwal Manual Error:", err); }
 }
@@ -90,13 +89,12 @@ async function initListPrMingguanScheduler(sock) {
                 let teksPesan = `📅 *JADWAL & PR MINGGU DEPAN*\nPeriode: *${periode}*\n━━━━━━━━━━━━━━━━━━━━\n\n`;
                 for (let i = 1; i <= 5; i++) {
                     const rawMapel = JADWAL_PELAJARAN[i].split('\n');
-                    const dataPRHariIni = (currentData[daysKey[i]] || "").toLowerCase();
+                    const dataPRHariIni = (currentData[daysKey[i]] || "");
                     
                     teksPesan += `📌 *${dayLabels[i]}, ${dates[i-1]}*\n`;
                     const listMapel = rawMapel.map(mapel => {
-                        const namaDepan = mapel.split(' ')[0].replace(/[^\w\s]/g, '').toLowerCase().trim();
-                        const regex = new RegExp(`\\b${namaDepan}\\b`, 'i');
-                        const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && regex.test(dataPRHariIni);
+                        const emojiOnly = mapel.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/u);
+                        const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && emojiOnly && dataPRHariIni.includes(emojiOnly[0]);
                         return `• ${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
                     }).join('\n');
                     
@@ -178,7 +176,7 @@ async function initJadwalBesokScheduler(sock) {
         const menit = now.getMinutes();
         const tglID = `${now.getDate()}-${now.getMonth()}`;
         if (jam === 17 && menit === 0 && lastSentJadwal !== tglID) {
-            await sendJadwalBesokManual(sock); // Otomatis tetap ke grup
+            await sendJadwalBesokManual(sock);
             lastSentJadwal = tglID;
         }
     }, 35000); 
@@ -192,4 +190,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-        
+                
