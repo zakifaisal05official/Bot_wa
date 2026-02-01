@@ -38,7 +38,6 @@ async function sendJadwalBesokManual(sock) {
         const hariIni = now.getDay(); 
         let hariBesok = (hariIni + 1) % 7;
         
-        // Agar tidak diam saat tes di hari libur, arahkan ke Senin jika besok Sabtu/Minggu
         if (hariBesok === 6 || hariBesok === 0) {
             hariBesok = 1; 
         }
@@ -53,8 +52,11 @@ async function sendJadwalBesokManual(sock) {
         const dataPRBesok = (currentData[daysKey[hariBesok]] || "").toLowerCase();
 
         const jadwalFinal = rawMapel.map(mapel => {
-            const mapelMurni = mapel.split(/[^\w\s]/)[0].toLowerCase().trim();
-            const adaPR = dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && dataPRBesok.includes(mapelMurni);
+            // Perbaikan: Ambil nama mapel saja, bersihkan dari simbol/emoji untuk pencocokan
+            const mapelMurni = mapel.replace(/[^\w\s]/g, '').trim().toLowerCase();
+            // Gunakan Regexp untuk memastikan kata yang cocok adalah kata utuh (bukan bagian dari kata lain)
+            const regex = new RegExp(`\\b${mapelMurni}\\b`, 'i');
+            const adaPR = dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && regex.test(dataPRBesok);
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
         }).join('\n');
 
@@ -83,12 +85,15 @@ async function initListPrMingguanScheduler(sock) {
                 for (let i = 1; i <= 5; i++) {
                     const rawMapel = JADWAL_PELAJARAN[i].split('\n');
                     const dataPRHariIni = (currentData[daysKey[i]] || "").toLowerCase();
+                    
                     teksPesan += `📌 *${dayLabels[i]}, ${dates[i-1]}*\n`;
                     const listMapel = rawMapel.map(mapel => {
-                        const mapelMurni = mapel.split(/[^\w\s]/)[0].toLowerCase().trim();
-                        const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && dataPRHariIni.includes(mapelMurni);
+                        const mapelMurni = mapel.replace(/[^\w\s]/g, '').trim().toLowerCase();
+                        const regex = new RegExp(`\\b${mapelMurni}\\b`, 'i');
+                        const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && regex.test(dataPRHariIni);
                         return `• ${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
                     }).join('\n');
+                    
                     teksPesan += `${listMapel}\n\n`;
                 }
                 teksPesan += `━━━━━━━━━━━━━━━━━━━━\n💡 _"${MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)]}"_\n\n*Selamat beristirahat & tetap semangat!*`;
@@ -181,4 +186,3 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-        
