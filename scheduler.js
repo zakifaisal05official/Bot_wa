@@ -13,7 +13,6 @@ function getWeekDates() {
     const dayOfWeek = now.getDay(); 
     const monday = new Date(now);
 
-    // Jika hari Sabtu (6) atau Minggu (0), arahkan ke Senin depan
     if (dayOfWeek === 6) { 
         monday.setDate(now.getDate() + 2); 
     } else if (dayOfWeek === 0) { 
@@ -33,15 +32,16 @@ function getWeekDates() {
     return { dates, periode };
 }
 
-// Fungsi bantu untuk mengirim jadwal (dipakai Scheduler & Manual !data)
 async function sendJadwalBesokManual(sock) {
     try {
         const now = getWIBDate();
         const hariIni = now.getDay(); 
         let hariBesok = (hariIni + 1) % 7;
         
-        // Hanya kirim jika besok adalah hari sekolah (Senin-Jumat)
-        if (hariBesok < 1 || hariBesok > 5) return; 
+        // Agar tidak diam saat tes di hari libur, arahkan ke Senin jika besok Sabtu/Minggu
+        if (hariBesok === 6 || hariBesok === 0) {
+            hariBesok = 1; 
+        }
 
         const { dates } = getWeekDates();
         const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -53,7 +53,6 @@ async function sendJadwalBesokManual(sock) {
         const dataPRBesok = (currentData[daysKey[hariBesok]] || "").toLowerCase();
 
         const jadwalFinal = rawMapel.map(mapel => {
-            // Perbaikan logika: Ambil nama mapel sebelum emoji agar pencocokan akurat
             const mapelMurni = mapel.split(/[^\w\s]/)[0].toLowerCase().trim();
             const adaPR = dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && dataPRBesok.includes(mapelMurni);
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
@@ -65,7 +64,6 @@ async function sendJadwalBesokManual(sock) {
     } catch (err) { console.error("Jadwal Manual Error:", err); }
 }
 
-// Scheduler untuk mengirim LIST LENGKAP jadwal & PR seminggu kedepan setiap Sabtu jam 10:00
 async function initListPrMingguanScheduler(sock) {
     console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
     let lastSentList = "";
@@ -75,36 +73,25 @@ async function initListPrMingguanScheduler(sock) {
         const jam = now.getHours();
         const menit = now.getMinutes();
         const tglID = `${now.getDate()}-${now.getMonth()}`;
-
         if (hariIni === 6 && jam === 10 && menit === 0 && lastSentList !== tglID) {
             try {
                 const { dates, periode } = getWeekDates();
                 const daysKey = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
                 const dayLabels = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
                 const currentData = db.getAll() || {};
-                
-                let teksPesan = `📅 *JADWAL & PR MINGGU DEPAN*\n`;
-                teksPesan += `Periode: *${periode}*\n`;
-                teksPesan += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
+                let teksPesan = `📅 *JADWAL & PR MINGGU DEPAN*\nPeriode: *${periode}*\n━━━━━━━━━━━━━━━━━━━━\n\n`;
                 for (let i = 1; i <= 5; i++) {
                     const rawMapel = JADWAL_PELAJARAN[i].split('\n');
                     const dataPRHariIni = (currentData[daysKey[i]] || "").toLowerCase();
-                    
                     teksPesan += `📌 *${dayLabels[i]}, ${dates[i-1]}*\n`;
                     const listMapel = rawMapel.map(mapel => {
                         const mapelMurni = mapel.split(/[^\w\s]/)[0].toLowerCase().trim();
                         const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && dataPRHariIni.includes(mapelMurni);
                         return `• ${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
                     }).join('\n');
-                    
                     teksPesan += `${listMapel}\n\n`;
                 }
-
-                teksPesan += `━━━━━━━━━━━━━━━━━━━━\n`;
-                const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
-                teksPesan += `💡 _"${motivasi}"_\n\n*Selamat beristirahat & tetap semangat!*`;
-
+                teksPesan += `━━━━━━━━━━━━━━━━━━━━\n💡 _"${MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)]}"_\n\n*Selamat beristirahat & tetap semangat!*`;
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksPesan });
                 lastSentList = tglID;
             } catch (err) { console.error("List PR Mingguan Error:", err); }
@@ -122,18 +109,13 @@ async function initQuizScheduler(sock, kuisAktif) {
         const hariAngka = now.getDay(); 
         const tglID = `${now.getDate()}-${now.getMonth()}`;
         const targetJam = (hariAngka === 5) ? 11 : 14;
-
         if (jam === targetJam && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
                 const kuisHariIni = QUIZ_BANK[hariAngka];
                 if (kuisHariIni && kuisHariIni.length > 0) {
                     const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
                     const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
-                        poll: {
-                            name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`,
-                            values: randomQuiz.options,
-                            selectableCount: 1
-                        }
+                        poll: { name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`, values: randomQuiz.options, selectableCount: 1 }
                     });
                     kuisAktif.msgId = sentMsg.key.id;
                     kuisAktif.data = randomQuiz;
@@ -142,7 +124,7 @@ async function initQuizScheduler(sock, kuisAktif) {
                     kuisAktif.tglID = tglID;
                     lastSentDate = tglID; 
                 }
-            } catch (err) { console.error("Quiz Scheduler Error:", err); }
+            } catch (err) { console.error("Quiz Error:", err); }
         }
     }, 35000);
 }
@@ -154,16 +136,11 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
         const now = getWIBDate();
         const jamSekarang = now.getHours();
         const tglSekarang = `${now.getDate()}-${now.getMonth()}`;
-
         if (kuisAktif.msgId && kuisAktif.data && kuisAktif.targetJam === jamSekarang && kuisAktif.tglID === tglSekarang) {
             if (lastProcessedId === kuisAktif.msgId) return;
             try {
                 const votesArray = Object.values(kuisAktif.votes);
-                if (votesArray.length === 0) {
-                    lastProcessedId = kuisAktif.msgId;
-                    kuisAktif.msgId = null;
-                    return;
-                }
+                if (votesArray.length === 0) { lastProcessedId = kuisAktif.msgId; kuisAktif.msgId = null; return; }
                 const counts = {};
                 votesArray.forEach(v => { counts[v[0]] = (counts[v[0]] || 0) + 1; });
                 let topIdx = -1; let maxVotes = 0;
@@ -171,19 +148,12 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
                     if ((counts[i] || 0) > maxVotes) { maxVotes = counts[i] || 0; topIdx = i; }
                 }
                 if (topIdx !== -1) {
-                    const feedback = kuisAktif.data.feedbacks[topIdx];
-                    const pilihan = kuisAktif.data.options[topIdx];
-                    const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\n` +
-                                      `Pilihan: *${pilihan}* (${maxVotes} suara)\n` +
-                                      `━━━━━━━━━━━━━━━━━━━━\n\n` +
-                                      `${feedback}\n\n` +
-                                      `━━━━━━━━━━━━━━━━━━━━\n` +
-                                      `_Respon otomatis jam ${jamSekarang}:00_`;
+                    const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
                     await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
                 }
                 lastProcessedId = kuisAktif.msgId;
                 kuisAktif.msgId = null;
-            } catch (err) { console.error("Feedback Scheduler Error:", err); }
+            } catch (err) { console.error("Feedback Error:", err); }
         }
     }, 40000);
 }
@@ -211,4 +181,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-         
+        
