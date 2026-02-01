@@ -113,14 +113,14 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                 }
                 break;
             case '!menu':
-                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n🔹 !data - Cek Jadwal Besok\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !update_jadwal [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !polling [soal] | [opsi:feedback]\n🔸 !polling_kirim [hari]\n🔸 !info [pesan]`;
+                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !update_jadwal [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !data (Kirim Jadwal Besok ke grup)\n🔸 !polling [soal] | [opsi:feedback]\n🔸 !polling_kirim [hari]\n🔸 !info [pesan]`;
                 await sock.sendMessage(sender, { text: menu });
                 break;
             case '!data':
-                // Memanggil fungsi dari scheduler melalui objek utils
+                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 if (utils.sendJadwalBesokManual) {
                     await utils.sendJadwalBesokManual(sock);
-                    if (sender !== ID_GRUP_TUJUAN) await sock.sendMessage(sender, { text: "✅ *Jadwal Besok telah dikirim ke grup!*" });
+                    await sock.sendMessage(sender, { text: "✅ *Perintah diterima. Jadwal persiapan besok sedang dikirim ke grup!*" });
                 }
                 break;
             case '!polling':
@@ -163,4 +163,4 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-                                                                 
+        
