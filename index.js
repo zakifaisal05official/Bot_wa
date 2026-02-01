@@ -19,6 +19,7 @@ const {
     initQuizScheduler, 
     initJadwalBesokScheduler, 
     initSmartFeedbackScheduler,
+    initListPrMingguanScheduler, // Tambahkan import fungsi baru
     getWeekDates 
 } = require('./scheduler'); 
 
@@ -255,6 +256,7 @@ async function start() {
                 initQuizScheduler(sock, kuisAktif);
                 initJadwalBesokScheduler(sock);
                 initSmartFeedbackScheduler(sock, kuisAktif); 
+                initListPrMingguanScheduler(sock); // Jalankan List PR Mingguan (Sabtu 10:00)
                 addLog("Sistem Aktif 100%");
             }
         });
