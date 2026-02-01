@@ -11,9 +11,17 @@ function getWIBDate() {
 function getWeekDates() {
     const now = getWIBDate();
     const dayOfWeek = now.getDay(); 
-    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
     const monday = new Date(now);
-    monday.setDate(now.getDate() + diffToMonday);
+
+    // Jika hari Sabtu (6) atau Minggu (0), arahkan ke Senin depan
+    if (dayOfWeek === 6) { 
+        monday.setDate(now.getDate() + 2); 
+    } else if (dayOfWeek === 0) { 
+        monday.setDate(now.getDate() + 1); 
+    } else {
+        const diffToMonday = 1 - dayOfWeek;
+        monday.setDate(now.getDate() + diffToMonday);
+    }
     
     const dates = [];
     for (let i = 0; i < 5; i++) {
@@ -23,6 +31,54 @@ function getWeekDates() {
     }
     const periode = `${dates[0]} - ${dates[4]}`;
     return { dates, periode };
+}
+
+// Scheduler untuk mengirim LIST LENGKAP jadwal & PR seminggu kedepan setiap Sabtu jam 10:00
+async function initListPrMingguanScheduler(sock) {
+    console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
+    let lastSentList = "";
+    setInterval(async () => {
+        const now = getWIBDate();
+        const hariIni = now.getDay();
+        const jam = now.getHours();
+        const menit = now.getMinutes();
+        const tglID = `${now.getDate()}-${now.getMonth()}`;
+
+        if (hariIni === 6 && jam === 10 && menit === 0 && lastSentList !== tglID) {
+            try {
+                const { dates, periode } = getWeekDates();
+                const daysKey = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+                const dayLabels = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
+                const currentData = db.getAll() || {};
+                
+                let teksPesan = `📅 *JADWAL & PR MINGGU DEPAN*\n`;
+                teksPesan += `Periode: *${periode}*\n`;
+                teksPesan += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+                // Loop dari Senin (1) sampai Jumat (5)
+                for (let i = 1; i <= 5; i++) {
+                    const rawMapel = JADWAL_PELAJARAN[i].split('\n');
+                    const dataPRHariIni = (currentData[daysKey[i]] || "").toLowerCase();
+                    
+                    teksPesan += `📌 *${dayLabels[i]}, ${dates[i-1]}*\n`;
+                    const listMapel = rawMapel.map(mapel => {
+                        const mapelMurni = mapel.replace(/[^\w\s]/gi, '').toLowerCase().trim();
+                        const adaPR = dataPRHariIni !== "" && !dataPRHariIni.includes("belum ada tugas") && dataPRHariIni.includes(mapelMurni);
+                        return `• ${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
+                    }).join('\n');
+                    
+                    teksPesan += `${listMapel}\n\n`;
+                }
+
+                teksPesan += `━━━━━━━━━━━━━━━━━━━━\n`;
+                const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
+                teksPesan += `💡 _"${motivasi}"_\n\n*Selamat beristirahat & tetap semangat!*`;
+
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksPesan });
+                lastSentList = tglID;
+            } catch (err) { console.error("List PR Mingguan Error:", err); }
+        }
+    }, 35000);
 }
 
 async function initQuizScheduler(sock, kuisAktif) {
@@ -134,4 +190,10 @@ async function initJadwalBesokScheduler(sock) {
     }, 35000); 
 }
 
-module.exports = { initQuizScheduler, initSmartFeedbackScheduler, initJadwalBesokScheduler, getWeekDates };
+module.exports = { 
+    initQuizScheduler, 
+    initSmartFeedbackScheduler, 
+    initJadwalBesokScheduler, 
+    initListPrMingguanScheduler, 
+    getWeekDates 
+};
