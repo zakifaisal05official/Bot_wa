@@ -8,7 +8,7 @@ const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155' , '241849
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
 
 function getClosestCommand(cmd) {
-    const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim', '!data'];
+    const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim', '!data', '!cek_db'];
     if (validCommands.includes(cmd)) return null;
     return validCommands.find(v => {
         const distance = Math.abs(v.length - cmd.length);
@@ -34,7 +34,7 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             process.exit(1);
         }
 
-        const triggers = ['p', 'pr', 'menu', 'update', 'update_jadwal', 'hapus', 'grup', 'info', 'deadline', 'polling', 'polling_kirim', 'data'];
+        const triggers = ['p', 'pr', 'menu', 'update', 'update_jadwal', 'hapus', 'grup', 'info', 'deadline', 'polling', 'polling_kirim', 'data', 'cek_db'];
         const firstWord = textLower.split(' ')[0].replace('!', '');
         if (!body.startsWith('!') && triggers.includes(firstWord)) {
             return await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan tanda seru (*!*) di depan perintah.\n💡 Contoh: *!menu*` });
@@ -43,7 +43,7 @@ async function handleMessages(sock, m, kuisAktif, utils) {
         if (body.startsWith('!')) {
             const cmdInput = body.split(' ')[0].toLowerCase();
             const suggestion = getClosestCommand(cmdInput);
-            const validCmds = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim', '!data'];
+            const validCmds = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim', '!data', '!cek_db'];
             if (!validCmds.includes(cmdInput) && suggestion) {
                 return await sock.sendMessage(sender, { text: `🧐 *Perintah tidak dikenal.*\n\nMungkin maksud Anda: *${suggestion}* ?\nKetik *!menu* untuk melihat semua perintah.` });
             }
@@ -112,8 +112,19 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                     await sock.sendMessage(sender, { text: `✅ Daftar tugas belum dikumpul diperbarui!` });
                 }
                 break;
+            case '!cek_db':
+                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
+                const allDataDb = db.getAll() || {};
+                let teksDb = "📂 *KONTROL DATABASE PR*\n━━━━━━━━━━━━━━━━━━━━\n\n";
+                ['senin', 'selasa', 'rabu', 'kamis', 'jumat'].forEach(hari => {
+                    const isi = allDataDb[hari] || "_Kosong_";
+                    teksDb += `📌 *${hari.toUpperCase()}*:\n${isi}\n\n`;
+                });
+                teksDb += "━━━━━━━━━━━━━━━━━━━━";
+                await sock.sendMessage(sender, { text: teksDb });
+                break;
             case '!menu':
-                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !update_jadwal [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !data (Kirim Jadwal Besok ke grup)\n🔸 !polling [soal] | [opsi:feedback]\n🔸 !polling_kirim [hari]\n🔸 !info [pesan]`;
+                const menu = `📖 *MENU BOT TUGAS*\n\n*PENGGUNA:* \n🔹 !p - Cek Aktif\n🔹 !pr - List Tugas\n🔹 !deadline - Daftar Belum Dikumpul\n\n*PENGURUS:* \n🔸 !update [hari] [tugas]\n🔸 !update_jadwal [hari] [tugas]\n🔸 !deadline [isi info]\n🔸 !cek_db [cek database]\n🔸 !hapus [hari/deadline]\n🔸 !grup (Kirim rekap ke grup)\n🔸 !data (Kirim Jadwal Besok ke grup)\n🔸 !polling [soal] | [opsi:feedback]\n🔸 !polling_kirim [hari]\n🔸 !info [pesan]`;
                 await sock.sendMessage(sender, { text: menu });
                 break;
             case '!data':
@@ -163,4 +174,4 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-    
+            
