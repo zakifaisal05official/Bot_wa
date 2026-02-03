@@ -130,6 +130,7 @@ async function initQuizScheduler(sock, kuisAktif) {
                     kuisAktif.data = randomQuiz;
                     kuisAktif.votes = {};
                     kuisAktif.targetJam = (hariAngka === 5 ? 13 : 16);
+                    kuisAktif.expiresAt = Date.now() + (2 * 60 * 60 * 1000); // Aktif 2 jam
                     kuisAktif.tglID = tglID;
                     lastSentDate = tglID; 
                 }
@@ -190,4 +191,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-                
+            
