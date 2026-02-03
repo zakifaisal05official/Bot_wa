@@ -24,7 +24,7 @@ const {
     sendJadwalBesokManual // Pastikan ini ter-import untuk digunakan di handler
 } = require('./scheduler'); 
 
-let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null };
+let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null, expiresAt: null };
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -199,6 +199,21 @@ async function start() {
                     if (pollUpdate) {
                         kuisAktif.votes[pollUpdate.voterJid] = pollUpdate.selectedOptions;
                         addLog(`Vote masuk dari: ${pollUpdate.voterJid.split('@')[0]}`);
+
+                        // Logika Feedback Otomatis (Aktif 2 Jam)
+                        if (kuisAktif.expiresAt && Date.now() < kuisAktif.expiresAt) {
+                            const selectedIndex = pollUpdate.selectedOptions[0];
+                            if (selectedIndex !== undefined && kuisAktif.data && kuisAktif.data.feedbacks) {
+                                const feedbackText = kuisAktif.data.feedbacks[selectedIndex];
+                                const voter = pollUpdate.voterJid;
+                                if (feedbackText) {
+                                    await sock.sendMessage(update.key.remoteJid, { 
+                                        text: `📝 *FEEDBACK KELAS*\n\nUntuk @${voter.split('@')[0]}:\n"${feedbackText}"`,
+                                        mentions: [voter] 
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
             }
