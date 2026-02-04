@@ -37,15 +37,15 @@ const QUIZ_BANK = {
             ]
         }
     ],
-    4: [ // KAMIS
+    4: [ // KAMIS (PASCA PENSI)
         { 
-            question: "Pensi udah beres, properti udah diberesin semua? Gimana mood hari ini?", 
-            options: ["Udah Beres", "Masih Kepikiran", "Ngantuk", "Happy"],
+            question: "Pensi udah beres, properti udah bersih. Gimana rasanya hari ini setelah semua perjuangan tuntas?", 
+            options: ["Lega & Bangga", "Masih Kepikiran Serunya", "Kangen Latihan Bareng", "Happy Banget"],
             feedbacks: [
-                "Kelas teladan! Makasih ya yang udah bantu beres-beres properti pensi kemarin. 👍",
-                "Jangan terlalu dipikirin, yang penting momennya udah kita jalanin bareng-bareng. 😊",
-                "Efek energi abis buat pensi ya? Sore ini tidur yang nyenyak ya semuanya! 💤",
-                "Seneng banget liat kalian happy. Kenangan ini bakal mahal banget nanti! ✨"
+                "Bener-bener lega ya! Akhirnya tugas kita selesai dengan indah. Makasih ya yang udah bantu beres-beres properti kemarin, kalian luar biasa! 🤝",
+                "Sama! Rasanya masih pengen denger musik tariannya diputer lagi. Emang momen paling pecah sih selama sekolah! 🤩🔥",
+                "Iya ya, gak bakal ada lagi jadwal latihan Jumat-Sabtu yang bikin capek tapi seru. Makasih udah jadi partner berjuang yang hebat! 🥺✨",
+                "Seneng banget liat aura positif kalian. Hasil yang kita dapet kemarin emang buah manis dari kompaknya kelas kita. Stay happy! 🥂✨"
             ]
         }
     ],
