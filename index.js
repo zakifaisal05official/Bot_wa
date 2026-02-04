@@ -21,7 +21,7 @@ const {
     initSmartFeedbackScheduler,
     initListPrMingguanScheduler,
     getWeekDates,
-    sendJadwalBesokManual // Pastikan ini ter-import untuk digunakan di handler
+    sendJadwalBesokManual 
 } = require('./scheduler'); 
 
 let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null, expiresAt: null };
@@ -194,26 +194,13 @@ async function start() {
 
         sock.ev.on('messages.update', async (updates) => {
             for (const update of updates) {
+                // Cek update polling
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
                     const pollUpdate = update.update.pollUpdates[0];
                     if (pollUpdate) {
+                        // Hanya mencatat suara ke memory untuk direkap nanti di scheduler
                         kuisAktif.votes[pollUpdate.voterJid] = pollUpdate.selectedOptions;
-                        addLog(`Vote masuk dari: ${pollUpdate.voterJid.split('@')[0]}`);
-
-                        // Logika Feedback Otomatis (Aktif 2 Jam)
-                        if (kuisAktif.expiresAt && Date.now() < kuisAktif.expiresAt) {
-                            const selectedIndex = pollUpdate.selectedOptions[0];
-                            if (selectedIndex !== undefined && kuisAktif.data && kuisAktif.data.feedbacks) {
-                                const feedbackText = kuisAktif.data.feedbacks[selectedIndex];
-                                const voter = pollUpdate.voterJid;
-                                if (feedbackText) {
-                                    await sock.sendMessage(update.key.remoteJid, { 
-                                        text: `📝 *FEEDBACK KELAS*\n\nUntuk @${voter.split('@')[0]}:\n"${feedbackText}"`,
-                                        mentions: [voter] 
-                                    });
-                                }
-                            }
-                        }
+                        addLog(`Vote dicatat: ${pollUpdate.voterJid.split('@')[0]}`);
                     }
                 }
             }
@@ -265,7 +252,6 @@ async function start() {
                 addLog(`Pesan: ${msg.pushName || msg.key.remoteJid.split('@')[0]}`);
 
                 try {
-                    // Penambahan sendJadwalBesokManual ke parameter utils
                     await handleMessages(sock, m, kuisAktif, { 
                         getWeekDates, 
                         sendJadwalBesokManual 
@@ -284,3 +270,4 @@ async function start() {
 }
 
 start();
+    
