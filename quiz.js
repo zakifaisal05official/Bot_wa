@@ -24,12 +24,13 @@ const QUIZ_BANK = {
             ]
         }
     ],
-    3: [ // RABU (PENGUMUMAN JUARA PENSI NARI - SESUAI PERMINTAAN)
+    3: [ // RABU (PENGUMUMAN JUARA PENSI NARI - UPDATED)
         { 
             question: "Gimana hasil penentuan nilai Pensi Nari tadi? Kelas kita menang atau dapet juara gak?", 
-            options: ["ALHAMDULILLAH JUARA!", "Masuk 3 Besar!", "Belum Beruntung", "Gak Masalah, Tetap Solid"],
+            options: ["ALHAMDULILLAH JUARA!", "TOP 2 ALUR CERITA TERBAIK!", "Masuk 3 Besar!", "Belum Beruntung", "Gak Masalah, Tetap Solid"],
             feedbacks: [
                 "ALHAMDULILLAH! Persembahan tari terakhir kita sebelum lulus ditutup dengan kemenangan manis! Bangga banget sama kerja keras kalian semua! 🏆 Kenangan indah buat kelas kita! ✨",
+                "KEREN PARAH! Dapet Top 2 Alur Cerita Terbaik itu bukti kalau konsep tarian kita punya makna yang dalem banget. Kerja keras mikirin ide kreatif akhirnya kebayar! Proud of you! 🎭✨",
                 "MANTAP! Juara berapapun itu, yang paling penting kita udah nampilin tarian terbaik kita di panggung terakhir ini. Bangga banget sama kekompakan kalian! 🥇🎉",
                 "Gak apa-apa, jangan sedih ya. Pensi nari ini bukan soal menang atau kalah, tapi soal momen kebersamaan terakhir kita yang bakal kita inget terus pas udah lulus nanti. ❤️",
                 "Meskipun hari ini belum menang, tapi bagi mimin, tarian kelas kita tetep yang paling kompak! Yang penting kita udah seru-seruan bareng sebelum nanti lulus. Tetap solid ya! 🔥"
