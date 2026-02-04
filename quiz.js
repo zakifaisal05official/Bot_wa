@@ -24,7 +24,7 @@ const QUIZ_BANK = {
             ]
         }
     ],
-    3: [ // RABU (PENGUMUMAN JUARA PENSI NARI - UPDATED)
+    3: [ // RABU (PENGUMUMAN JUARA PENSI NARI)
         { 
             question: "Gimana hasil penentuan nilai Pensi Nari tadi? Kelas kita menang atau dapet juara gak?", 
             options: ["ALHAMDULILLAH JUARA!", "TOP 2 ALUR CERITA TERBAIK!", "Masuk 3 Besar!", "Belum Beruntung", "Gak Masalah, Tetap Solid"],
