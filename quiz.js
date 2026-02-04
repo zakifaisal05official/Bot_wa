@@ -30,7 +30,7 @@ const QUIZ_BANK = {
             options: ["ALHAMDULILLAH JUARA!", "TOP 2 ALUR CERITA TERBAIK!", "Masuk 3 Besar!", "Belum Beruntung", "Gak Masalah, Tetap Solid"],
             feedbacks: [
                 "ALHAMDULILLAH! Persembahan tari terakhir kita sebelum lulus ditutup dengan kemenangan manis! Bangga banget sama kerja keras kalian semua! 🏆 Kenangan indah buat kelas kita! ✨",
-                "KEREN PARAH! Dapet Top 2 Alur Cerita Terbaik itu bukti kalau konsep tarian kita punya makna yang dalem banget. Kerja keras mikirin ide kreatif akhirnya kebayar! Proud of you! 🎭✨",
+                "KEREN PARAH! Dapet Top 2 Alur Cerita Terbaik itu bukti kalau konsep kita emang berkelas. Perjuangan latihan tiap Jumat & Sabtu yang nguras waktu sekarang udah tuntas dan terbayar lunas. Akhirnya kalian bisa tarik napas lega, gak perlu latihan lagi di hari sibuk atau hari libur. Enjoy the victory, kalian hebat banget! Proud of you all! 🎭✨",
                 "MANTAP! Juara berapapun itu, yang paling penting kita udah nampilin tarian terbaik kita di panggung terakhir ini. Bangga banget sama kekompakan kalian! 🥇🎉",
                 "Gak apa-apa, jangan sedih ya. Pensi nari ini bukan soal menang atau kalah, tapi soal momen kebersamaan terakhir kita yang bakal kita inget terus pas udah lulus nanti. ❤️",
                 "Meskipun hari ini belum menang, tapi bagi mimin, tarian kelas kita tetep yang paling kompak! Yang penting kita udah seru-seruan bareng sebelum nanti lulus. Tetap solid ya! 🔥"
