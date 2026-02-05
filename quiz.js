@@ -1,63 +1,62 @@
 // quiz.js
 const QUIZ_BANK = {
-    1: [ // SENIN (GLADI KOTOR TERAKHIR)
+    1: [ // SENIN (YEARBOOK KOBOY)
         { 
-            question: "Gimana Gladi Kotor terakhir di lapangan tadi? Besok udah Final di panggung loh!", 
-            options: ["Udah Siap Pol!", "Masih Deg-degan", "Banyak Evaluasi", "Capek Banget"],
+            question: "Gimana sesi foto Yearbook tema KOBOY tadi? Udah ngerasa paling keren belum se-kabupaten?", 
+            options: ["Gagah Banget!", "Aesthetic Parah", "Salah Kostum Dikit", "Capek Bergaya"],
             feedbacks: [
-                "Mantap! Pertahankan semangatnya buat besok ya. Kasih yang terbaik buat kelas kita! 🔥",
-                "Wajar deg-degan, itu tandanya kalian peduli. Tenang, kita pasti bisa kompak besok! ✨",
-                "Masih ada waktu malem ini buat diskusi tipis-tipis. Semangat perbaikannya kawan! 🛠️",
-                "Langsung istirahat total ya, jangan mabar dulu. Tenaga kalian butuh buat besok Final! 😴"
+                "Yeehaaa! Pasti hasil fotonya gahar banget tuh. Aura-aura sukses kalian mulai kelihatan dari gaya koboynya! 🤠🔥",
+                "Fix! Ini bakal jadi halaman paling ikonik di buku tahunan nanti. Kenangan keren yang gak bakal terlupa! 📸✨",
+                "Gak masalah, justru itu yang bikin unik dan bakal jadi bahan ketawa seru pas kita reuni nanti! 😂🌵",
+                "Bergaya ala koboy emang butuh effort, tapi demi dokumentasi terakhir sebelum lulus, semuanya worth it! Istirahat ya Sheriff! 🐎💤"
             ]
         }
     ],
-    2: [ // SELASA (FINAL TAMPIL DI PANGGUNG)
+    2: [ // SELASA (MULAI BELAJAR)
         { 
-            question: "FINAL CHECK! Gimana penampilan tari kelas kita di panggung tadi?", 
-            options: ["PECAH BANGET!", "Kompak Parah", "Ada Salah Dikit", "Lega Udah Beres"],
+            question: "Selasa Check! 🖊️ Udah mulai masuk materi lagi nih, gimana rasanya balik liat papan tulis hari ini?", 
+            options: ["Masih Fokus Kok", "Otak Lagi Loading", "Kangen Masa Latihan Pensi", "Pasrah Sama Tugas"],
             feedbacks: [
-                "GILA SIH! Panggung bener-bener milik kita tadi. Proud of you all! 🏆🔥",
-                "Kekompakan kalian emang gak perlu diraguin lagi. Kenangan indah banget sebelum lulus! 🤝✨",
-                "Gak masalah ada salah dikit, ketutup sama energi kalian yang luar biasa tadi! ❤️",
-                "Bener-bener plong ya! Yang penting kita udah nampilin hasil latihan kita selama ini. 😇"
+                "Mantap! Fokusnya dijaga ya, biar materi pelajaran hari ini langsung nyangkut di kepala. 🔥📖",
+                "Wajar banget, efek habis seru-seruan foto koboy emang bikin otak butuh waktu buat sinkron sama pelajaran. Semangat! 🧠⚡",
+                "Asli, vibes latihan sore-sore bareng temen emang gak ada tandingannya. Bakal jadi cerita indah pas udah lulus nanti! ✨🎭",
+                "Jangan pasrah dulu! Yuk pelan-pelan dibuka buku paketnya, kita babat bareng tugas hari ini biar gak numpuk! 💪📚"
             ]
         }
     ],
-    3: [ // RABU (PENGUMUMAN JUARA PENSI NARI)
+    3: [ // RABU (B. INDO, B. SUNDA, IPS, MTK)
         { 
-            question: "Gimana hasil penentuan nilai Pensi Nari tadi? Kelas kita menang atau dapet juara gak?", 
-            options: ["ALHAMDULILLAH JUARA!", "TOP 2 ALUR CERITA TERBAIK!", "Masuk 3 Besar!", "Belum Beruntung", "Gak Masalah, Tetap Solid"],
+            question: "Hari Rabu penuh bahasa & logika! Gimana tadi pelajaran Bahasa Sunda & MTK-nya?", 
+            options: ["Sampurasun! Aman", "MTK Lanjut Terus", "B. Indo Seru", "IPS Banyak Materi"],
             feedbacks: [
-                "ALHAMDULILLAH! Persembahan tari terakhir kita sebelum lulus ditutup dengan kemenangan manis! Bangga banget sama kerja keras kalian semua! 🏆 Kenangan indah buat kelas kita! ✨",
-                "KEREN PARAH! Dapet Top 2 Alur Cerita Terbaik itu bukti kalau konsep kita emang berkelas. Perjuangan latihan tiap Jumat & Sabtu yang nguras waktu sekarang udah tuntas dan terbayar lunas. Akhirnya kalian bisa tarik napas lega, gak perlu latihan lagi di hari sibuk atau hari libur. Enjoy the victory, kalian hebat banget! Proud of you all! 🎭✨",
-                "MANTAP! Juara berapapun itu, yang paling penting kita udah nampilin tarian terbaik kita di panggung terakhir ini. Bangga banget sama kekompakan kalian! 🥇🎉",
-                "Gak apa-apa, jangan sedih ya. Pensi nari ini bukan soal menang atau kalah, tapi soal momen kebersamaan terakhir kita yang bakal kita inget terus pas udah lulus nanti. ❤️",
-                "Meskipun hari ini belum menang, tapi bagi mimin, tarian kelas kita tetep yang paling kompak! Yang penting kita udah seru-seruan bareng sebelum nanti lulus. Tetap solid ya! 🔥"
+                "Rampes! Lestarikan budaya lokal lewat bahasa daerah ya, biar makin luwes ngomongnya! 📖✨",
+                "Gas terus! Hari ini emang jatahnya asah otak buat hitung-hitungan. Dikit lagi tuntas kok! 💪📉",
+                "Bahasa Indonesia emang penting banget buat nambah kosa kata dan cara komunikasi kita! 🇮🇩📚",
+                "Makin paham dong soal fenomena sosial di sekitar kita? Belajar IPS emang bikin wawasan luas! 🗺️🤝"
             ]
         }
     ],
-    4: [ // KAMIS (PASCA PENSI)
+    4: [ // KAMIS (IPA, PANCASILA, SBK)
         { 
-            question: "Pensi udah beres, properti udah bersih. Gimana rasanya hari ini setelah semua perjuangan tuntas?", 
-            options: ["Lega & Bangga", "Masih Kepikiran Serunya", "Kangen Latihan Bareng", "Happy Banget"],
+            question: "Kamis Berwarna! 🧪 Dari praktikum IPA lanjut Pancasila terus SBK. Pelajaran apa yang paling berkesan hari ini?", 
+            options: ["Praktikum IPA", "Materi Pancasila", "Karya SBK", "Capek Tapi Seru"],
             feedbacks: [
-                "Bener-bener lega ya! Akhirnya tugas kita selesai dengan indah. Makasih ya yang udah bantu beres-beres properti kemarin, kalian luar biasa! 🤝",
-                "Sama! Rasanya masih pengen denger musik tariannya diputer lagi. Emang momen paling pecah sih selama sekolah! 🤩🔥",
-                "Iya ya, gak bakal ada lagi jadwal latihan Jumat-Sabtu yang bikin capek tapi seru. Makasih udah jadi partner berjuang yang hebat! 🥺✨",
-                "Seneng banget liat aura positif kalian. Hasil yang kita dapet kemarin emang buah manis dari kompaknya kelas kita. Stay happy! 🥂✨"
+                "Eksperimen di laboratorium emang selalu bikin penasaran ya! Berasa jadi ilmuwan sehari. 🧪🔬",
+                "Makin paham soal nilai-nilai negara kita. Penting banget buat bekal jadi warga negara yang baik! 🇮🇩✨",
+                "Waktunya keluarin jiwa seni! Hasil karya kalian hari ini pasti keren-keren banget. 🎨🎸",
+                "Wajar capek, jadwal hari ini emang padat materi tapi tetep seru kan bisa bareng temen sekelas? ❤️"
             ]
         }
     ],
-  5: [ // JUMAT (KHUSUS JAM 11:00)
+    5: [ // JUMAT (PERSIAPAN TKA)
         { 
-            question: "Friday Check! 🕒 Belajar apa aja hari ini? Ada B. Inggris, B. Cirebon, atau lagi pada santai?", 
-            options: ["Bahasa Inggris", "Bahasa Cirebon", "Gladi Lapangan", "Jamkos / Gak Belajar"],
+            question: "Friday Check! 🕒 Gimana Try Out TKA hari ini? Masih aman atau mulai berasap nih kepalanya?", 
+            options: ["Lancar Jaya!", "Susah di Penalaran", "Waktunya Kurang", "Pasrah yang Penting Beres"],
             feedbacks: [
-                "Nice! Bahasa Inggris itu modal keren buat kalian setelah lulus nanti. Semangat belajarnya! 🇺🇸📚",
-                "Lestarikan budaya lokal! Bahasa Cirebon itu jati diri kita, jangan sampai lupa bahasa daerah sendiri ya. 🦐✨",
-                "Semangat gladi nya! Lapangan emang panas, tapi keringat kalian hari ini adalah sejarah buat masa depan! 🔥",
-                "WADUH! Menikmati masa-masa terakhir di sekolah ya? Meskipun jamkos, tetep jangan bikin keributan di kelas ya kawan! 🤫☕"
+                "Mantap! Kalau TO aja lancar, yakin deh nanti pas ujian beneran kalian bakal babat habis soalnya. 🧠🔥",
+                "Tenang, bagian penalaran emang butuh jam terbang. Sering-sering bahas soal bareng ya, kita sukses bareng-bareng! 📚✨",
+                "Manajemen waktu itu kunci! Jadikan TO hari ini pelajaran biar besok pas 'perang' beneran gak keteteran. Semangat! ⏳💪",
+                "Eits, jangan pasrah dulu! Masa-masa terakhir sekolah ini emang capek, tapi hasilnya bakal manis nanti. Istirahat dulu! ☕🍀"
             ]
         }
     ]
