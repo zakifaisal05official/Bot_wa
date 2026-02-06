@@ -19,10 +19,10 @@ function getClosestCommand(cmd) {
 async function handleMessages(sock, m, kuisAktif, utils) {
     try {
         const msg = m.messages[0];
-        if (!msg || !msg.message || msg.key.fromMe) return; // Tambah pengecekan msg
+        if (!msg || !msg.message || msg.key.fromMe) return;
         const sender = msg.key.remoteJid;
         const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || "").trim();
-        if (!body) return; // Hindari pesan kosong
+        if (!body) return;
         const textLower = body.toLowerCase();
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
         const nonAdminMsg = "🚫 *AKSES DITOLAK*\n\nMaaf, fitur ini hanya bisa diakses oleh *Pengurus*. Kamu adalah pengguna biasa, silakan gunakan fitur pengguna seperti *!pr* atau *!deadline* saja ya! 😊";
@@ -61,15 +61,14 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             const dayMap = { 'senin': 0, 'selasa': 1, 'rabu': 2, 'kamis': 3, 'jumat': 4 };
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
             let allData = db.getAll() || {};
-            let currentData = String(allData[dayKey] || ""); // Pastikan string agar tidak crash saat .split
+            let currentData = String(allData[dayKey] || ""); 
             let organized = [];
             
             if (!STRUKTUR_JADWAL[dayKey]) return "";
 
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
                 const emojiMapel = MAPEL_CONFIG[mKey];
-                // Menggunakan Regex agar case-insensitive saat mencari Mapel
-                const mapelRegex = new RegExp(mKey, 'i');
+                const mapelRegex = new RegExp(mKey, 'i'); // Fix: Pencarian mapel tidak sensitif huruf besar/kecil
                 
                 if (mapelRegex.test(input)) {
                     let parts = input.split(mapelRegex);
@@ -146,31 +145,30 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                     await sock.sendMessage(sender, { text: "✅ *Laporan jadwal besok sudah saya kirim ke sini ya!*" });
                 }
                 break;
-            case '!polling':
-                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const inputPoll = body.slice(9).trim();
-                if (!inputPoll.includes('|')) return await sock.sendMessage(sender, { text: "⚠️ *FORMAT SALAH*\nContoh: !polling Soal | Opsi1:Feedback1, Opsi2:Feedback2" });
-                const [pertanyaan, mentahanOpsi] = inputPoll.split('|');
-                const listOpsi = mentahanOpsi.split(',').map(v => v.trim());
-                const finalOptions = [], finalFeedbacks = [];
-                listOpsi.forEach(item => {
-                    const [opt, feed] = item.split(':');
-                    if (opt && feed) { finalOptions.push(opt.trim()); finalFeedbacks.push(feed.trim()); }
-                });
-                const sMsg = await sock.sendMessage(ID_GRUP_TUJUAN, { poll: { name: `📊 *POLLING ADMIN*\n${pertanyaan.trim()}`, values: finalOptions, selectableCount: 1 } });
-                kuisAktif.msgId = sMsg.key.id;
-                kuisAktif.data = { question: pertanyaan.trim(), options: finalOptions, feedbacks: finalFeedbacks };
-                break;
             case '!update':
             case '!update_jadwal':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 const daysUpdate = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                 let dIdx = daysUpdate.findIndex(d => textLower.includes(d));
                 if (dIdx === -1) return await sock.sendMessage(sender, { text: "❌ *HARI TIDAK DITEMUKAN*" });
-                let res = getProcessedTask(daysUpdate[dIdx], body);
-                db.updateTugas(daysUpdate[dIdx], res);
-                if (cmd === '!update') await sendToGroupSafe({ text: `📌 *Daftar tugas/ pr di Minggu ini* 📢\n➝ ${periode}\n\n---------------------------------------------------------------------------------\n\n\n*\`📅 ${daysUpdate[dIdx].toUpperCase()}\`* ➝ ${dates[dIdx]}\n\n${res}` });
-                await sock.sendMessage(sender, { text: `✅ Berhasil Update!` });
+                
+                const dayKey = daysUpdate[dIdx];
+                const mapelList = STRUKTUR_JADWAL[dayKey];
+                // Check if any valid mapel exists in the input
+                const hasValidMapel = mapelList.some(m => new RegExp(m, 'i').test(body));
+                
+                if (!hasValidMapel) {
+                    return await sock.sendMessage(sender, { 
+                        text: `❌ *MAPEL SALAH/TYPO*\n\nMapel hari *${dayKey.toUpperCase()}* adalah:\n> ${mapelList.join(', ')}` 
+                    });
+                }
+
+                let res = getProcessedTask(dayKey, body);
+                if (res) {
+                    db.updateTugas(dayKey, res);
+                    if (cmd === '!update') await sendToGroupSafe({ text: `📌 *Daftar tugas/ pr di Minggu ini* 📢\n➝ ${periode}\n\n---------------------------------------------------------------------------------\n\n\n*\`📅 ${dayKey.toUpperCase()}\`* ➝ ${dates[dIdx]}\n\n${res}` });
+                    await sock.sendMessage(sender, { text: `✅ Berhasil Update data ${dayKey}!` });
+                }
                 break;
             case '!grup':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
@@ -196,4 +194,4 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-                          
+                           
