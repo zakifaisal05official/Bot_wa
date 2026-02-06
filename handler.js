@@ -35,7 +35,6 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             process.exit(1);
         }
 
-        // Shortcut check format (lupa tanda seru)
         const triggers = ['p', 'pr', 'menu', 'update', 'update_jadwal', 'hapus', 'grup', 'info', 'deadline', 'polling', 'polling_kirim', 'data', 'cek_db'];
         const firstWord = textLower.split(' ')[0].replace('!', '');
         if (!body.startsWith('!') && triggers.includes(firstWord)) {
@@ -69,20 +68,26 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
                 const emojiMapel = MAPEL_CONFIG[mKey];
-                const mapelRegex = new RegExp(`\\b${mKey}\\b`, 'i'); // Lebih ketat agar tidak salah deteksi kata di dalam kalimat
+                const mapelRegex = new RegExp(`\\b${mKey}\\b`, 'i');
                 
                 if (mapelRegex.test(input)) {
                     let parts = input.split(mapelRegex);
                     let desc = (parts[1] && parts[1].trim() !== "") ? parts[1].split(/label:/i)[0].trim() : "";
                     if (desc === "") return;
-                    let lbl = LABELS['biasa'];
+
+                    // --- LOGIKA MULTI LABEL ---
+                    let labelsFound = [];
                     for (let l in LABELS) { 
                         if (new RegExp(`\\b${l}\\b`, 'i').test(input)) { 
-                            lbl = LABELS[l]; 
-                            break; 
+                            labelsFound.push(LABELS[l]); 
                         } 
                     }
-                    organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${lbl} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
+                    // Jika tidak ada label disebut, gunakan label biasa
+                    if (labelsFound.length === 0) labelsFound.push(LABELS['biasa']);
+                    let finalLabel = labelsFound.join(' | ');
+                    // --------------------------
+
+                    organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
                 } else {
                     const exist = currentData.split('\n\n').find(s => s.includes(emojiMapel));
                     if (exist) organized.push(exist);
@@ -150,17 +155,15 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             case '!update_jadwal':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 
-                // Cari hari HANYA di awal pesan (setelah perintah)
                 const daysUpdate = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-                const firstTwoWords = args.slice(0, 3).join(' ').toLowerCase();
-                let dIdx = daysUpdate.findIndex(d => firstTwoWords.includes(d));
+                // Deteksi hari hanya di awal kalimat biar tidak tertukar
+                const firstPart = args.slice(0, 3).join(' ').toLowerCase();
+                let dIdx = daysUpdate.findIndex(d => firstPart.includes(d));
                 
-                if (dIdx === -1) return await sock.sendMessage(sender, { text: "❌ *HARI TIDAK DITEMUKAN*\nFormat: !update [hari] [mapel] [tugas]" });
+                if (dIdx === -1) return await sock.sendMessage(sender, { text: "❌ *HARI TIDAK DITEMUKAN*" });
                 
                 const dayKey = daysUpdate[dIdx];
                 const mapelList = STRUKTUR_JADWAL[dayKey];
-                
-                // Cek mapel dengan cara yang lebih aman
                 const isMapelFound = mapelList.some(m => new RegExp(`\\b${m}\\b`, 'i').test(body));
                 
                 if (!isMapelFound) {
@@ -192,7 +195,7 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                     db.updateTugas(targetHapus, "");
                     await sock.sendMessage(sender, { text: `✅ Data *${targetHapus}* berhasil dihapus!` });
                 } else {
-                    await sock.sendMessage(sender, { text: "⚠️ Contoh: !hapus senin" });
+                    await sock.sendMessage(sender, { text: "⚠️ Contoh: !hapus deadline" });
                 }
                 break;
         }
@@ -200,4 +203,4 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-        
+                
