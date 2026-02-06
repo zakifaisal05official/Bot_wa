@@ -19,9 +19,10 @@ function getClosestCommand(cmd) {
 async function handleMessages(sock, m, kuisAktif, utils) {
     try {
         const msg = m.messages[0];
-        if (!msg.message || msg.key.fromMe) return;
+        if (!msg || !msg.message || msg.key.fromMe) return; // Tambah pengecekan msg
         const sender = msg.key.remoteJid;
         const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || "").trim();
+        if (!body) return; // Hindari pesan kosong
         const textLower = body.toLowerCase();
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
         const nonAdminMsg = "🚫 *AKSES DITOLAK*\n\nMaaf, fitur ini hanya bisa diakses oleh *Pengurus*. Kamu adalah pengguna biasa, silakan gunakan fitur pengguna seperti *!pr* atau *!deadline* saja ya! 😊";
@@ -60,16 +61,27 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             const dayMap = { 'senin': 0, 'selasa': 1, 'rabu': 2, 'kamis': 3, 'jumat': 4 };
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
             let allData = db.getAll() || {};
-            let currentData = allData[dayKey] || "";
+            let currentData = String(allData[dayKey] || ""); // Pastikan string agar tidak crash saat .split
             let organized = [];
+            
+            if (!STRUKTUR_JADWAL[dayKey]) return "";
+
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
                 const emojiMapel = MAPEL_CONFIG[mKey];
-                if (input.toLowerCase().includes(mKey.toLowerCase())) {
-                    let parts = input.toLowerCase().split(mKey.toLowerCase());
-                    let desc = (parts[1] && parts[1].trim() !== "") ? parts[1].split('label:')[0].trim() : "";
+                // Menggunakan Regex agar case-insensitive saat mencari Mapel
+                const mapelRegex = new RegExp(mKey, 'i');
+                
+                if (mapelRegex.test(input)) {
+                    let parts = input.split(mapelRegex);
+                    let desc = (parts[1] && parts[1].trim() !== "") ? parts[1].split(/label:/i)[0].trim() : "";
                     if (desc === "") return;
                     let lbl = LABELS['biasa'];
-                    for (let l in LABELS) { if (input.toLowerCase().includes(l.toLowerCase())) { lbl = LABELS[l]; break; } }
+                    for (let l in LABELS) { 
+                        if (new RegExp(l, 'i').test(input)) { 
+                            lbl = LABELS[l]; 
+                            break; 
+                        } 
+                    }
                     organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${lbl} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
                 } else {
                     const exist = currentData.split('\n\n').find(s => s.includes(emojiMapel));
@@ -130,7 +142,6 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             case '!data':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 if (utils && typeof utils.sendJadwalBesokManual === 'function') {
-                    // Kita tambahkan parameter 'sender' agar dikirim ke chat pribadi kamu
                     await utils.sendJadwalBesokManual(sock, sender);
                     await sock.sendMessage(sender, { text: "✅ *Laporan jadwal besok sudah saya kirim ke sini ya!*" });
                 }
@@ -170,9 +181,19 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                 const info = body.slice(6).trim();
                 if (info) await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${info}\n\n_— Pengurus_` });
                 break;
+            case '!hapus':
+                if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
+                const targetHapus = args[1]?.toLowerCase();
+                if (['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'].includes(targetHapus)) {
+                    db.updateTugas(targetHapus, "");
+                    await sock.sendMessage(sender, { text: `✅ Data *${targetHapus}* berhasil dihapus!` });
+                } else {
+                    await sock.sendMessage(sender, { text: "⚠️ *Pilih hari atau deadline.*\nContoh: !hapus senin" });
+                }
+                break;
         }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Error Handler:", err); }
 }
 
 module.exports = { handleMessages };
-            
+                          
