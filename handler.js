@@ -82,10 +82,8 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                             labelsFound.push(LABELS[l]); 
                         } 
                     }
-                    // Jika tidak ada label disebut, gunakan label biasa
                     if (labelsFound.length === 0) labelsFound.push(LABELS['biasa']);
                     let finalLabel = labelsFound.join(' | ');
-                    // --------------------------
 
                     organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
                 } else {
@@ -100,11 +98,17 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             const currentData = db.getAll() || {};
             let rekap = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
             ['senin', 'selasa', 'rabu', 'kamis', 'jumat'].forEach((day, i) => {
-                rekap += `📅 *${day.toUpperCase()}* (${dates[i]})\n`;
+                const dayLabelsFull = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
+                const dayLabelsSmall = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+                rekap += `📅 *${dayLabelsFull[i]}* (${dates[i]})\n`;
                 let tugas = currentData[day];
                 if (!tugas || tugas.includes("Belum ada tugas") || tugas === "") {
                     rekap += `└─ ✅ _Tidak ada PR_\n\n`;
-                } else { rekap += `${tugas}\n\n`; }
+                } else { 
+                    // Update tanggal deadline otomatis agar sinkron dengan periode terbaru
+                    let updatedTugas = tugas.replace(/⏰ Deadline: [^|]*/g, `⏰ Deadline: ${dayLabelsSmall[i]}, ${dates[i]}`);
+                    rekap += `${updatedTugas}\n\n`; 
+                }
             });
             rekap += `━━━━━━━━━━━━━━━━━━━━\n⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN:*\n${currentData.deadline || "Semua tugas sudah selesai."}\n\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
             return rekap;
@@ -156,7 +160,6 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 
                 const daysUpdate = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-                // Deteksi hari hanya di awal kalimat biar tidak tertukar
                 const firstPart = args.slice(0, 3).join(' ').toLowerCase();
                 let dIdx = daysUpdate.findIndex(d => firstPart.includes(d));
                 
@@ -203,4 +206,4 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-                
+        
