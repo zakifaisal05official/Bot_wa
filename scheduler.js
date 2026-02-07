@@ -1,4 +1,4 @@
-.const { QUIZ_BANK } = require('./quiz'); 
+const { QUIZ_BANK } = require('./quiz'); 
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 const db = require('./data');
 
@@ -8,16 +8,19 @@ function getWIBDate() {
     return new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
 }
 
+// FUNGSI INI DIPERBAIKI: Agar selalu menunjuk ke Senin depan jika dipanggil Sabtu/Minggu
 function getWeekDates() {
     const now = getWIBDate();
     const dayOfWeek = now.getDay(); 
     const monday = new Date(now);
 
+    // Jika hari ini Sabtu (6) atau Minggu (0), kita siapkan untuk MINGGU DEPAN
     if (dayOfWeek === 6) { 
         monday.setDate(now.getDate() + 2); 
     } else if (dayOfWeek === 0) { 
         monday.setDate(now.getDate() + 1); 
     } else {
+        // Jika di hari kerja, tetap di minggu ini
         const diffToMonday = 1 - dayOfWeek;
         monday.setDate(now.getDate() + diffToMonday);
     }
@@ -83,7 +86,6 @@ async function initListPrMingguanScheduler(sock) {
                 const dayLabels = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
                 const currentData = db.getAll() || {};
                 
-                // HEADER PESAN SEPERTI !PR
                 let teksPesan = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
                 
                 for (let i = 0; i < 5; i++) {
@@ -91,10 +93,12 @@ async function initListPrMingguanScheduler(sock) {
                     teksPesan += `📅 *${dayLabels[i]}* (${dates[i]})\n`;
                     
                     let tugas = currentData[hariKey];
-                    if (!tugas || tugas === "" || tugas.includes("Belum ada tugas")) {
+                    if (!tugas || tugas === "" || tugas.includes("Belum ada tugas") || tugas.includes("Tidak ada PR")) {
                         teksPesan += `└─ ✅ _Tidak ada PR_\n\n`;
                     } else {
-                        teksPesan += `${tugas}\n\n`;
+                        // Perbaikan: Ganti tanggal deadline lama dengan tanggal minggu depan secara otomatis
+                        let updatedTugas = tugas.replace(/⏰ Deadline: .*/g, `⏰ Deadline: ${dayLabels[i].charAt(0) + dayLabels[i].slice(1).toLowerCase()}, ${dates[i]}`);
+                        teksPesan += `${updatedTugas}\n\n`;
                     }
                 }
                 
@@ -190,3 +194,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
+    
