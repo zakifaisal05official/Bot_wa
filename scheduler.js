@@ -39,11 +39,15 @@ async function sendJadwalBesokManual(sock, targetJid) {
     try {
         const now = getWIBDate();
         const hariIni = now.getDay(); 
+        
+        // PERBAIKAN: Jangan kirim jika besok adalah hari libur (Sabtu/Minggu)
+        // Jika hari ini Jumat (5) atau Sabtu (6), maka fungsi berhenti (return)
+        if (hariIni === 5 || hariIni === 6) return;
+
         let hariBesok = (hariIni + 1) % 7;
         
-        if (hariBesok === 6 || hariBesok === 0) {
-            hariBesok = 1; 
-        }
+        // Penyesuaian jika dipanggil hari Minggu (0) maka besok Senin (1)
+        if (hariBesok === 0) hariBesok = 1;
 
         const { dates } = getWeekDates();
         const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -63,6 +67,7 @@ async function sendJadwalBesokManual(sock, targetJid) {
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
         }).join('\n');
 
+        // PERBAIKAN KALENDER: dates[0] adalah Senin, maka indexnya adalah hariBesok - 1
         const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${dates[hariBesok - 1]}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
         
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
@@ -96,7 +101,6 @@ async function initListPrMingguanScheduler(sock) {
                     if (!tugas || tugas === "" || tugas.includes("Belum ada tugas") || tugas.includes("Tidak ada PR")) {
                         teksPesan += `└─ ✅ _Tidak ada PR_\n\n`;
                     } else {
-                        // Perbaikan: Ganti tanggal deadline lama dengan tanggal minggu depan secara otomatis
                         let updatedTugas = tugas.replace(/⏰ Deadline: .*/g, `⏰ Deadline: ${dayLabels[i].charAt(0) + dayLabels[i].slice(1).toLowerCase()}, ${dates[i]}`);
                         teksPesan += `${updatedTugas}\n\n`;
                     }
@@ -194,4 +198,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-    
+            
