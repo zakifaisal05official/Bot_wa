@@ -75,7 +75,6 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                     let desc = (parts[1] && parts[1].trim() !== "") ? parts[1].split(/label:/i)[0].trim() : "";
                     if (desc === "") return;
 
-                    // --- LOGIKA MULTI LABEL ---
                     let labelsFound = [];
                     for (let l in LABELS) { 
                         if (new RegExp(`\\b${l}\\b`, 'i').test(input)) { 
@@ -105,8 +104,14 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                 if (!tugas || tugas.includes("Belum ada tugas") || tugas === "") {
                     rekap += `└─ ✅ _Tidak ada PR_\n\n`;
                 } else { 
-                    // Update tanggal deadline otomatis agar sinkron dengan periode terbaru
-                    let updatedTugas = tugas.replace(/⏰ Deadline: [^|]*/g, `⏰ Deadline: ${dayLabelsSmall[i]}, ${dates[i]}`);
+                    // FIX: Bersihkan semua baris deadline lama (biar tidak dobel) baru pasang yang baru
+                    let cleanTugas = tugas.split('\n').filter(line => !line.includes('⏰ Deadline:')).join('\n').trim();
+                    let updatedTugas = cleanTugas.replace(/(\|)$/gm, `$1\n⏰ Deadline: ${dayLabelsSmall[i]}, ${dates[i]}`);
+                    
+                    // Jika replace regex gagal, kita tambahkan manual di akhir
+                    if (!updatedTugas.includes('⏰ Deadline:')) {
+                        updatedTugas += `\n⏰ Deadline: ${dayLabelsSmall[i]}, ${dates[i]}`;
+                    }
                     rekap += `${updatedTugas}\n\n`; 
                 }
             });
@@ -158,23 +163,18 @@ async function handleMessages(sock, m, kuisAktif, utils) {
             case '!update':
             case '!update_jadwal':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                
                 const daysUpdate = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                 const firstPart = args.slice(0, 3).join(' ').toLowerCase();
                 let dIdx = daysUpdate.findIndex(d => firstPart.includes(d));
-                
                 if (dIdx === -1) return await sock.sendMessage(sender, { text: "❌ *HARI TIDAK DITEMUKAN*" });
-                
                 const dayKey = daysUpdate[dIdx];
                 const mapelList = STRUKTUR_JADWAL[dayKey];
                 const isMapelFound = mapelList.some(m => new RegExp(`\\b${m}\\b`, 'i').test(body));
-                
                 if (!isMapelFound) {
                     return await sock.sendMessage(sender, { 
                         text: `❌ *MAPEL SALAH/TYPO*\n\nMapel hari *${dayKey.toUpperCase()}* adalah:\n> ${mapelList.join(', ')}` 
                     });
                 }
-
                 let res = getProcessedTask(dayKey, body);
                 if (res) {
                     db.updateTugas(dayKey, res);
@@ -206,4 +206,4 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-        
+                          
