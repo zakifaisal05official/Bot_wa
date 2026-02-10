@@ -24,7 +24,23 @@ const {
     sendJadwalBesokManual 
 } = require('./scheduler'); 
 
+// --- LOGIKA DATABASE KUIS (Agar aman kalau mati) ---
+const KUIS_PATH = './kuis.json';
 let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null, expiresAt: null };
+
+// Load data kuis jika file ada
+if (fs.existsSync(KUIS_PATH)) {
+    try {
+        const savedKuis = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
+        const now = new Date();
+        const tglSekarang = `${now.getDate()}-${now.getMonth()}`;
+        // Hanya muat jika kuis berasal dari hari yang sama
+        if (savedKuis.tglID === tglSekarang) {
+            kuisAktif = savedKuis;
+            console.log("✅ Data kuis berhasil dimuat ulang dari file.");
+        }
+    } catch (e) { console.error("Gagal memuat kuis.json"); }
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -192,16 +208,18 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        // PERBAIKAN: Penangkapan Vote yang lebih akurat
+        // PERBAIKAN: Penangkapan Vote & Auto-Save
         sock.ev.on('messages.update', async (updates) => {
             for (const update of updates) {
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
-                    const pollCreationKey = update.key;
                     const pollUpdate = update.update.pollUpdates[0];
                     if (pollUpdate) {
                         const voter = pollUpdate.voterJid;
                         kuisAktif.votes[voter] = pollUpdate.selectedOptions;
                         addLog(`Vote dicatat: ${voter.split('@')[0]}`);
+                        
+                        // Simpan ke file agar tidak hilang kalau bot restart
+                        fs.writeFileSync(KUIS_PATH, JSON.stringify(kuisAktif, null, 2));
                     }
                 }
             }
@@ -227,18 +245,16 @@ async function start() {
                 isConnected = false;
                 qrCodeData = "";
                 isStarting = false;
-                const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-                addLog(`Terputus. Reconnect: ${shouldReconnect}`);
-                if (shouldReconnect) { 
-                    setTimeout(start, 5000); 
-                }
+                const reason = lastDisconnect?.error?.output?.statusCode;
+                addLog(`Terputus. Alasan: ${reason}`);
+                if (reason !== DisconnectReason.loggedOut) { setTimeout(start, 5000); }
             } else if (connection === "open") {
                 qrCodeData = ""; 
                 isConnected = true;
                 isStarting = false;
                 addLog("Bot Terhubung!");
                 
-                // Menjalankan scheduler sekali saja saat koneksi terbuka
+                await delay(2000);
                 initQuizScheduler(sock, kuisAktif);
                 initJadwalBesokScheduler(sock);
                 initSmartFeedbackScheduler(sock, kuisAktif); 
@@ -274,4 +290,4 @@ async function start() {
 }
 
 start();
-        
+    
