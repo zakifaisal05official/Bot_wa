@@ -1,8 +1,10 @@
 const { QUIZ_BANK } = require('./quiz'); 
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 const db = require('./data');
+const fs = require('fs'); 
 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
+const KUIS_PATH = './kuis.json';
 
 function getWIBDate() {
     return new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
@@ -131,10 +133,12 @@ async function initQuizScheduler(sock, kuisAktif) {
                     });
                     kuisAktif.msgId = sentMsg.key.id;
                     kuisAktif.data = randomQuiz;
-                    kuisAktif.votes = {}; // Reset suara baru
+                    kuisAktif.votes = {}; 
                     kuisAktif.targetJam = (hariAngka === 5 ? 13 : 16);
                     kuisAktif.tglID = tglID;
                     lastSentDate = tglID; 
+
+                    fs.writeFileSync(KUIS_PATH, JSON.stringify(kuisAktif, null, 2));
                 }
             } catch (err) { console.error("Quiz Error:", err); }
         }
@@ -149,41 +153,46 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
         const jamSekarang = now.getHours();
         const tglSekarang = `${now.getDate()}-${now.getMonth()}`;
         
-        // Pengecekan: Ada kuis aktif, jam sudah masuk target, dan belum diproses
         if (kuisAktif.msgId && kuisAktif.data && kuisAktif.targetJam === jamSekarang && kuisAktif.tglID === tglSekarang) {
             if (lastProcessedId === kuisAktif.msgId) return;
             
             try {
                 const votesArray = Object.values(kuisAktif.votes || {});
-                let topIdx = 0; // Default ke opsi pertama jika tidak ada yang vote
+                let topIdx = 0; 
                 let maxVotes = 0;
 
                 if (votesArray.length > 0) {
                     const counts = {};
                     votesArray.forEach(v => { 
-                        const idx = v[0]; 
-                        counts[idx] = (counts[idx] || 0) + 1; 
+                        // v adalah array pilihan user
+                        if (Array.isArray(v)) {
+                            v.forEach(opt => {
+                                counts[opt] = (counts[opt] || 0) + 1;
+                            });
+                        }
                     });
                     
                     for (let i = 0; i < kuisAktif.data.options.length; i++) {
-                        if ((counts[i] || 0) > maxVotes) { 
-                            maxVotes = counts[i] || 0; 
+                        // Cek berdasarkan index (i) karena Baileys memberikan index pilihan
+                        let currentCount = counts[i] || 0;
+                        if (currentCount > maxVotes) { 
+                            maxVotes = currentCount; 
                             topIdx = i; 
                         }
                     }
                 }
 
-                // Kirim Feedback
                 const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
                 
-                // Tandai sudah diproses dan bersihkan data
                 lastProcessedId = kuisAktif.msgId;
                 kuisAktif.msgId = null;
                 kuisAktif.data = null;
+                kuisAktif.votes = {};
+                if (fs.existsSync(KUIS_PATH)) fs.unlinkSync(KUIS_PATH);
             } catch (err) { console.error("Feedback Error:", err); }
         }
-    }, 35000); // Dipercepat ke 35 detik agar lebih responsif
+    }, 35000);
 }
 
 async function initJadwalBesokScheduler(sock) {
@@ -209,4 +218,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-                                         
+                         
