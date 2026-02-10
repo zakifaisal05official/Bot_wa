@@ -215,6 +215,7 @@ async function start() {
                     const pollUpdate = update.update.pollUpdates[0];
                     if (pollUpdate) {
                         const voter = pollUpdate.voterJid;
+                        // Pastikan data vote masuk ke objek
                         kuisAktif.votes[voter] = pollUpdate.selectedOptions;
                         addLog(`Vote dicatat: ${voter.split('@')[0]}`);
                         
