@@ -41,12 +41,9 @@ async function sendJadwalBesokManual(sock, targetJid) {
         const hariIni = now.getDay(); 
         
         // PERBAIKAN: Jangan kirim jika besok adalah hari libur (Sabtu/Minggu)
-        // Jika hari ini Jumat (5) atau Sabtu (6), maka fungsi berhenti (return)
         if (hariIni === 5 || hariIni === 6) return;
 
         let hariBesok = (hariIni + 1) % 7;
-        
-        // Penyesuaian jika dipanggil hari Minggu (0) maka besok Senin (1)
         if (hariBesok === 0) hariBesok = 1;
 
         const { dates } = getWeekDates();
@@ -67,7 +64,6 @@ async function sendJadwalBesokManual(sock, targetJid) {
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
         }).join('\n');
 
-        // PERBAIKAN KALENDER: dates[0] adalah Senin, maka indexnya adalah hariBesok - 1
         const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${dates[hariBesok - 1]}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
         
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
@@ -135,9 +131,8 @@ async function initQuizScheduler(sock, kuisAktif) {
                     });
                     kuisAktif.msgId = sentMsg.key.id;
                     kuisAktif.data = randomQuiz;
-                    kuisAktif.votes = {};
+                    kuisAktif.votes = {}; // Reset suara baru
                     kuisAktif.targetJam = (hariAngka === 5 ? 13 : 16);
-                    kuisAktif.expiresAt = Date.now() + (2 * 60 * 60 * 1000); 
                     kuisAktif.tglID = tglID;
                     lastSentDate = tglID; 
                 }
@@ -153,26 +148,42 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
         const now = getWIBDate();
         const jamSekarang = now.getHours();
         const tglSekarang = `${now.getDate()}-${now.getMonth()}`;
+        
+        // Pengecekan: Ada kuis aktif, jam sudah masuk target, dan belum diproses
         if (kuisAktif.msgId && kuisAktif.data && kuisAktif.targetJam === jamSekarang && kuisAktif.tglID === tglSekarang) {
             if (lastProcessedId === kuisAktif.msgId) return;
+            
             try {
-                const votesArray = Object.values(kuisAktif.votes);
-                if (votesArray.length === 0) { lastProcessedId = kuisAktif.msgId; kuisAktif.msgId = null; return; }
-                const counts = {};
-                votesArray.forEach(v => { counts[v[0]] = (counts[v[0]] || 0) + 1; });
-                let topIdx = -1; let maxVotes = 0;
-                for (let i = 0; i < kuisAktif.data.options.length; i++) {
-                    if ((counts[i] || 0) > maxVotes) { maxVotes = counts[i] || 0; topIdx = i; }
+                const votesArray = Object.values(kuisAktif.votes || {});
+                let topIdx = 0; // Default ke opsi pertama jika tidak ada yang vote
+                let maxVotes = 0;
+
+                if (votesArray.length > 0) {
+                    const counts = {};
+                    votesArray.forEach(v => { 
+                        const idx = v[0]; 
+                        counts[idx] = (counts[idx] || 0) + 1; 
+                    });
+                    
+                    for (let i = 0; i < kuisAktif.data.options.length; i++) {
+                        if ((counts[i] || 0) > maxVotes) { 
+                            maxVotes = counts[i] || 0; 
+                            topIdx = i; 
+                        }
+                    }
                 }
-                if (topIdx !== -1) {
-                    const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
-                    await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
-                }
+
+                // Kirim Feedback
+                const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
+                
+                // Tandai sudah diproses dan bersihkan data
                 lastProcessedId = kuisAktif.msgId;
                 kuisAktif.msgId = null;
+                kuisAktif.data = null;
             } catch (err) { console.error("Feedback Error:", err); }
         }
-    }, 40000);
+    }, 35000); // Dipercepat ke 35 detik agar lebih responsif
 }
 
 async function initJadwalBesokScheduler(sock) {
@@ -198,4 +209,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-            
+                                         
