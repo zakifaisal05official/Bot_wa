@@ -192,15 +192,16 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
+        // PERBAIKAN: Penangkapan Vote yang lebih akurat
         sock.ev.on('messages.update', async (updates) => {
             for (const update of updates) {
-                // Cek update polling
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
+                    const pollCreationKey = update.key;
                     const pollUpdate = update.update.pollUpdates[0];
                     if (pollUpdate) {
-                        // Hanya mencatat suara ke memory untuk direkap nanti di scheduler
-                        kuisAktif.votes[pollUpdate.voterJid] = pollUpdate.selectedOptions;
-                        addLog(`Vote dicatat: ${pollUpdate.voterJid.split('@')[0]}`);
+                        const voter = pollUpdate.voterJid;
+                        kuisAktif.votes[voter] = pollUpdate.selectedOptions;
+                        addLog(`Vote dicatat: ${voter.split('@')[0]}`);
                     }
                 }
             }
@@ -226,15 +227,18 @@ async function start() {
                 isConnected = false;
                 qrCodeData = "";
                 isStarting = false;
-                const reason = lastDisconnect?.error?.output?.statusCode;
-                addLog(`Terputus. Alasan: ${reason}`);
-                if (reason !== DisconnectReason.loggedOut) { setTimeout(start, 5000); }
+                const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+                addLog(`Terputus. Reconnect: ${shouldReconnect}`);
+                if (shouldReconnect) { 
+                    setTimeout(start, 5000); 
+                }
             } else if (connection === "open") {
                 qrCodeData = ""; 
                 isConnected = true;
                 isStarting = false;
                 addLog("Bot Terhubung!");
-                await delay(2000);
+                
+                // Menjalankan scheduler sekali saja saat koneksi terbuka
                 initQuizScheduler(sock, kuisAktif);
                 initJadwalBesokScheduler(sock);
                 initSmartFeedbackScheduler(sock, kuisAktif); 
@@ -263,11 +267,11 @@ async function start() {
         });
 
     } catch (err) {
-        addLog(`Error: ${err.message}`);
+        addLog(`Error Fatal: ${err.message}`);
         isStarting = false;
         setTimeout(start, 5000);
     }
 }
 
 start();
-    
+        
