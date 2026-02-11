@@ -157,14 +157,15 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
             if (lastProcessedId === kuisAktif.msgId) return;
             
             try {
+                // AMBIL DATA VOTE DARI GRUP
                 const votesArray = Object.values(kuisAktif.votes || {});
                 let topIdx = 0; 
                 let maxVotes = 0;
 
+                // CEK DAN BANDINGKAN SUARA TERBANYAK
                 if (votesArray.length > 0) {
                     const counts = {};
                     votesArray.forEach(v => { 
-                        // v adalah array pilihan user
                         if (Array.isArray(v)) {
                             v.forEach(opt => {
                                 counts[opt] = (counts[opt] || 0) + 1;
@@ -172,8 +173,8 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
                         }
                     });
                     
+                    // Looping semua opsi untuk mencari peraih suara tertinggi
                     for (let i = 0; i < kuisAktif.data.options.length; i++) {
-                        // Cek berdasarkan index (i) karena Baileys memberikan index pilihan
                         let currentCount = counts[i] || 0;
                         if (currentCount > maxVotes) { 
                             maxVotes = currentCount; 
@@ -182,6 +183,7 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
                     }
                 }
 
+                // Kirim Feedback berdasarkan hasil pengecekan suara terbanyak
                 const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
                 
@@ -218,4 +220,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-                         
+    
