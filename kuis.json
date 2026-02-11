@@ -1,1 +1,17 @@
+{
+  "msgId": "3EB0ABC12345",
+  "data": {
+    "question": "Senin produktif! 📝 Mana yang paling bikin mikir?",
+    "options": ["Pelajaran IPA", "B. Inggris", "Agama (PAI)", "B. Indonesia"],
+    "feedbacks": ["...", "...", "...", "..."]
+  },
+  "votes": {
+    "62812345678@s.whatsapp.net": [0],
+    "62898765432@s.whatsapp.net": [1],
+    "62811223344@s.whatsapp.net": [0]
+  },
+  "targetJam": 16,
+  "tglID": "11-1",
+  "expiresAt": null
+}
 
