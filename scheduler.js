@@ -56,7 +56,25 @@ async function sendJadwalBesokManual(sock, targetJid) {
         const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
         const currentData = db.getAll() || {};
         const dataPRBesok = (currentData[daysKey[hariBesok]] || "");
+        const tglBesok = dates[hariBesok - 1];
 
+        // 1. KIRIM LIST PR HARIAN (UNTUK BESOK SAJA)
+        let teksPR = `📌 *DAFTAR LIST TUGAS PR* 📢\n📅 Hari: ${dayLabels[hariBesok].toUpperCase()} (${tglBesok})\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+        
+        if (!dataPRBesok || dataPRBesok === "" || dataPRBesok.includes("Belum ada tugas") || dataPRBesok.includes("Tidak ada PR")) {
+            teksPR += `└─ ✅ _Tidak ada PR_\n\n`;
+        } else {
+            let updatedTugas = dataPRBesok.replace(/⏰ Deadline: .*/g, `⏰ Deadline: ${dayLabels[hariBesok].charAt(0) + dayLabels[hariBesok].slice(1).toLowerCase()}, ${tglBesok}`);
+            teksPR += `${updatedTugas}\n\n`;
+        }
+        teksPR += `━━━━━━━━━━━━━━━━━━━━\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
+
+        await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: teksPR });
+
+        // DELAY 5 DETIK SEBELUM KIRIM JADWAL
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // 2. KIRIM JADWAL PELAJARAN
         const jadwalFinal = rawMapel.map(mapel => {
             const emojiOnly = mapel.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/u);
             let adaPR = false;
@@ -66,7 +84,7 @@ async function sendJadwalBesokManual(sock, targetJid) {
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
         }).join('\n');
 
-        const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${dates[hariBesok - 1]}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
+        const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${tglBesok}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
         
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
     } catch (err) { console.error("Jadwal Manual Error:", err); }
@@ -220,4 +238,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-    
+        
