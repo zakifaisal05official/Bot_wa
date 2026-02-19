@@ -1,4 +1,10 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, delay } = require("@whiskeysockets/baileys");
+const { 
+    default: makeWASocket, 
+    useMultiFileAuthState, 
+    DisconnectReason, 
+    fetchLatestBaileysVersion, 
+    makeCacheableSignalKeyStore 
+} = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const express = require("express");
 const QRCode = require("qrcode");
@@ -6,36 +12,55 @@ const path = require("path");
 const fs = require("fs");
 
 const { handleMessages } = require('./handler'); 
-const { initQuizScheduler, initJadwalBesokScheduler, initSmartFeedbackScheduler, initListPrMingguanScheduler, getWeekDates, sendJadwalBesokManual } = require('./scheduler'); 
+const { 
+    initQuizScheduler, 
+    initJadwalBesokScheduler, 
+    initSmartFeedbackScheduler, 
+    initListPrMingguanScheduler, 
+    getWeekDates, 
+    sendJadwalBesokManual 
+} = require('./scheduler'); 
 const { renderDashboard } = require('./views/dashboard'); 
 
-// --- FIXED CONFIG SYSTEM ---
-const CONFIG_PATH = path.join(__dirname, 'config.json');
+// --- KONFIGURASI PATH VOLUME SESUAI PERMINTAAN ---
+const VOLUME_PATH = '/app/auth_info';
+const CONFIG_PATH = path.join(VOLUME_PATH, 'config.json');
+
+// Pastikan folder volume tersedia
+if (!fs.existsSync(VOLUME_PATH)) {
+    fs.mkdirSync(VOLUME_PATH, { recursive: true });
+}
+
 let botConfig = { quiz: true, jadwalBesok: true, smartFeedback: true, prMingguan: true };
 
+// Fungsi Load Config agar status ON/OFF tersimpan permanen
 function loadConfig() {
-    if (fs.existsSync(CONFIG_PATH)) {
-        try {
+    try {
+        if (fs.existsSync(CONFIG_PATH)) {
             const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
             botConfig = JSON.parse(data);
-            console.log("✅ Config Loaded:", botConfig);
-        } catch (e) { console.error("Gagal load config"); }
-    }
+            console.log("✅ Config loaded from /app/auth_info/config.json");
+        } else {
+            fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
+        }
+    } catch (e) { console.error("Error loading config:", e); }
 }
-loadConfig(); // Load di awal sebelum start
+loadConfig();
 
-const saveConfig = () => fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
-
-// --- KUIS DATABASE ---
-const KUIS_PATH = './kuis.json';
-let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null, expiresAt: null };
+const saveConfig = () => {
+    try {
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
+    } catch (e) { console.error("Error saving config:", e); }
+};
 
 const app = express();
 const port = process.env.PORT || 8080;
 let qrCodeData = "", isConnected = false, sock, logs = [], stats = { pesanMasuk: 0, totalLog: 0 };
 
 const addLog = (msg) => {
-    logs.unshift(`<span style="color: #00ff73;">[${new Date().toLocaleTimeString('id-ID')}]</span> ${msg}`);
+    const time = new Date().toLocaleTimeString('id-ID');
+    // Format log: Jam (Hijau), Pesan (Putih)
+    logs.unshift(`<span style="color: #00ff73;">[${time}]</span> <span style="color: #ffffff !important;">${msg}</span>`);
     stats.totalLog++;
     if (logs.length > 50) logs.pop();
 };
@@ -45,7 +70,7 @@ app.get("/toggle/:feature", (req, res) => {
     if (botConfig.hasOwnProperty(feat)) {
         botConfig[feat] = !botConfig[feat];
         saveConfig();
-        addLog(`Fitur ${feat} -> ${botConfig[feat] ? 'ON' : 'OFF'}`);
+        addLog(`Fitur ${feat} diubah -> ${botConfig[feat] ? 'ON' : 'OFF'}`);
     }
     res.redirect("/");
 });
@@ -57,14 +82,19 @@ app.get("/", (req, res) => {
 
 async function start() {
     const { version } = await fetchLatestBaileysVersion();
-    const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'auth_info'));
+    
+    // Auth info juga disimpan di dalam folder /app/auth_info
+    const { state, saveCreds } = await useMultiFileAuthState(VOLUME_PATH);
 
     sock = makeWASocket({
         version,
-        auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })) },
+        auth: { 
+            creds: state.creds, 
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })) 
+        },
         printQRInTerminal: false,
         logger: pino({ level: "silent" }),
-        browser: ["Ubuntu", "Chrome", "20.0.0.4"],
+        browser: ["Syteam-Bot", "Chrome", "1.0.0"],
     });
 
     sock.ev.on("creds.update", saveCreds);
@@ -73,14 +103,18 @@ async function start() {
         if (qr) qrCodeData = await QRCode.toDataURL(qr);
         if (connection === "close") {
             isConnected = false;
-            if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) setTimeout(start, 5000);
+            if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
+                setTimeout(start, 5000);
+            }
         } else if (connection === "open") {
-            isConnected = true; qrCodeData = "";
-            addLog("Bot Online!");
-            // Jalankan scheduler HANYA jika status di botConfig adalah true
-            if (botConfig.quiz) initQuizScheduler(sock, kuisAktif);
+            isConnected = true; 
+            qrCodeData = "";
+            addLog("Bot Terhubung!");
+            
+            // Scheduler hanya aktif jika di config bernilai TRUE
+            if (botConfig.quiz) initQuizScheduler(sock, {}); 
             if (botConfig.jadwalBesok) initJadwalBesokScheduler(sock);
-            if (botConfig.smartFeedback) initSmartFeedbackScheduler(sock, kuisAktif);
+            if (botConfig.smartFeedback) initSmartFeedbackScheduler(sock, {});
             if (botConfig.prMingguan) initListPrMingguanScheduler(sock);
         }
     });
@@ -90,12 +124,11 @@ async function start() {
             const msg = m.messages[0];
             if (!msg.message || msg.key.fromMe) return;
             stats.pesanMasuk++;
-            addLog(`Chat: ${msg.pushName || 'User'}`);
-            await handleMessages(sock, m, kuisAktif, { getWeekDates, sendJadwalBesokManual });
+            addLog(`Chat dari: ${msg.pushName || 'User'}`);
+            await handleMessages(sock, m, {}, { getWeekDates, sendJadwalBesokManual });
         }
     });
 }
 
 start();
 app.listen(port, "0.0.0.0");
-    
