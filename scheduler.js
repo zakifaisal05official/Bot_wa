@@ -37,6 +37,26 @@ function getWeekDates() {
     return { dates, periode };
 }
 
+// --- FUNGSI BARU: SCHEDULER SAHUR ---
+async function initSahurScheduler(sock) {
+    console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
+    let lastSentSahur = "";
+    setInterval(async () => {
+        const now = getWIBDate();
+        const jam = now.getHours();
+        const menit = now.getMinutes();
+        const tglID = `${now.getDate()}-${now.getMonth()}`;
+        
+        if (jam === 4 && menit === 0 && lastSentSahur !== tglID) {
+            try {
+                const pesanSahur = `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nSelamat makan sahur semuanya! Jangan lupa niat puasa dan perbanyak minum air putih ya.\n\n_🕒 Waktu: 04:00 WIB (Sebelum Subuh)_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga puasanya lancar!* ✨`;
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: pesanSahur });
+                lastSentSahur = tglID;
+            } catch (err) { console.error("Sahur Error:", err); }
+        }
+    }, 35000);
+}
+
 async function sendJadwalBesokManual(sock, targetJid) {
     try {
         const now = getWIBDate();
@@ -143,10 +163,8 @@ async function initQuizScheduler(sock, kuisAktif) {
         const hariAngka = now.getDay(); 
         const tglID = `${tgl}-${now.getMonth()}`;
 
-        // Kirim kuis jam 13:00 (1 Siang)
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
-                // PENENTUAN FASE BERDASARKAN KALENDER FEBRUARI-MARET 2026
                 let fase = 0;
                 if (tgl >= 18 && tgl <= 21 && bln === 2) fase = 1; 
                 else if (tgl >= 24 && tgl <= 26 && bln === 2) fase = 2; 
@@ -163,7 +181,7 @@ async function initQuizScheduler(sock, kuisAktif) {
                     kuisAktif.msgId = sentMsg.key.id;
                     kuisAktif.data = randomQuiz;
                     kuisAktif.votes = {}; 
-                    kuisAktif.targetJam = 15; // Feedback jam 15:00 (3 Sore)
+                    kuisAktif.targetJam = 15; 
                     kuisAktif.tglID = tglID;
                     lastSentDate = tglID; 
 
@@ -186,12 +204,10 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
             if (lastProcessedId === kuisAktif.msgId) return;
             
             try {
-                // AMBIL DATA VOTE DARI GRUP
                 const votesArray = Object.values(kuisAktif.votes || {});
                 let topIdx = 0; 
                 let maxVotes = 0;
 
-                // CEK DAN BANDINGKAN SUARA TERBANYAK
                 if (votesArray.length > 0) {
                     const counts = {};
                     votesArray.forEach(v => { 
@@ -202,7 +218,6 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
                         }
                     });
                     
-                    // Looping semua opsi untuk mencari peraih suara tertinggi
                     for (let i = 0; i < kuisAktif.data.options.length; i++) {
                         let currentCount = counts[i] || 0;
                         if (currentCount > maxVotes) { 
@@ -212,7 +227,6 @@ async function initSmartFeedbackScheduler(sock, kuisAktif) {
                     }
                 }
 
-                // Kirim Feedback berdasarkan hasil pengecekan suara terbanyak
                 const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
                 
@@ -246,7 +260,8 @@ module.exports = {
     initSmartFeedbackScheduler, 
     initJadwalBesokScheduler, 
     initListPrMingguanScheduler, 
+    initSahurScheduler,
     getWeekDates,
     sendJadwalBesokManual
 };
-                  
+    
