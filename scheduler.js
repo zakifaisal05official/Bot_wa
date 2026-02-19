@@ -132,18 +132,29 @@ async function initListPrMingguanScheduler(sock) {
 }
 
 async function initQuizScheduler(sock, kuisAktif) {
-    console.log("✅ Scheduler Polling Aktif (Sen-Kam 14:00, Jum 11:00 WIB)");
+    console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
     let lastSentDate = ""; 
     setInterval(async () => {
         const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
+        const tgl = now.getDate();
+        const bln = now.getMonth() + 1;
         const hariAngka = now.getDay(); 
-        const tglID = `${now.getDate()}-${now.getMonth()}`;
-        const targetJam = (hariAngka === 5) ? 11 : 14;
-        if (jam === targetJam && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
+        const tglID = `${tgl}-${now.getMonth()}`;
+
+        // Kirim kuis jam 13:00 (1 Siang)
+        if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
-                const kuisHariIni = QUIZ_BANK[hariAngka];
+                // PENENTUAN FASE BERDASARKAN KALENDER FEBRUARI-MARET 2026
+                let fase = 0;
+                if (tgl >= 18 && tgl <= 21 && bln === 2) fase = 1; 
+                else if (tgl >= 24 && tgl <= 26 && bln === 2) fase = 2; 
+                else if ((tgl >= 27 && bln === 2) || (tgl <= 4 && bln === 3)) fase = 3; 
+                else if (tgl >= 9 && tgl <= 14 && bln === 3) fase = 4; 
+                else if (tgl >= 16 && tgl <= 27 && bln === 3) fase = 5; 
+
+                const kuisHariIni = QUIZ_BANK[fase];
                 if (kuisHariIni && kuisHariIni.length > 0) {
                     const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
                     const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
@@ -152,7 +163,7 @@ async function initQuizScheduler(sock, kuisAktif) {
                     kuisAktif.msgId = sentMsg.key.id;
                     kuisAktif.data = randomQuiz;
                     kuisAktif.votes = {}; 
-                    kuisAktif.targetJam = (hariAngka === 5 ? 13 : 16);
+                    kuisAktif.targetJam = 15; // Feedback jam 15:00 (3 Sore)
                     kuisAktif.tglID = tglID;
                     lastSentDate = tglID; 
 
@@ -238,4 +249,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-        
+                  
