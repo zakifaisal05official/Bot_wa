@@ -24,9 +24,14 @@ const {
     sendJadwalBesokManual 
 } = require('./scheduler'); 
 
-// --- SISTEM PENYIMPANAN STATUS ON/OFF ---
+// --- SISTEM PENYIMPANAN STATUS PER FITUR ---
 const CONFIG_PATH = path.join(__dirname, 'config.json');
-let botConfig = { schedulerActive: true };
+let botConfig = { 
+    quiz: true,
+    jadwalBesok: true,
+    smartFeedback: true,
+    prMingguan: true
+};
 
 // Muat status dari file agar permanen
 if (fs.existsSync(CONFIG_PATH)) {
@@ -59,7 +64,7 @@ if (fs.existsSync(KUIS_PATH)) {
 }
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080; // PORT DIUBAH KE 8080
 let qrCodeData = ""; 
 let isConnected = false; 
 let sock; 
@@ -82,10 +87,13 @@ const addLog = (msg) => {
 app.use(express.urlencoded({ extended: true }));
 
 // --- API UNTUK TOGGLE FITUR ---
-app.get("/toggle", (req, res) => {
-    botConfig.schedulerActive = !botConfig.schedulerActive;
-    saveConfig();
-    addLog(`Fitur Sistem diubah menjadi: ${botConfig.schedulerActive ? 'ON' : 'OFF'}`);
+app.get("/toggle/:feature", (req, res) => {
+    const feat = req.params.feature;
+    if (botConfig.hasOwnProperty(feat)) {
+        botConfig[feat] = !botConfig[feat];
+        saveConfig();
+        addLog(`Fitur ${feat} diubah menjadi: ${botConfig[feat] ? 'ON' : 'OFF'}`);
+    }
     res.redirect("/");
 });
 
@@ -107,7 +115,7 @@ app.get("/", (req, res) => {
             .dot-online { background-color: #00ff73; box-shadow: 0 0 12px #00ff73; animation: pulse 1.5s infinite; }
             @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
             .log-box { 
-                background: #0c151b; border-radius: 8px; height: 350px; overflow-y: auto; padding: 15px; 
+                background: #0c151b; border-radius: 8px; height: 300px; overflow-y: auto; padding: 15px; 
                 font-family: 'Consolas', 'Monaco', monospace; font-size: 0.85rem; color: #e9edef; 
                 border: 1px solid #374045; line-height: 1.6;
             }
@@ -115,12 +123,14 @@ app.get("/", (req, res) => {
             .stats-item small { color: #00a884 !important; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
             .qr-container { background: white; padding: 20px; border-radius: 15px; display: inline-block; }
             .btn-refresh { background: #00a884; border: none; font-weight: 600; color: white; width: 100%; padding: 10px; border-radius: 8px; }
-            .btn-status { 
-                padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; border: none; 
-                transition: 0.3s; text-decoration: none; display: block; text-align: center; margin-bottom: 15px;
-            }
-            .status-on { background: #25d366; color: white; }
-            .status-off { background: #f15c5c; color: white; }
+            
+            .feature-list { background: #2a3942; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #374045; }
+            .feature-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #374045; }
+            .feature-item:last-child { border-bottom: none; }
+            .btn-toggle { border: none; padding: 5px 15px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; min-width: 70px; }
+            .btn-on { background: #25d366; color: white; }
+            .btn-off { background: #f15c5c; color: white; }
+            a { text-decoration: none; }
         </style>
     `;
 
@@ -134,16 +144,33 @@ app.get("/", (req, res) => {
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <div>
                                     <h4 class="mb-0">WhatsApp Bot</h4>
-                                    <small style="color: #8696a0;">Status: Active Monitoring</small>
+                                    <small style="color: #8696a0;">Status: Connected (Port 8080)</small>
                                 </div>
                                 <div class="text-end">
                                     <span class="status-dot dot-online"></span>
                                     <span class="status-online">CONNECTED</span>
                                 </div>
                             </div>
-                            <a href="/toggle" class="btn-status ${botConfig.schedulerActive ? 'status-on' : 'status-off'}">
-                                SYSTEM FEATURES: ${botConfig.schedulerActive ? 'ACTIVE (ON)' : 'DISABLED (OFF)'}
-                            </a>
+
+                            <div class="feature-list">
+                                <div class="feature-item">
+                                    <span>initQuizScheduler</span>
+                                    <a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                                <div class="feature-item">
+                                    <span>initJadwalBesokScheduler</span>
+                                    <a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                                <div class="feature-item">
+                                    <span>initSmartFeedbackScheduler</span>
+                                    <a href="/toggle/smartFeedback"><button class="btn-toggle ${botConfig.smartFeedback ? 'btn-on' : 'btn-off'}">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                                <div class="feature-item">
+                                    <span>initListPrMingguanScheduler</span>
+                                    <a href="/toggle/prMingguan"><button class="btn-toggle ${botConfig.prMingguan ? 'btn-on' : 'btn-off'}">${botConfig.prMingguan ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                            </div>
+
                             <div class="row g-2 mb-4 text-center">
                                 <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">RAM</small><strong>${usedRAM}G</strong></div></div>
                                 <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">UPTIME</small><strong>${uptime}H</strong></div></div>
@@ -213,7 +240,6 @@ async function start() {
         sock.ev.on("creds.update", saveCreds);
 
         sock.ev.on('messages.update', async (updates) => {
-            if (!botConfig.schedulerActive) return; 
             for (const update of updates) {
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
                     const pollUpdate = update.update.pollUpdates[0];
@@ -257,15 +283,14 @@ async function start() {
                 addLog("Bot Terhubung!");
                 
                 await delay(2000);
-                if (botConfig.schedulerActive) {
-                    initQuizScheduler(sock, kuisAktif);
-                    initJadwalBesokScheduler(sock);
-                    initSmartFeedbackScheduler(sock, kuisAktif); 
-                    initListPrMingguanScheduler(sock);
-                    addLog("Sistem Aktif 100%");
-                } else {
-                    addLog("⚠️ Fitur OFF (Tidak menjalankan scheduler)");
-                }
+                
+                // JALANKAN SCHEDULER BERDASARKAN CONFIG
+                if (botConfig.quiz) initQuizScheduler(sock, kuisAktif);
+                if (botConfig.jadwalBesok) initJadwalBesokScheduler(sock);
+                if (botConfig.smartFeedback) initSmartFeedbackScheduler(sock, kuisAktif); 
+                if (botConfig.prMingguan) initListPrMingguanScheduler(sock);
+                
+                addLog("Sistem Aktif (Scheduler Sesuai Config)");
             }
         });
 
@@ -273,7 +298,6 @@ async function start() {
             if (m.type === 'notify') {
                 const msg = m.messages[0];
                 if (!msg.message || msg.key.fromMe) return;
-                if (!botConfig.schedulerActive) return; 
 
                 stats.pesanMasuk++;
                 addLog(`Pesan: ${msg.pushName || msg.key.remoteJid.split('@')[0]}`);
@@ -297,4 +321,4 @@ async function start() {
 }
 
 start();
-                 
+    
