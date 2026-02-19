@@ -9,68 +9,137 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port) 
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>
-            body { background: #ffffff; color: #212529; font-family: -apple-system, sans-serif; }
-            .card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-            .status-online { color: #198754; font-weight: bold; }
-            .status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; background-color: #198754; }
-            .log-box { 
-                background: #ffffff; border-radius: 8px; height: 300px; overflow-y: auto; padding: 15px; 
-                font-family: monospace; font-size: 0.9rem; color: #333; 
-                border: 1px solid #dee2e6; line-height: 1.6;
+            body { background: #ffffff; color: #333; font-family: 'Segoe UI', sans-serif; }
+            .card { background: #ffffff; border: 1px solid #f0f0f0; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); }
+            
+            /* Tombol Pemicu Menu */
+            .btn-trigger-menu { 
+                background: #007bff; color: white; border: none; padding: 15px; 
+                border-radius: 12px; font-weight: bold; width: 100%; 
+                transition: 0.3s; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px;
             }
-            .stats-item { background: #ffffff; border: 1px solid #dee2e6 !important; }
-            .stats-item small { color: #ffffff !important; font-weight: 600; font-size: 0.75rem; background: #6c757d; padding: 2px 5px; border-radius: 3px; }
-            .btn-refresh { background: #0d6efd; border: none; font-weight: 600; color: white; width: 100%; padding: 12px; border-radius: 8px; }
-            .feature-list { background: #ffffff; border-radius: 10px; border: 1px solid #dee2e6; overflow: hidden; }
-            .feature-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
-            .btn-toggle { border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; min-width: 80px; color: white !important; }
-            .btn-on { background: #198754; }
+            .btn-trigger-menu:hover { background: #0056b3; }
+
+            /* Layout Menu yang Muncul (Hidden by Default) */
+            #layoutMenu { 
+                display: none; 
+                margin-top: 20px; 
+                padding: 20px; 
+                background: #f8f9fa; 
+                border-radius: 15px;
+                border: 1px solid #eee;
+                animation: fadeIn 0.4s ease-in-out;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            .feature-item { 
+                display: flex; justify-content: space-between; align-items: center; 
+                padding: 12px 0; border-bottom: 1px solid #e9ecef; 
+            }
+            .feature-item:last-child { border-bottom: none; }
+
+            /* Teks Putih pada Tombol ON/OFF */
+            .btn-toggle { 
+                border: none; padding: 7px 18px; border-radius: 8px; font-weight: bold; 
+                min-width: 75px; color: #ffffff !important; font-size: 0.8rem;
+            }
+            .btn-on { background: #28a745; }
             .btn-off { background: #dc3545; }
-            .text-white-fixed { color: #ffffff !important; }
+
+            .log-box { 
+                background: #1e1e1e; color: #dcdcdc; border-radius: 12px; height: 250px; 
+                overflow-y: auto; padding: 15px; font-family: 'Courier New', monospace; font-size: 0.85rem;
+            }
+            .stats-card { background: #f8f9fa; border: 1px solid #eee; border-radius: 12px; padding: 10px; }
+            .stats-val { color: #007bff; font-weight: 800; font-size: 1.1rem; display: block; }
+            .stats-lbl { color: #999; font-size: 0.65rem; text-transform: uppercase; font-weight: bold; }
         </style>
     `;
 
     if (isConnected) {
         return `
             <html>
-                <head><title>Bot Syteam Panel</title>${commonHead}</head>
-                <body class="py-4">
-                    <div class="container" style="max-width: 650px;">
+                <head><title>Panel Kendali Bot</title>${commonHead}</head>
+                <body class="py-5">
+                    <div class="container" style="max-width: 500px;">
                         <div class="card p-4">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div><h4 class="mb-0">WhatsApp Bot Menu</h4><small class="text-muted">Sistem Aktif (Port ${port})</small></div>
-                                <div class="text-end"><span class="status-dot"></span><span class="status-online">TERHUBUNG</span></div>
+                                <div><h4 class="mb-0 fw-bold">SYTEAM PANEL</h4><small class="text-success fw-bold">Online</small></div>
+                                <div class="text-muted small">Port: ${port}</div>
                             </div>
-                            <div class="feature-list mb-4">
-                                ${Object.keys(botConfig).map(feat => `
-                                    <div class="feature-item">
-                                        <span><strong>init${feat.charAt(0).toUpperCase() + feat.slice(1)}Scheduler</strong></span>
-                                        <a href="/toggle/${feat}"><button class="btn-toggle ${botConfig[feat] ? 'btn-on' : 'btn-off'}">${botConfig[feat] ? 'ON' : 'OFF'}</button></a>
-                                    </div>
-                                `).join('')}
+
+                            <button class="btn-trigger-menu" onclick="toggleMenu()">
+                                🛠️ KONFIGURASI FITUR
+                            </button>
+
+                            <div id="layoutMenu">
+                                <div class="feature-item">
+                                    <span class="fw-bold">Quiz Scheduler</span>
+                                    <a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="fw-bold">Jadwal Besok</span>
+                                    <a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="fw-bold">Smart Feedback</span>
+                                    <a href="/toggle/smartFeedback"><button class="btn-toggle ${botConfig.smartFeedback ? 'btn-on' : 'btn-off'}">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                                <div class="feature-item">
+                                    <span class="fw-bold">PR Mingguan</span>
+                                    <a href="/toggle/prMingguan"><button class="btn-toggle ${botConfig.prMingguan ? 'btn-on' : 'btn-off'}">${botConfig.prMingguan ? 'ON' : 'OFF'}</button></a>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary w-100 mt-3" onclick="toggleMenu()">Tutup</button>
                             </div>
+
+                            <hr class="my-4">
+
                             <div class="row g-2 mb-4 text-center">
-                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block text-white-fixed">RAM</small><strong>${usedRAM}G</strong></div></div>
-                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block text-white-fixed">UPTIME</small><strong>${uptime}H</strong></div></div>
-                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block text-white-fixed">CHAT</small><strong>${stats.pesanMasuk}</strong></div></div>
-                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block text-white-fixed">LOGS</small><strong>${stats.totalLog}</strong></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">RAM</span><span class="stats-val">${usedRAM}G</span></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">UPTIME</span><span class="stats-val">${uptime}H</span></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">CHAT</span><span class="stats-val">${stats.pesanMasuk}</span></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">LOGS</span><span class="stats-val">${stats.totalLog}</span></div></div>
                             </div>
-                            <h6 class="mb-2 text-muted fw-bold small">LOG AKTIVITAS:</h6>
-                            <div class="log-box mb-4">${logs.map(l => `<div>${l}</div>`).join('')}</div>
-                            <button class="btn-refresh" onclick="location.reload()">REFRESH PANEL</button>
+
+                            <div class="log-box mb-4">${logs.map(l => `<div class="mb-1">${l}</div>`).join('')}</div>
+                            
+                            <button class="btn btn-light w-100 fw-bold border" onclick="location.reload()">🔄 REFRESH DATA</button>
                         </div>
                     </div>
-                    <script>setTimeout(() => location.reload(), 20000);</script>
+
+                    <script>
+                        function toggleMenu() {
+                            const menu = document.getElementById('layoutMenu');
+                            if (menu.style.display === 'none' || menu.style.display === '') {
+                                menu.style.display = 'block';
+                            } else {
+                                menu.style.display = 'none';
+                            }
+                        }
+                    </script>
                 </body>
-            </html>`;
+            </html>
+        `;
     }
 
+    // Tampilan jika QR tersedia
     if (qrCodeData) {
-        return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100"><div class="card p-5 text-center shadow-sm" style="max-width: 400px; background: white;"><h4>Link WhatsApp</h4><div class="p-3 border rounded mb-3 bg-light"><img src="${qrCodeData}" class="img-fluid"/></div><p class="text-muted small">Scan QR untuk login.</p></div><script>setTimeout(()=>location.reload(), 15000);</script></body></html>`;
+        return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100">
+            <div class="card p-5 text-center" style="max-width: 400px;">
+                <h5 class="fw-bold mb-4">SCAN WHATSAPP</h5>
+                <img src="${qrCodeData}" class="img-fluid border rounded p-2 mb-3">
+                <p class="text-muted small">Silakan scan untuk menghubungkan bot.</p>
+            </div>
+            <script>setTimeout(() => location.reload(), 15000);</script>
+        </body></html>`;
     }
 
-    return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100 text-center"><div><div class="spinner-border text-primary mb-3"></div><h3 class="text-muted">MEMUAT SISTEM...</h3></div><script>setTimeout(()=>location.reload(), 4000);</script></body></html>`;
+    return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100"><h4>Memuat Sistem...</h4></body></html>`;
 };
 
 module.exports = { renderDashboard };
-      
+    
