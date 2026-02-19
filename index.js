@@ -17,6 +17,7 @@ const {
     initJadwalBesokScheduler, 
     initSmartFeedbackScheduler, 
     initListPrMingguanScheduler, 
+    initSahurScheduler, // Import fungsi sahur
     getWeekDates, 
     sendJadwalBesokManual 
 } = require('./scheduler'); 
@@ -31,7 +32,8 @@ if (!fs.existsSync(VOLUME_PATH)) {
     fs.mkdirSync(VOLUME_PATH, { recursive: true });
 }
 
-let botConfig = { quiz: true, jadwalBesok: true, smartFeedback: true, prMingguan: true };
+// Tambahkan sahur: true ke botConfig
+let botConfig = { quiz: true, jadwalBesok: true, smartFeedback: true, prMingguan: true, sahur: true };
 
 // Fungsi Load Config agar status ON/OFF tersimpan permanen
 function loadConfig() {
@@ -116,6 +118,7 @@ async function start() {
             if (botConfig.jadwalBesok) initJadwalBesokScheduler(sock);
             if (botConfig.smartFeedback) initSmartFeedbackScheduler(sock, {});
             if (botConfig.prMingguan) initListPrMingguanScheduler(sock);
+            if (botConfig.sahur) initSahurScheduler(sock); // Jalankan scheduler sahur
         }
     });
 
@@ -132,3 +135,4 @@ async function start() {
 
 start();
 app.listen(port, "0.0.0.0");
+    
