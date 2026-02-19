@@ -9,137 +9,90 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port) 
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>
-            body { background: #ffffff; color: #333; font-family: 'Segoe UI', sans-serif; }
-            .card { background: #ffffff; border: 1px solid #f0f0f0; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); }
+            body { background: #0b141a; color: #e9edef; font-family: 'Segoe UI', sans-serif; }
+            .card { background: #1f2c33; border: 1px solid #2a3942; border-radius: 15px; }
             
-            /* Tombol Pemicu Menu */
-            .btn-trigger-menu { 
-                background: #007bff; color: white; border: none; padding: 15px; 
-                border-radius: 12px; font-weight: bold; width: 100%; 
-                transition: 0.3s; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px;
+            /* Tombol Konfigurasi */
+            .btn-config { 
+                background: #00a884; color: white; border: none; padding: 12px; 
+                border-radius: 10px; font-weight: bold; width: 100%; transition: 0.3s;
             }
-            .btn-trigger-menu:hover { background: #0056b3; }
+            .btn-config:hover { background: #008f72; box-shadow: 0 0 15px rgba(0, 168, 132, 0.4); }
 
-            /* Layout Menu yang Muncul (Hidden by Default) */
+            /* Panel Menu yang Muncul */
             #layoutMenu { 
-                display: none; 
-                margin-top: 20px; 
-                padding: 20px; 
-                background: #f8f9fa; 
-                border-radius: 15px;
-                border: 1px solid #eee;
-                animation: fadeIn 0.4s ease-in-out;
+                display: none; background: #2a3942; border-radius: 12px; 
+                padding: 15px; margin-top: 15px; border: 1px solid #3b4a54;
+                animation: slideDown 0.3s ease-out;
             }
+            @keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
 
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
+            .menu-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #3b4a54; }
+            .menu-row:last-child { border-bottom: none; }
 
-            .feature-item { 
-                display: flex; justify-content: space-between; align-items: center; 
-                padding: 12px 0; border-bottom: 1px solid #e9ecef; 
-            }
-            .feature-item:last-child { border-bottom: none; }
+            /* Tombol ON/OFF Putih Teks */
+            .btn-toggle { border: none; padding: 6px 15px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; color: #fff !important; min-width: 70px; }
+            .btn-on { background: #25d366; }
+            .btn-off { background: #f15c5c; }
 
-            /* Teks Putih pada Tombol ON/OFF */
-            .btn-toggle { 
-                border: none; padding: 7px 18px; border-radius: 8px; font-weight: bold; 
-                min-width: 75px; color: #ffffff !important; font-size: 0.8rem;
-            }
-            .btn-on { background: #28a745; }
-            .btn-off { background: #dc3545; }
-
-            .log-box { 
-                background: #1e1e1e; color: #dcdcdc; border-radius: 12px; height: 250px; 
-                overflow-y: auto; padding: 15px; font-family: 'Courier New', monospace; font-size: 0.85rem;
-            }
-            .stats-card { background: #f8f9fa; border: 1px solid #eee; border-radius: 12px; padding: 10px; }
-            .stats-val { color: #007bff; font-weight: 800; font-size: 1.1rem; display: block; }
-            .stats-lbl { color: #999; font-size: 0.65rem; text-transform: uppercase; font-weight: bold; }
+            .log-container { background: #0c1317; border-radius: 10px; height: 250px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.8rem; border: 1px solid #2a3942; }
+            .stats-box { background: #2a3942; border-radius: 10px; padding: 10px; border: 1px solid #3b4a54; }
+            .stats-label { font-size: 0.65rem; color: #8696a0; text-transform: uppercase; font-weight: bold; }
+            .stats-val { font-size: 1rem; color: #00a884; font-weight: bold; display: block; }
         </style>
     `;
 
     if (isConnected) {
         return `
             <html>
-                <head><title>Panel Kendali Bot</title>${commonHead}</head>
-                <body class="py-5">
+                <head><title>Syteam Bot Dark</title>${commonHead}</head>
+                <body class="py-4">
                     <div class="container" style="max-width: 500px;">
-                        <div class="card p-4">
+                        <div class="card p-4 shadow-lg">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div><h4 class="mb-0 fw-bold">SYTEAM PANEL</h4><small class="text-success fw-bold">Online</small></div>
-                                <div class="text-muted small">Port: ${port}</div>
+                                <div><h4 class="mb-0" style="color:#00a884">SYTEAM <b>BOT</b></h4><small style="color:#8696a0">Status: Terhubung</small></div>
+                                <div style="height:12px; width:12px; background:#25d366; border-radius:50%; box-shadow: 0 0 10px #25d366"></div>
                             </div>
 
-                            <button class="btn-trigger-menu" onclick="toggleMenu()">
-                                🛠️ KONFIGURASI FITUR
-                            </button>
+                            <button class="btn-config" onclick="toggleMenu()">🛠 PENGATURAN FITUR</button>
 
                             <div id="layoutMenu">
-                                <div class="feature-item">
-                                    <span class="fw-bold">Quiz Scheduler</span>
-                                    <a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a>
-                                </div>
-                                <div class="feature-item">
-                                    <span class="fw-bold">Jadwal Besok</span>
-                                    <a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a>
-                                </div>
-                                <div class="feature-item">
-                                    <span class="fw-bold">Smart Feedback</span>
-                                    <a href="/toggle/smartFeedback"><button class="btn-toggle ${botConfig.smartFeedback ? 'btn-on' : 'btn-off'}">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a>
-                                </div>
-                                <div class="feature-item">
-                                    <span class="fw-bold">PR Mingguan</span>
-                                    <a href="/toggle/prMingguan"><button class="btn-toggle ${botConfig.prMingguan ? 'btn-on' : 'btn-off'}">${botConfig.prMingguan ? 'ON' : 'OFF'}</button></a>
-                                </div>
-                                <button class="btn btn-sm btn-outline-secondary w-100 mt-3" onclick="toggleMenu()">Tutup</button>
+                                <div class="menu-row"><span>Quiz Scheduler</span><a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a></div>
+                                <div class="menu-row"><span>Smart Feedback</span><a href="/toggle/smartFeedback"><button class="btn-toggle ${botConfig.smartFeedback ? 'btn-on' : 'btn-off'}">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a></div>
+                                <div class="menu-row"><span>Jadwal Besok</span><a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a></div>
+                                <div class="menu-row"><span>PR Mingguan</span><a href="/toggle/prMingguan"><button class="btn-toggle ${botConfig.prMingguan ? 'btn-on' : 'btn-off'}">${botConfig.prMingguan ? 'ON' : 'OFF'}</button></a></div>
+                                <button class="btn btn-sm btn-dark w-100 mt-2" style="font-size: 0.7rem; border:1px solid #3b4a54" onclick="toggleMenu()">Tutup</button>
                             </div>
 
-                            <hr class="my-4">
-
-                            <div class="row g-2 mb-4 text-center">
-                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">RAM</span><span class="stats-val">${usedRAM}G</span></div></div>
-                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">UPTIME</span><span class="stats-val">${uptime}H</span></div></div>
-                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">CHAT</span><span class="stats-val">${stats.pesanMasuk}</span></div></div>
-                                <div class="col-3"><div class="stats-card"><span class="stats-lbl">LOGS</span><span class="stats-val">${stats.totalLog}</span></div></div>
+                            <div class="row g-2 mt-4 text-center">
+                                <div class="col-3"><div class="stats-box"><span class="stats-label">RAM</span><span class="stats-val">${usedRAM}G</span></div></div>
+                                <div class="col-3"><div class="stats-box"><span class="stats-label">UPTIME</span><span class="stats-val">${uptime}H</span></div></div>
+                                <div class="col-3"><div class="stats-box"><span class="stats-label">CHAT</span><span class="stats-val">${stats.pesanMasuk}</span></div></div>
+                                <div class="col-3"><div class="stats-box"><span class="stats-label">LOGS</span><span class="stats-val">${stats.totalLog}</span></div></div>
                             </div>
 
-                            <div class="log-box mb-4">${logs.map(l => `<div class="mb-1">${l}</div>`).join('')}</div>
-                            
-                            <button class="btn btn-light w-100 fw-bold border" onclick="location.reload()">🔄 REFRESH DATA</button>
+                            <div class="mt-4 mb-2 small fw-bold" style="color:#8696a0">KONSOL AKTIVITAS:</div>
+                            <div class="log-container mb-3">${logs.join('<br>')}</div>
+
+                            <button class="btn btn-sm btn-outline-secondary w-100" onclick="location.reload()">REFRESH DASHBOARD</button>
                         </div>
                     </div>
-
                     <script>
                         function toggleMenu() {
-                            const menu = document.getElementById('layoutMenu');
-                            if (menu.style.display === 'none' || menu.style.display === '') {
-                                menu.style.display = 'block';
-                            } else {
-                                menu.style.display = 'none';
-                            }
+                            const m = document.getElementById('layoutMenu');
+                            m.style.display = (m.style.display === 'block') ? 'none' : 'block';
                         }
                     </script>
                 </body>
-            </html>
-        `;
+            </html>`;
     }
 
-    // Tampilan jika QR tersedia
     if (qrCodeData) {
-        return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100">
-            <div class="card p-5 text-center" style="max-width: 400px;">
-                <h5 class="fw-bold mb-4">SCAN WHATSAPP</h5>
-                <img src="${qrCodeData}" class="img-fluid border rounded p-2 mb-3">
-                <p class="text-muted small">Silakan scan untuk menghubungkan bot.</p>
-            </div>
-            <script>setTimeout(() => location.reload(), 15000);</script>
-        </body></html>`;
+        return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100"><div class="card p-5 text-center" style="max-width: 400px; background:#1f2c33; border: 1px solid #2a3942;"><h5 class="mb-4">SCAN WHATSAPP</h5><div class="p-3 bg-white rounded"><img src="${qrCodeData}" class="img-fluid"></div><p class="mt-3 small text-muted">Scan QR untuk menghubungkan.</p></div><script>setTimeout(()=>location.reload(),10000)</script></body></html>`;
     }
 
-    return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100"><h4>Memuat Sistem...</h4></body></html>`;
+    return `<html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100"><div class="text-center"><div class="spinner-border text-success mb-3"></div><h5>SYSTEM LOADING...</h5></div></body></html>`;
 };
 
 module.exports = { renderDashboard };
-    
+                                    
