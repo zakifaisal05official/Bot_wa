@@ -12,14 +12,12 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port) 
             body { background: #0b141a; color: #e9edef; font-family: 'Segoe UI', sans-serif; }
             .card { background: #1f2c33; border: 1px solid #2a3942; border-radius: 15px; }
             
-            /* Tombol Konfigurasi */
             .btn-config { 
                 background: #00a884; color: white; border: none; padding: 12px; 
                 border-radius: 10px; font-weight: bold; width: 100%; transition: 0.3s;
             }
             .btn-config:hover { background: #008f72; box-shadow: 0 0 15px rgba(0, 168, 132, 0.4); }
 
-            /* Panel Menu yang Muncul */
             #layoutMenu { 
                 display: none; background: #2a3942; border-radius: 12px; 
                 padding: 15px; margin-top: 15px; border: 1px solid #3b4a54;
@@ -27,10 +25,15 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port) 
             }
             @keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
 
-            .menu-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #3b4a54; }
+            /* PERUBAHAN DISINI: Teks label menu jadi putih */
+            .menu-row { 
+                display: flex; justify-content: space-between; align-items: center; 
+                padding: 10px 0; border-bottom: 1px solid #3b4a54; 
+                color: #ffffff !important; 
+                font-weight: 500;
+            }
             .menu-row:last-child { border-bottom: none; }
 
-            /* Tombol ON/OFF Putih Teks */
             .btn-toggle { border: none; padding: 6px 15px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; color: #fff !important; min-width: 70px; }
             .btn-on { background: #25d366; }
             .btn-off { background: #f15c5c; }
@@ -95,4 +98,4 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port) 
 };
 
 module.exports = { renderDashboard };
-                                    
+                                                                                                                                                                                       
