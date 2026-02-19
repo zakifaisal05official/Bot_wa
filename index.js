@@ -24,6 +24,21 @@ const {
     sendJadwalBesokManual 
 } = require('./scheduler'); 
 
+// --- SISTEM PENYIMPANAN STATUS ON/OFF ---
+const CONFIG_PATH = './config.json';
+let botConfig = { schedulerActive: true };
+
+// Muat status On/Off dari file agar tidak reset saat restart
+if (fs.existsSync(CONFIG_PATH)) {
+    try {
+        botConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+    } catch (e) { console.error("Gagal memuat config.json"); }
+}
+
+const saveConfig = () => {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
+};
+
 // --- LOGIKA DATABASE KUIS (Agar aman kalau mati) ---
 const KUIS_PATH = './kuis.json';
 let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null, expiresAt: null };
@@ -65,6 +80,14 @@ const addLog = (msg) => {
 
 app.use(express.urlencoded({ extended: true }));
 
+// --- API UNTUK TOGGLE FITUR ---
+app.get("/toggle", (req, res) => {
+    botConfig.schedulerActive = !botConfig.schedulerActive;
+    saveConfig();
+    addLog(`Fitur Sistem diubah menjadi: ${botConfig.schedulerActive ? 'ON' : 'OFF'}`);
+    res.redirect("/");
+});
+
 // --- 1. WEB SERVER UI ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
@@ -98,6 +121,14 @@ app.get("/", (req, res) => {
             .stats-item small { color: #00a884 !important; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
             .qr-container { background: white; padding: 20px; border-radius: 15px; display: inline-block; }
             .btn-refresh { background: #00a884; border: none; font-weight: 600; color: white; width: 100%; padding: 10px; border-radius: 8px; }
+            
+            /* UI ON/OFF Style */
+            .btn-status { 
+                padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; border: none; transition: 0.3s;
+                text-decoration: none; display: block; text-align: center; margin-bottom: 15px;
+            }
+            .status-on { background: #25d366; color: white; }
+            .status-off { background: #f15c5c; color: white; }
         </style>
     `;
 
@@ -118,6 +149,11 @@ app.get("/", (req, res) => {
                                     <span class="status-online">CONNECTED</span>
                                 </div>
                             </div>
+
+                            <a href="/toggle" class="btn-status ${botConfig.schedulerActive ? 'status-on' : 'status-off'}">
+                                SYSTEM FEATURES: ${botConfig.schedulerActive ? 'ACTIVE (ON)' : 'DISABLED (OFF)'}
+                            </a>
+
                             <div class="row g-2 mb-4 text-center">
                                 <div class="col-3">
                                     <div class="p-2 rounded stats-item">
@@ -181,10 +217,6 @@ app.get("/", (req, res) => {
     `);
 });
 
-app.listen(port, "0.0.0.0", () => {
-    console.log(`🌐 Dashboard: http://localhost:${port}`);
-});
-
 // --- 2. LOGIKA UTAMA BOT ---
 async function start() {
     if (isStarting) return;
@@ -210,16 +242,15 @@ async function start() {
 
         // PERBAIKAN: Penangkapan Vote & Auto-Save
         sock.ev.on('messages.update', async (updates) => {
+            if (!botConfig.schedulerActive) return; // Matikan jika fitur OFF
+
             for (const update of updates) {
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
                     const pollUpdate = update.update.pollUpdates[0];
                     if (pollUpdate) {
                         const voter = pollUpdate.voterJid;
-                        // Pastikan data vote masuk ke objek
                         kuisAktif.votes[voter] = pollUpdate.selectedOptions;
                         addLog(`Vote dicatat: ${voter.split('@')[0]}`);
-                        
-                        // Simpan ke file agar tidak hilang kalau bot restart
                         fs.writeFileSync(KUIS_PATH, JSON.stringify(kuisAktif, null, 2));
                     }
                 }
@@ -256,11 +287,17 @@ async function start() {
                 addLog("Bot Terhubung!");
                 
                 await delay(2000);
-                initQuizScheduler(sock, kuisAktif);
-                initJadwalBesokScheduler(sock);
-                initSmartFeedbackScheduler(sock, kuisAktif); 
-                initListPrMingguanScheduler(sock);
-                addLog("Sistem Aktif 100%");
+                
+                // Hanya jalankan scheduler jika status ON
+                if (botConfig.schedulerActive) {
+                    initQuizScheduler(sock, kuisAktif);
+                    initJadwalBesokScheduler(sock);
+                    initSmartFeedbackScheduler(sock, kuisAktif); 
+                    initListPrMingguanScheduler(sock);
+                    addLog("Sistem Aktif 100%");
+                } else {
+                    addLog("⚠️ Fitur Scheduler dalam posisi OFF.");
+                }
             }
         });
 
@@ -268,6 +305,9 @@ async function start() {
             if (m.type === 'notify') {
                 const msg = m.messages[0];
                 if (!msg.message || msg.key.fromMe) return;
+
+                // Cek status ON/OFF sebelum memproses pesan
+                if (!botConfig.schedulerActive) return;
 
                 stats.pesanMasuk++;
                 addLog(`Pesan: ${msg.pushName || msg.key.remoteJid.split('@')[0]}`);
@@ -291,4 +331,4 @@ async function start() {
 }
 
 start();
-    
+                                               
