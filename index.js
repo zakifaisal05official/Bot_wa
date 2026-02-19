@@ -25,14 +25,17 @@ const {
 } = require('./scheduler'); 
 
 // --- SISTEM PENYIMPANAN STATUS ON/OFF ---
-const CONFIG_PATH = './config.json';
+const CONFIG_PATH = path.join(__dirname, 'config.json');
 let botConfig = { schedulerActive: true };
 
-// Muat status On/Off dari file agar tidak reset saat restart
+// Muat status dari file agar permanen
 if (fs.existsSync(CONFIG_PATH)) {
     try {
-        botConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
-    } catch (e) { console.error("Gagal memuat config.json"); }
+        const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
+        botConfig = JSON.parse(data);
+    } catch (e) { 
+        console.error("Gagal memuat config.json, menggunakan default."); 
+    }
 }
 
 const saveConfig = () => {
@@ -43,13 +46,11 @@ const saveConfig = () => {
 const KUIS_PATH = './kuis.json';
 let kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null, expiresAt: null };
 
-// Load data kuis jika file ada
 if (fs.existsSync(KUIS_PATH)) {
     try {
         const savedKuis = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
         const now = new Date();
         const tglSekarang = `${now.getDate()}-${now.getMonth()}`;
-        // Hanya muat jika kuis berasal dari hari yang sama
         if (savedKuis.tglID === tglSekarang) {
             kuisAktif = savedKuis;
             console.log("✅ Data kuis berhasil dimuat ulang dari file.");
@@ -106,26 +107,17 @@ app.get("/", (req, res) => {
             .dot-online { background-color: #00ff73; box-shadow: 0 0 12px #00ff73; animation: pulse 1.5s infinite; }
             @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
             .log-box { 
-                background: #0c151b; 
-                border-radius: 8px; 
-                height: 350px; 
-                overflow-y: auto; 
-                padding: 15px; 
-                font-family: 'Consolas', 'Monaco', monospace; 
-                font-size: 0.85rem; 
-                color: #e9edef; 
-                border: 1px solid #374045;
-                line-height: 1.6;
+                background: #0c151b; border-radius: 8px; height: 350px; overflow-y: auto; padding: 15px; 
+                font-family: 'Consolas', 'Monaco', monospace; font-size: 0.85rem; color: #e9edef; 
+                border: 1px solid #374045; line-height: 1.6;
             }
             .stats-item { background: #2a3942; border: 1px solid #374045 !important; color: #ffffff !important; }
             .stats-item small { color: #00a884 !important; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
             .qr-container { background: white; padding: 20px; border-radius: 15px; display: inline-block; }
             .btn-refresh { background: #00a884; border: none; font-weight: 600; color: white; width: 100%; padding: 10px; border-radius: 8px; }
-            
-            /* UI ON/OFF Style */
             .btn-status { 
-                padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; border: none; transition: 0.3s;
-                text-decoration: none; display: block; text-align: center; margin-bottom: 15px;
+                padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; border: none; 
+                transition: 0.3s; text-decoration: none; display: block; text-align: center; margin-bottom: 15px;
             }
             .status-on { background: #25d366; color: white; }
             .status-off { background: #f15c5c; color: white; }
@@ -149,41 +141,17 @@ app.get("/", (req, res) => {
                                     <span class="status-online">CONNECTED</span>
                                 </div>
                             </div>
-
                             <a href="/toggle" class="btn-status ${botConfig.schedulerActive ? 'status-on' : 'status-off'}">
                                 SYSTEM FEATURES: ${botConfig.schedulerActive ? 'ACTIVE (ON)' : 'DISABLED (OFF)'}
                             </a>
-
                             <div class="row g-2 mb-4 text-center">
-                                <div class="col-3">
-                                    <div class="p-2 rounded stats-item">
-                                        <small class="d-block">RAM</small>
-                                        <strong>${usedRAM}G</strong>
-                                    </div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="p-2 rounded stats-item">
-                                        <small class="d-block">UPTIME</small>
-                                        <strong>${uptime}H</strong>
-                                    </div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="p-2 rounded stats-item">
-                                        <small class="d-block">CHAT</small>
-                                        <strong>${stats.pesanMasuk}</strong>
-                                    </div>
-                                </div>
-                                <div class="col-3">
-                                    <div class="p-2 rounded stats-item">
-                                        <small class="d-block">LOGS</small>
-                                        <strong>${stats.totalLog}</strong>
-                                    </div>
-                                </div>
+                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">RAM</small><strong>${usedRAM}G</strong></div></div>
+                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">UPTIME</small><strong>${uptime}H</strong></div></div>
+                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">CHAT</small><strong>${stats.pesanMasuk}</strong></div></div>
+                                <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">LOGS</small><strong>${stats.totalLog}</strong></div></div>
                             </div>
                             <h6 class="mb-2" style="color: #e9edef;">Live Activity Log:</h6>
-                            <div class="log-box mb-4">
-                                ${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Waiting for data...</div>'}
-                            </div>
+                            <div class="log-box mb-4">${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Waiting for data...</div>'}</div>
                             <button class="btn-refresh" onclick="location.reload()">REFRESH DASHBOARD</button>
                         </div>
                     </div>
@@ -217,6 +185,10 @@ app.get("/", (req, res) => {
     `);
 });
 
+app.listen(port, "0.0.0.0", () => {
+    console.log(`🌐 Dashboard: http://localhost:${port}`);
+});
+
 // --- 2. LOGIKA UTAMA BOT ---
 async function start() {
     if (isStarting) return;
@@ -240,10 +212,8 @@ async function start() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        // PERBAIKAN: Penangkapan Vote & Auto-Save
         sock.ev.on('messages.update', async (updates) => {
-            if (!botConfig.schedulerActive) return; // Matikan jika fitur OFF
-
+            if (!botConfig.schedulerActive) return; 
             for (const update of updates) {
                 if (update.update.pollUpdates && kuisAktif && kuisAktif.msgId === update.key.id) {
                     const pollUpdate = update.update.pollUpdates[0];
@@ -287,8 +257,6 @@ async function start() {
                 addLog("Bot Terhubung!");
                 
                 await delay(2000);
-                
-                // Hanya jalankan scheduler jika status ON
                 if (botConfig.schedulerActive) {
                     initQuizScheduler(sock, kuisAktif);
                     initJadwalBesokScheduler(sock);
@@ -296,7 +264,7 @@ async function start() {
                     initListPrMingguanScheduler(sock);
                     addLog("Sistem Aktif 100%");
                 } else {
-                    addLog("⚠️ Fitur Scheduler dalam posisi OFF.");
+                    addLog("⚠️ Fitur OFF (Tidak menjalankan scheduler)");
                 }
             }
         });
@@ -305,9 +273,7 @@ async function start() {
             if (m.type === 'notify') {
                 const msg = m.messages[0];
                 if (!msg.message || msg.key.fromMe) return;
-
-                // Cek status ON/OFF sebelum memproses pesan
-                if (!botConfig.schedulerActive) return;
+                if (!botConfig.schedulerActive) return; 
 
                 stats.pesanMasuk++;
                 addLog(`Pesan: ${msg.pushName || msg.key.remoteJid.split('@')[0]}`);
@@ -331,4 +297,4 @@ async function start() {
 }
 
 start();
-                                               
+                 
