@@ -64,7 +64,7 @@ if (fs.existsSync(KUIS_PATH)) {
 }
 
 const app = express();
-const port = process.env.PORT || 8080; // PORT DIUBAH KE 8080
+const port = process.env.PORT || 8080; 
 let qrCodeData = ""; 
 let isConnected = false; 
 let sock; 
@@ -79,7 +79,7 @@ let stats = {
 
 const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
-    logs.unshift(`<span style="color: #00a884;">[${time}]</span> ${msg}`);
+    logs.unshift(`<span style="color: #007bff;">[${time}]</span> ${msg}`);
     stats.totalLog++;
     if (logs.length > 100) logs.pop();
 };
@@ -97,7 +97,7 @@ app.get("/toggle/:feature", (req, res) => {
     res.redirect("/");
 });
 
-// --- 1. WEB SERVER UI ---
+// --- 1. WEB SERVER UI (WHITE THEME) ---
 app.get("/", (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     const totalRAM = (os.totalmem() / (1024 ** 3)).toFixed(2);
@@ -108,28 +108,30 @@ app.get("/", (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>
-            body { background: #0b141a; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-            .card { background: #1f2c33; border: 1px solid #2a3942; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-            .status-online { color: #00ff73; font-weight: bold; text-shadow: 0 0 8px rgba(0,255,115,0.4); }
+            body { background: #f4f7f6; color: #333; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            .card { background: #ffffff; border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+            .status-online { color: #28a745; font-weight: bold; }
             .status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-            .dot-online { background-color: #00ff73; box-shadow: 0 0 12px #00ff73; animation: pulse 1.5s infinite; }
+            .dot-online { background-color: #28a745; box-shadow: 0 0 10px #28a745; animation: pulse 1.5s infinite; }
             @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
             .log-box { 
-                background: #0c151b; border-radius: 8px; height: 300px; overflow-y: auto; padding: 15px; 
-                font-family: 'Consolas', 'Monaco', monospace; font-size: 0.85rem; color: #e9edef; 
-                border: 1px solid #374045; line-height: 1.6;
+                background: #fdfdfd; border-radius: 10px; height: 300px; overflow-y: auto; padding: 15px; 
+                font-family: 'Consolas', 'Monaco', monospace; font-size: 0.85rem; color: #444; 
+                border: 1px solid #eee; line-height: 1.6;
             }
-            .stats-item { background: #2a3942; border: 1px solid #374045 !important; color: #ffffff !important; }
-            .stats-item small { color: #00a884 !important; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
-            .qr-container { background: white; padding: 20px; border-radius: 15px; display: inline-block; }
-            .btn-refresh { background: #00a884; border: none; font-weight: 600; color: white; width: 100%; padding: 10px; border-radius: 8px; }
+            .stats-item { background: #f8f9fa; border: 1px solid #eee !important; color: #333 !important; }
+            .stats-item small { color: #6c757d !important; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+            .qr-container { background: #fff; padding: 20px; border-radius: 15px; border: 1px solid #eee; display: inline-block; }
+            .btn-refresh { background: #007bff; border: none; font-weight: 600; color: white; width: 100%; padding: 10px; border-radius: 8px; }
             
-            .feature-list { background: #2a3942; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #374045; }
-            .feature-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #374045; }
+            .feature-list { background: #fff; padding: 5px; border-radius: 10px; margin-bottom: 20px; }
+            .feature-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid #f1f1f1; }
             .feature-item:last-child { border-bottom: none; }
-            .btn-toggle { border: none; padding: 5px 15px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; min-width: 70px; }
-            .btn-on { background: #25d366; color: white; }
-            .btn-off { background: #f15c5c; color: white; }
+            .btn-toggle { border: none; padding: 6px 16px; border-radius: 8px; font-weight: bold; font-size: 0.8rem; min-width: 75px; transition: 0.2s; }
+            .btn-on { background: #d4edda; color: #155724; }
+            .btn-off { background: #f8d7da; color: #721c24; }
+            .btn-nav { background: #fff; border: 1px solid #ddd; padding: 8px 15px; border-radius: 8px; margin-bottom: 15px; font-weight: 500; text-decoration: none; color: #555; display: inline-block; }
+            .btn-nav:hover { background: #f1f1f1; }
             a { text-decoration: none; }
         </style>
     `;
@@ -137,14 +139,14 @@ app.get("/", (req, res) => {
     if (isConnected) {
         return res.send(`
             <html>
-                <head><title>Monitor Bot Syteam</title>${commonHead}</head>
+                <head><title>Bot Dashboard</title>${commonHead}</head>
                 <body class="py-4">
-                    <div class="container" style="max-width: 600px;">
+                    <div class="container" style="max-width: 650px;">
                         <div class="card p-4">
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <div>
-                                    <h4 class="mb-0">WhatsApp Bot</h4>
-                                    <small style="color: #8696a0;">Status: Connected (Port 8080)</small>
+                                    <h4 class="mb-0">WhatsApp Bot Dashboard</h4>
+                                    <small class="text-muted">System Active on Port 8080</small>
                                 </div>
                                 <div class="text-end">
                                     <span class="status-dot dot-online"></span>
@@ -152,21 +154,25 @@ app.get("/", (req, res) => {
                                 </div>
                             </div>
 
-                            <div class="feature-list">
+                            <div class="mb-3">
+                                <span class="text-muted small fw-bold text-uppercase">Menu Control:</span>
+                            </div>
+
+                            <div class="feature-list border mb-4">
                                 <div class="feature-item">
-                                    <span>initQuizScheduler</span>
+                                    <div><strong>initQuizScheduler</strong><br><small class="text-muted">Kuis Harian Otomatis</small></div>
                                     <a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a>
                                 </div>
                                 <div class="feature-item">
-                                    <span>initJadwalBesokScheduler</span>
+                                    <div><strong>initJadwalBesokScheduler</strong><br><small class="text-muted">Notif Pelajaran Besok</small></div>
                                     <a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a>
                                 </div>
                                 <div class="feature-item">
-                                    <span>initSmartFeedbackScheduler</span>
+                                    <div><strong>initSmartFeedbackScheduler</strong><br><small class="text-muted">Respon Pintar Sistem</small></div>
                                     <a href="/toggle/smartFeedback"><button class="btn-toggle ${botConfig.smartFeedback ? 'btn-on' : 'btn-off'}">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a>
                                 </div>
                                 <div class="feature-item">
-                                    <span>initListPrMingguanScheduler</span>
+                                    <div><strong>initListPrMingguanScheduler</strong><br><small class="text-muted">Rekap PR Mingguan</small></div>
                                     <a href="/toggle/prMingguan"><button class="btn-toggle ${botConfig.prMingguan ? 'btn-on' : 'btn-off'}">${botConfig.prMingguan ? 'ON' : 'OFF'}</button></a>
                                 </div>
                             </div>
@@ -177,9 +183,13 @@ app.get("/", (req, res) => {
                                 <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">CHAT</small><strong>${stats.pesanMasuk}</strong></div></div>
                                 <div class="col-3"><div class="p-2 rounded stats-item"><small class="d-block">LOGS</small><strong>${stats.totalLog}</strong></div></div>
                             </div>
-                            <h6 class="mb-2" style="color: #e9edef;">Live Activity Log:</h6>
-                            <div class="log-box mb-4">${logs.map(l => `<div>${l}</div>`).join('') || '<div style="color: #8696a0;">Waiting for data...</div>'}</div>
-                            <button class="btn-refresh" onclick="location.reload()">REFRESH DASHBOARD</button>
+
+                            <h6 class="mb-2 text-muted fw-bold small text-uppercase">Live Activity Log:</h6>
+                            <div class="log-box mb-4">${logs.map(l => `<div>${l}</div>`).join('') || '<div class="text-muted">Waiting for activity...</div>'}</div>
+                            
+                            <div class="d-flex gap-2">
+                                <button class="btn-refresh" onclick="location.reload()">REFRESH DASHBOARD</button>
+                            </div>
                         </div>
                     </div>
                     <script>setTimeout(() => { location.reload(); }, 15000);</script>
@@ -191,12 +201,12 @@ app.get("/", (req, res) => {
     if (qrCodeData) {
         return res.send(`
             <html>
-                <head><title>Scan WhatsApp</title>${commonHead}</head>
+                <head><title>Scan QR Code</title>${commonHead}</head>
                 <body class="d-flex align-items-center justify-content-center vh-100">
-                    <div class="card p-4 text-center" style="max-width: 400px;">
-                        <h4 class="mb-3">Link WhatsApp</h4>
+                    <div class="card p-5 text-center shadow" style="max-width: 400px;">
+                        <h4 class="mb-3">WhatsApp Connection</h4>
                         <div class="qr-container mb-3"><img src="${qrCodeData}" class="img-fluid"/></div>
-                        <p style="color: #8696a0;">Buka WhatsApp > Perangkat Tertaut > Scan QR ini.</p>
+                        <p class="text-muted small">Buka WhatsApp > Perangkat Tertaut > Scan QR ini untuk memulai bot.</p>
                         <script>setTimeout(() => { location.reload(); }, 15000);</script>
                     </div>
                 </body>
@@ -206,17 +216,13 @@ app.get("/", (req, res) => {
 
     res.send(`
         <html><head>${commonHead}</head><body class="d-flex align-items-center justify-content-center vh-100 text-center">
-            <div><div class="spinner-grow text-success mb-3"></div><h3>SYSTEM BOOTING...</h3></div>
+            <div><div class="spinner-border text-primary mb-3"></div><h3 class="text-muted">SYSTEM BOOTING...</h3></div>
             <script>setTimeout(() => { location.reload(); }, 4000);</script>
         </body></html>
     `);
 });
 
-app.listen(port, "0.0.0.0", () => {
-    console.log(`🌐 Dashboard: http://localhost:${port}`);
-});
-
-// --- 2. LOGIKA UTAMA BOT ---
+// --- LOGIKA UTAMA BOT ---
 async function start() {
     if (isStarting) return;
     isStarting = true;
@@ -321,4 +327,7 @@ async function start() {
 }
 
 start();
+app.listen(port, "0.0.0.0", () => {
+    console.log(`🌐 Dashboard: http://localhost:${port}`);
+});
     
