@@ -17,42 +17,35 @@ const {
     initJadwalBesokScheduler, 
     initSmartFeedbackScheduler, 
     initListPrMingguanScheduler, 
-    initSahurScheduler, // Import fungsi sahur
+    initSahurScheduler,
     getWeekDates, 
     sendJadwalBesokManual 
 } = require('./scheduler'); 
 const { renderDashboard } = require('./views/dashboard'); 
 
-// --- KONFIGURASI PATH VOLUME SESUAI PERMINTAAN ---
+// --- VOLUME PATH ---
 const VOLUME_PATH = '/app/auth_info';
 const CONFIG_PATH = path.join(VOLUME_PATH, 'config.json');
 
-// Pastikan folder volume tersedia
-if (!fs.existsSync(VOLUME_PATH)) {
-    fs.mkdirSync(VOLUME_PATH, { recursive: true });
-}
+if (!fs.existsSync(VOLUME_PATH)) fs.mkdirSync(VOLUME_PATH, { recursive: true });
 
-// Tambahkan sahur: true ke botConfig
 let botConfig = { quiz: true, jadwalBesok: true, smartFeedback: true, prMingguan: true, sahur: true };
 
-// Fungsi Load Config agar status ON/OFF tersimpan permanen
 function loadConfig() {
     try {
         if (fs.existsSync(CONFIG_PATH)) {
             const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
-            botConfig = JSON.parse(data);
-            console.log("✅ Config loaded from /app/auth_info/config.json");
+            const parsed = JSON.parse(data);
+            botConfig = { ...botConfig, ...parsed };
         } else {
             fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
         }
-    } catch (e) { console.error("Error loading config:", e); }
+    } catch (e) { console.error("Config Load Error"); }
 }
 loadConfig();
 
 const saveConfig = () => {
-    try {
-        fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
-    } catch (e) { console.error("Error saving config:", e); }
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
 };
 
 const app = express();
@@ -61,9 +54,8 @@ let qrCodeData = "", isConnected = false, sock, logs = [], stats = { pesanMasuk:
 
 const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
-    // Format log: Jam (Hijau), Pesan (Putih)
+    // Paksa teks menjadi putih agar terlihat di background hitam
     logs.unshift(`<span style="color: #00ff73;">[${time}]</span> <span style="color: #ffffff !important;">${msg}</span>`);
-    stats.totalLog++;
     if (logs.length > 50) logs.pop();
 };
 
@@ -84,8 +76,6 @@ app.get("/", (req, res) => {
 
 async function start() {
     const { version } = await fetchLatestBaileysVersion();
-    
-    // Auth info juga disimpan di dalam folder /app/auth_info
     const { state, saveCreds } = await useMultiFileAuthState(VOLUME_PATH);
 
     sock = makeWASocket({
@@ -103,22 +93,16 @@ async function start() {
     sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
         if (qr) qrCodeData = await QRCode.toDataURL(qr);
-        if (connection === "close") {
-            isConnected = false;
-            if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
-                setTimeout(start, 5000);
-            }
-        } else if (connection === "open") {
-            isConnected = true; 
-            qrCodeData = "";
-            addLog("Bot Terhubung!");
+        if (connection === "open") {
+            isConnected = true;
+            addLog("Bot Online & Terkoneksi!");
             
-            // Scheduler hanya aktif jika di config bernilai TRUE
-            if (botConfig.quiz) initQuizScheduler(sock, {}); 
-            if (botConfig.jadwalBesok) initJadwalBesokScheduler(sock);
-            if (botConfig.smartFeedback) initSmartFeedbackScheduler(sock, {});
-            if (botConfig.prMingguan) initListPrMingguanScheduler(sock);
-            if (botConfig.sahur) initSahurScheduler(sock); // Jalankan scheduler sahur
+            // Oper botConfig agar scheduler bisa cek status ON/OFF
+            initQuizScheduler(sock, botConfig); 
+            initJadwalBesokScheduler(sock, botConfig);
+            initSmartFeedbackScheduler(sock, botConfig);
+            initListPrMingguanScheduler(sock, botConfig);
+            initSahurScheduler(sock, botConfig);
         }
     });
 
@@ -127,12 +111,10 @@ async function start() {
             const msg = m.messages[0];
             if (!msg.message || msg.key.fromMe) return;
             stats.pesanMasuk++;
-            addLog(`Chat dari: ${msg.pushName || 'User'}`);
+            addLog(`Chat: ${msg.pushName || 'User'}`);
             await handleMessages(sock, m, {}, { getWeekDates, sendJadwalBesokManual });
         }
     });
 }
-
 start();
 app.listen(port, "0.0.0.0");
-    
