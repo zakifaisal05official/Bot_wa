@@ -4,22 +4,25 @@ const db = require('./data');
 const fs = require('fs'); 
 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
-const KUIS_PATH = '/app/auth_info'; // Path disesuaikan ke volume agar tidak reset
+const KUIS_PATH = '/app/auth_info/kuis.json'; // Diarahkan ke volume agar tidak reset
 
 function getWIBDate() {
     return new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
 }
 
+// FUNGSI INI DIPERBAIKI: Agar selalu menunjuk ke Senin depan jika dipanggil Sabtu/Minggu
 function getWeekDates() {
     const now = getWIBDate();
     const dayOfWeek = now.getDay(); 
     const monday = new Date(now);
 
+    // Jika hari ini Sabtu (6) atau Minggu (0), kita siapkan untuk MINGGU DEPAN
     if (dayOfWeek === 6) { 
         monday.setDate(now.getDate() + 2); 
     } else if (dayOfWeek === 0) { 
         monday.setDate(now.getDate() + 1); 
     } else {
+        // Jika di hari kerja, tetap di minggu ini
         const diffToMonday = 1 - dayOfWeek;
         monday.setDate(now.getDate() + diffToMonday);
     }
@@ -34,11 +37,14 @@ function getWeekDates() {
     return { dates, periode };
 }
 
+// --- FUNGSI SAHUR (TAMBAHAN) ---
 async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
     let lastSentSahur = "";
     setInterval(async () => {
-        if (!botConfig.sahur) return; // Cek fitur ON/OFF
+        // Cek status ON/OFF dari botConfig
+        if (!botConfig || botConfig.sahur === false) return;
+
         const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
@@ -58,6 +64,8 @@ async function sendJadwalBesokManual(sock, targetJid) {
     try {
         const now = getWIBDate();
         const hariIni = now.getDay(); 
+        
+        // PERBAIKAN: Jangan kirim jika besok adalah hari libur (Sabtu/Minggu)
         if (hariIni === 5 || hariIni === 6) return;
 
         let hariBesok = (hariIni + 1) % 7;
@@ -73,7 +81,9 @@ async function sendJadwalBesokManual(sock, targetJid) {
         const dataPRBesok = (currentData[daysKey[hariBesok]] || "");
         const tglBesok = dates[hariBesok - 1];
 
+        // 1. KIRIM LIST PR HARIAN (UNTUK BESOK SAJA)
         let teksPR = `📌 *DAFTAR LIST TUGAS PR* 📢\n📅 Hari: ${dayLabels[hariBesok].toUpperCase()} (${tglBesok})\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+        
         if (!dataPRBesok || dataPRBesok === "" || dataPRBesok.includes("Belum ada tugas") || dataPRBesok.includes("Tidak ada PR")) {
             teksPR += `└─ ✅ _Tidak ada PR_\n\n`;
         } else {
@@ -83,8 +93,11 @@ async function sendJadwalBesokManual(sock, targetJid) {
         teksPR += `━━━━━━━━━━━━━━━━━━━━\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
 
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: teksPR });
+
+        // DELAY 5 DETIK SEBELUM KIRIM JADWAL
         await new Promise(resolve => setTimeout(resolve, 5000));
 
+        // 2. KIRIM JADWAL PELAJARAN
         const jadwalFinal = rawMapel.map(mapel => {
             const emojiOnly = mapel.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/u);
             let adaPR = false;
@@ -95,6 +108,7 @@ async function sendJadwalBesokManual(sock, targetJid) {
         }).join('\n');
 
         const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${tglBesok}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
+        
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
     } catch (err) { console.error("Jadwal Manual Error:", err); }
 }
@@ -103,7 +117,9 @@ async function initListPrMingguanScheduler(sock, botConfig) {
     console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
     let lastSentList = "";
     setInterval(async () => {
-        if (!botConfig.prMingguan) return; // Cek fitur ON/OFF
+        // Cek status ON/OFF
+        if (!botConfig || botConfig.prMingguan === false) return;
+
         const now = getWIBDate();
         const hariIni = now.getDay();
         const jam = now.getHours();
@@ -118,9 +134,11 @@ async function initListPrMingguanScheduler(sock, botConfig) {
                 const currentData = db.getAll() || {};
                 
                 let teksPesan = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+                
                 for (let i = 0; i < 5; i++) {
                     const hariKey = daysKey[i];
                     teksPesan += `📅 *${dayLabels[i]}* (${dates[i]})\n`;
+                    
                     let tugas = currentData[hariKey];
                     if (!tugas || tugas === "" || tugas.includes("Belum ada tugas") || tugas.includes("Tidak ada PR")) {
                         teksPesan += `└─ ✅ _Tidak ada PR_\n\n`;
@@ -129,7 +147,9 @@ async function initListPrMingguanScheduler(sock, botConfig) {
                         teksPesan += `${updatedTugas}\n\n`;
                     }
                 }
+                
                 teksPesan += `━━━━━━━━━━━━━━━━━━━━\n⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN:*\n${currentData.deadline || "Semua tugas sudah selesai."}\n\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
+                
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksPesan });
                 lastSentList = tglID;
             } catch (err) { console.error("List PR Mingguan Error:", err); }
@@ -140,10 +160,10 @@ async function initListPrMingguanScheduler(sock, botConfig) {
 async function initQuizScheduler(sock, botConfig) {
     console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
     let lastSentDate = ""; 
-    const kuisAktif = { msgId: null, data: null, votes: {}, targetJam: null, tglID: null };
-    
     setInterval(async () => {
-        if (!botConfig.quiz) return; // Cek fitur ON/OFF
+        // Cek status ON/OFF
+        if (!botConfig || botConfig.quiz === false) return;
+
         const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
@@ -167,13 +187,18 @@ async function initQuizScheduler(sock, botConfig) {
                     const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
                         poll: { name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`, values: randomQuiz.options, selectableCount: 1 }
                     });
-                    kuisAktif.msgId = sentMsg.key.id;
-                    kuisAktif.data = randomQuiz;
-                    kuisAktif.votes = {}; 
-                    kuisAktif.targetJam = 15; 
-                    kuisAktif.tglID = tglID;
-                    lastSentDate = tglID; 
+                    
+                    // Update kuis aktif untuk smart feedback
+                    let kuisAktif = {
+                        msgId: sentMsg.key.id,
+                        data: randomQuiz,
+                        votes: {},
+                        targetJam: 15,
+                        tglID: tglID
+                    };
+
                     fs.writeFileSync(KUIS_PATH, JSON.stringify(kuisAktif, null, 2));
+                    lastSentDate = tglID; 
                 }
             } catch (err) { console.error("Quiz Error:", err); }
         }
@@ -184,29 +209,51 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
     console.log("✅ Scheduler Smart Feedback Aktif");
     let lastProcessedId = "";
     setInterval(async () => {
-        if (!botConfig.smartFeedback) return; // Cek fitur ON/OFF
+        // Cek status ON/OFF
+        if (!botConfig || botConfig.smartFeedback === false) return;
+
+        // Load kuisAktif dari file agar sync setelah restart
         let kuisAktif = {};
-        if (fs.existsSync(KUIS_PATH)) kuisAktif = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
-        
+        if (fs.existsSync(KUIS_PATH)) {
+            kuisAktif = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
+        } else {
+            return;
+        }
+
         const now = getWIBDate();
         const jamSekarang = now.getHours();
         const tglSekarang = `${now.getDate()}-${now.getMonth()}`;
         
         if (kuisAktif.msgId && kuisAktif.data && kuisAktif.targetJam === jamSekarang && kuisAktif.tglID === tglSekarang) {
             if (lastProcessedId === kuisAktif.msgId) return;
+            
             try {
                 const votesArray = Object.values(kuisAktif.votes || {});
-                let topIdx = 0; let maxVotes = 0;
+                let topIdx = 0; 
+                let maxVotes = 0;
+
                 if (votesArray.length > 0) {
                     const counts = {};
-                    votesArray.forEach(v => { if (Array.isArray(v)) v.forEach(opt => { counts[opt] = (counts[opt] || 0) + 1; }); });
+                    votesArray.forEach(v => { 
+                        if (Array.isArray(v)) {
+                            v.forEach(opt => {
+                                counts[opt] = (counts[opt] || 0) + 1;
+                            });
+                        }
+                    });
+                    
                     for (let i = 0; i < kuisAktif.data.options.length; i++) {
                         let currentCount = counts[i] || 0;
-                        if (currentCount > maxVotes) { maxVotes = currentCount; topIdx = i; }
+                        if (currentCount > maxVotes) { 
+                            maxVotes = currentCount; 
+                            topIdx = i; 
+                        }
                     }
                 }
+
                 const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
+                
                 lastProcessedId = kuisAktif.msgId;
                 if (fs.existsSync(KUIS_PATH)) fs.unlinkSync(KUIS_PATH);
             } catch (err) { console.error("Feedback Error:", err); }
@@ -218,7 +265,9 @@ async function initJadwalBesokScheduler(sock, botConfig) {
     console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
     let lastSentJadwal = "";
     setInterval(async () => {
-        if (!botConfig.jadwalBesok) return; // Cek fitur ON/OFF
+        // Cek status ON/OFF
+        if (!botConfig || botConfig.jadwalBesok === false) return;
+
         const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
@@ -239,4 +288,3 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-        
