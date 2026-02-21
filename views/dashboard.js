@@ -166,18 +166,33 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                         let voiceActivated = false;
 
                         function speak() {
-                            if (voiceActivated) return;
+                            // Selalu reset status suara agar tidak macet
+                            window.speechSynthesis.cancel();
+                            
                             const text = document.getElementById('quoteText').innerText;
-                            const utterance = new SpeechSynthesisUtterance("Sistem Synectic Core aktif. Pesan untuk hari ini. " + text);
+                            const utterance = new SpeechSynthesisUtterance("Sistem Synectic Core aktif. Pesan untuk Zaki hari ini. " + text);
                             utterance.lang = 'id-ID';
                             utterance.rate = 1.0;
+                            utterance.volume = 1;
+
+                            // Atasi bug Chrome yang kadang pause sendiri
                             window.speechSynthesis.speak(utterance);
+                            
+                            // Re-trigger jika browser mencoba mematikan suara di tengah jalan
+                            const keepAlive = setInterval(() => {
+                                if (!window.speechSynthesis.speaking) {
+                                    clearInterval(keepAlive);
+                                } else {
+                                    window.speechSynthesis.resume();
+                                }
+                            }, 500);
+
                             voiceActivated = true;
                         }
 
                         // Trigger suara begitu user menyentuh layar dashboard
-                        document.addEventListener('click', speak);
-                        document.addEventListener('touchstart', speak);
+                        document.addEventListener('click', () => { if(!voiceActivated) speak(); });
+                        document.addEventListener('touchstart', () => { if(!voiceActivated) speak(); });
 
                         function toggleMenu() {
                             const m = document.getElementById('layoutMenu');
@@ -201,4 +216,4 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
 };
 
 module.exports = { renderDashboard };
-                                                                                                                                                                                    
+                                             
