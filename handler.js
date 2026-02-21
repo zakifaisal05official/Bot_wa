@@ -16,10 +16,29 @@ function getClosestCommand(cmd) {
     });
 }
 
-async function handleMessages(sock, m, kuisAktif, utils) {
+// STRUKTUR TETAP SAMA: kuisAktif di index.js sekarang mengirimkan botConfig
+async function handleMessages(sock, m, botConfig, utils) {
     try {
         const msg = m.messages[0];
         if (!msg || !msg.message || msg.key.fromMe) return;
+
+        // --- LOGIKA TAMBAHAN UNTUK SMART FEEDBACK (Dashboard Sync) ---
+        if (msg.pollUpdates && botConfig?.smartFeedback !== false) {
+            const KUIS_PATH = '/app/auth_info/kuis.json';
+            if (fs.existsSync(KUIS_PATH)) {
+                let kuisData = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
+                const update = msg.pollUpdates[0];
+                const pollCreationId = msg.key.id;
+                // Jika ID polling cocok, catat suaranya
+                if (kuisData.msgId === pollCreationId || msg.messageContextInfo) {
+                    const voter = msg.key.participant || msg.key.remoteJid;
+                    const votes = update.vote?.selectedOptions || [];
+                    kuisData.votes[voter] = votes;
+                    fs.writeFileSync(KUIS_PATH, JSON.stringify(kuisData, null, 2));
+                }
+            }
+        }
+
         const sender = msg.key.remoteJid;
         const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || "").trim();
         if (!body) return;
@@ -104,11 +123,9 @@ async function handleMessages(sock, m, kuisAktif, utils) {
                 if (!tugas || tugas.includes("Belum ada tugas") || tugas === "") {
                     rekap += `└─ ✅ _Tidak ada PR_\n\n`;
                 } else { 
-                    // FIX: Bersihkan semua baris deadline lama (biar tidak dobel) baru pasang yang baru
                     let cleanTugas = tugas.split('\n').filter(line => !line.includes('⏰ Deadline:')).join('\n').trim();
                     let updatedTugas = cleanTugas.replace(/(\|)$/gm, `$1\n⏰ Deadline: ${dayLabelsSmall[i]}, ${dates[i]}`);
                     
-                    // Jika replace regex gagal, kita tambahkan manual di akhir
                     if (!updatedTugas.includes('⏰ Deadline:')) {
                         updatedTugas += `\n⏰ Deadline: ${dayLabelsSmall[i]}, ${dates[i]}`;
                     }
@@ -206,4 +223,3 @@ async function handleMessages(sock, m, kuisAktif, utils) {
 }
 
 module.exports = { handleMessages };
-                          
