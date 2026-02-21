@@ -47,8 +47,8 @@ function loadConfig() {
         if (fs.existsSync(CONFIG_PATH)) {
             const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
             const parsed = JSON.parse(data);
-            // Gabungkan data lama dengan default (agar jika ada fitur baru tetap muncul)
-            botConfig = Object.assign(botConfig, parsed);
+            // Gabungkan data lama dengan default agar fitur baru muncul
+            Object.assign(botConfig, parsed);
             console.log("✅ Config Berhasil Dimuat dari Volume");
         } else {
             // Jika file belum ada, buat file baru
@@ -72,7 +72,6 @@ let qrCodeData = "", isConnected = false, sock, logs = [], stats = { pesanMasuk:
 
 const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
-    // LOG TEXT WARNA PUTIH
     logs.unshift(`<span style="color: #00ff73;">[${time}]</span> <span style="color: #ffffff !important;">${msg}</span>`);
     stats.totalLog++;
     if (logs.length > 50) logs.pop();
@@ -80,10 +79,12 @@ const addLog = (msg) => {
 
 app.get("/toggle/:feature", (req, res) => {
     const feat = req.params.feature;
+    // Perbaikan: Pengecekan hasOwnProperty agar sinkron dengan dashboard
     if (botConfig.hasOwnProperty(feat)) {
         botConfig[feat] = !botConfig[feat];
         saveConfig();
-        addLog(`Fitur ${feat} diubah -> ${botConfig[feat] ? 'ON' : 'OFF'}`);
+        const status = botConfig[feat] ? 'ON' : 'OFF';
+        addLog(`Sistem ${feat} diubah -> ${status}`);
     }
     res.redirect("/");
 });
@@ -128,7 +129,7 @@ async function start() {
             qrCodeData = "";
             addLog("Bot Terhubung ke WhatsApp!");
             
-            // JALANKAN SEMUA SCHEDULER DENGAN PARAMETER botConfig
+            // JALANKAN SEMUA SCHEDULER
             initQuizScheduler(sock, botConfig); 
             initJadwalBesokScheduler(sock, botConfig);
             initSmartFeedbackScheduler(sock, botConfig);
@@ -142,8 +143,9 @@ async function start() {
             const msg = m.messages[0];
             if (!msg.message || msg.key.fromMe) return;
             stats.pesanMasuk++;
-            addLog(`Pesan: ${msg.pushName || 'User'}`);
-            await handleMessages(sock, m, {}, { getWeekDates, sendJadwalBesokManual });
+            addLog(`Pesan dari: ${msg.pushName || 'User'}`);
+            // Mengirim botConfig ke handler jika diperlukan di masa depan
+            await handleMessages(sock, m, botConfig, { getWeekDates, sendJadwalBesokManual });
         }
     });
 }
