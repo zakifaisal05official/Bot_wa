@@ -4,29 +4,24 @@ const db = require('./data');
 const fs = require('fs'); 
 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
-const KUIS_PATH = '/app/auth_info/kuis.json'; // Diarahkan ke volume agar tidak reset
+const KUIS_PATH = '/app/auth_info/kuis.json'; // Path volume agar sync
 
 function getWIBDate() {
     return new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
 }
 
-// FUNGSI INI DIPERBAIKI: Agar selalu menunjuk ke Senin depan jika dipanggil Sabtu/Minggu
 function getWeekDates() {
     const now = getWIBDate();
     const dayOfWeek = now.getDay(); 
     const monday = new Date(now);
-
-    // Jika hari ini Sabtu (6) atau Minggu (0), kita siapkan untuk MINGGU DEPAN
     if (dayOfWeek === 6) { 
         monday.setDate(now.getDate() + 2); 
     } else if (dayOfWeek === 0) { 
         monday.setDate(now.getDate() + 1); 
     } else {
-        // Jika di hari kerja, tetap di minggu ini
         const diffToMonday = 1 - dayOfWeek;
         monday.setDate(now.getDate() + diffToMonday);
     }
-    
     const dates = [];
     for (let i = 0; i < 5; i++) {
         const d = new Date(monday);
@@ -37,12 +32,12 @@ function getWeekDates() {
     return { dates, periode };
 }
 
-// --- FUNGSI SAHUR (TAMBAHAN) ---
+// --- FUNGSI SAHUR ---
 async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
     let lastSentSahur = "";
     setInterval(async () => {
-        // Cek status ON/OFF dari botConfig
+        // CEK ON/OFF DASHBOARD
         if (!botConfig || botConfig.sahur === false) return;
 
         const now = getWIBDate();
@@ -60,108 +55,12 @@ async function initSahurScheduler(sock, botConfig) {
     }, 35000);
 }
 
-async function sendJadwalBesokManual(sock, targetJid) {
-    try {
-        const now = getWIBDate();
-        const hariIni = now.getDay(); 
-        
-        // PERBAIKAN: Jangan kirim jika besok adalah hari libur (Sabtu/Minggu)
-        if (hariIni === 5 || hariIni === 6) return;
-
-        let hariBesok = (hariIni + 1) % 7;
-        if (hariBesok === 0) hariBesok = 1;
-
-        const { dates } = getWeekDates();
-        const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        const daysKey = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
-        
-        const rawMapel = JADWAL_PELAJARAN[hariBesok].split('\n');
-        const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
-        const currentData = db.getAll() || {};
-        const dataPRBesok = (currentData[daysKey[hariBesok]] || "");
-        const tglBesok = dates[hariBesok - 1];
-
-        // 1. KIRIM LIST PR HARIAN (UNTUK BESOK SAJA)
-        let teksPR = `📌 *DAFTAR LIST TUGAS PR* 📢\n📅 Hari: ${dayLabels[hariBesok].toUpperCase()} (${tglBesok})\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-        
-        if (!dataPRBesok || dataPRBesok === "" || dataPRBesok.includes("Belum ada tugas") || dataPRBesok.includes("Tidak ada PR")) {
-            teksPR += `└─ ✅ _Tidak ada PR_\n\n`;
-        } else {
-            let updatedTugas = dataPRBesok.replace(/⏰ Deadline: .*/g, `⏰ Deadline: ${dayLabels[hariBesok].charAt(0) + dayLabels[hariBesok].slice(1).toLowerCase()}, ${tglBesok}`);
-            teksPR += `${updatedTugas}\n\n`;
-        }
-        teksPR += `━━━━━━━━━━━━━━━━━━━━\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
-
-        await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: teksPR });
-
-        // DELAY 5 DETIK SEBELUM KIRIM JADWAL
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        // 2. KIRIM JADWAL PELAJARAN
-        const jadwalFinal = rawMapel.map(mapel => {
-            const emojiOnly = mapel.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/u);
-            let adaPR = false;
-            if (dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && emojiOnly) {
-                adaPR = dataPRBesok.includes(emojiOnly[0]);
-            }
-            return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
-        }).join('\n');
-
-        const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${tglBesok}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
-        
-        await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
-    } catch (err) { console.error("Jadwal Manual Error:", err); }
-}
-
-async function initListPrMingguanScheduler(sock, botConfig) {
-    console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
-    let lastSentList = "";
-    setInterval(async () => {
-        // Cek status ON/OFF
-        if (!botConfig || botConfig.prMingguan === false) return;
-
-        const now = getWIBDate();
-        const hariIni = now.getDay();
-        const jam = now.getHours();
-        const menit = now.getMinutes();
-        const tglID = `${now.getDate()}-${now.getMonth()}`;
-        
-        if (hariIni === 6 && jam === 10 && menit === 0 && lastSentList !== tglID) {
-            try {
-                const { dates, periode } = getWeekDates();
-                const daysKey = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
-                const dayLabels = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
-                const currentData = db.getAll() || {};
-                
-                let teksPesan = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-                
-                for (let i = 0; i < 5; i++) {
-                    const hariKey = daysKey[i];
-                    teksPesan += `📅 *${dayLabels[i]}* (${dates[i]})\n`;
-                    
-                    let tugas = currentData[hariKey];
-                    if (!tugas || tugas === "" || tugas.includes("Belum ada tugas") || tugas.includes("Tidak ada PR")) {
-                        teksPesan += `└─ ✅ _Tidak ada PR_\n\n`;
-                    } else {
-                        let updatedTugas = tugas.replace(/⏰ Deadline: .*/g, `⏰ Deadline: ${dayLabels[i].charAt(0) + dayLabels[i].slice(1).toLowerCase()}, ${dates[i]}`);
-                        teksPesan += `${updatedTugas}\n\n`;
-                    }
-                }
-                
-                teksPesan += `━━━━━━━━━━━━━━━━━━━━\n⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN:*\n${currentData.deadline || "Semua tugas sudah selesai."}\n\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
-                
-                await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksPesan });
-                lastSentList = tglID;
-            } catch (err) { console.error("List PR Mingguan Error:", err); }
-        }
-    }, 35000);
-}
-
+// --- FUNGSI QUIZ ---
 async function initQuizScheduler(sock, botConfig) {
     console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
     let lastSentDate = ""; 
     setInterval(async () => {
-        // Cek status ON/OFF
+        // CEK ON/OFF DASHBOARD
         if (!botConfig || botConfig.quiz === false) return;
 
         const now = getWIBDate();
@@ -188,7 +87,6 @@ async function initQuizScheduler(sock, botConfig) {
                         poll: { name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`, values: randomQuiz.options, selectableCount: 1 }
                     });
                     
-                    // Update kuis aktif untuk smart feedback
                     let kuisAktif = {
                         msgId: sentMsg.key.id,
                         data: randomQuiz,
@@ -205,20 +103,18 @@ async function initQuizScheduler(sock, botConfig) {
     }, 35000);
 }
 
+// --- FUNGSI SMART FEEDBACK ---
 async function initSmartFeedbackScheduler(sock, botConfig) {
     console.log("✅ Scheduler Smart Feedback Aktif");
     let lastProcessedId = "";
     setInterval(async () => {
-        // Cek status ON/OFF
+        // CEK ON/OFF DASHBOARD
         if (!botConfig || botConfig.smartFeedback === false) return;
 
-        // Load kuisAktif dari file agar sync setelah restart
         let kuisAktif = {};
         if (fs.existsSync(KUIS_PATH)) {
             kuisAktif = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
-        } else {
-            return;
-        }
+        } else { return; }
 
         const now = getWIBDate();
         const jamSekarang = now.getHours();
@@ -236,18 +132,13 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
                     const counts = {};
                     votesArray.forEach(v => { 
                         if (Array.isArray(v)) {
-                            v.forEach(opt => {
-                                counts[opt] = (counts[opt] || 0) + 1;
-                            });
+                            v.forEach(opt => { counts[opt] = (counts[opt] || 0) + 1; });
                         }
                     });
                     
                     for (let i = 0; i < kuisAktif.data.options.length; i++) {
                         let currentCount = counts[i] || 0;
-                        if (currentCount > maxVotes) { 
-                            maxVotes = currentCount; 
-                            topIdx = i; 
-                        }
+                        if (currentCount > maxVotes) { maxVotes = currentCount; topIdx = i; }
                     }
                 }
 
@@ -261,11 +152,12 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
     }, 35000);
 }
 
+// --- FUNGSI JADWAL BESOK ---
 async function initJadwalBesokScheduler(sock, botConfig) {
     console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
     let lastSentJadwal = "";
     setInterval(async () => {
-        // Cek status ON/OFF
+        // CEK ON/OFF DASHBOARD
         if (!botConfig || botConfig.jadwalBesok === false) return;
 
         const now = getWIBDate();
@@ -279,6 +171,85 @@ async function initJadwalBesokScheduler(sock, botConfig) {
     }, 35000); 
 }
 
+// --- FUNGSI LIST PR MINGGUAN ---
+async function initListPrMingguanScheduler(sock, botConfig) {
+    console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
+    let lastSentList = "";
+    setInterval(async () => {
+        // CEK ON/OFF DASHBOARD
+        if (!botConfig || botConfig.prMingguan === false) return;
+
+        const now = getWIBDate();
+        const hariIni = now.getDay();
+        const jam = now.getHours();
+        const menit = now.getMinutes();
+        const tglID = `${now.getDate()}-${now.getMonth()}`;
+        
+        if (hariIni === 6 && jam === 10 && menit === 0 && lastSentList !== tglID) {
+            try {
+                const { dates, periode } = getWeekDates();
+                const daysKey = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
+                const dayLabels = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
+                const currentData = db.getAll() || {};
+                
+                let teksPesan = `📌 *DAFTAR LIST TUGAS PR* 📢\n🗓️ Periode: ${periode}\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+                for (let i = 0; i < 5; i++) {
+                    const hariKey = daysKey[i];
+                    teksPesan += `📅 *${dayLabels[i]}* (${dates[i]})\n`;
+                    let tugas = currentData[hariKey];
+                    if (!tugas || tugas === "" || tugas.includes("Belum ada tugas") || tugas.includes("Tidak ada PR")) {
+                        teksPesan += `└─ ✅ _Tidak ada PR_\n\n`;
+                    } else {
+                        let updatedTugas = tugas.replace(/⏰ Deadline: .*/g, `⏰ Deadline: ${dayLabels[i].charAt(0) + dayLabels[i].slice(1).toLowerCase()}, ${dates[i]}`);
+                        teksPesan += `${updatedTugas}\n\n`;
+                    }
+                }
+                teksPesan += `━━━━━━━━━━━━━━━━━━━━\n⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN:*\n${currentData.deadline || "Semua tugas sudah selesai."}\n\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksPesan });
+                lastSentList = tglID;
+            } catch (err) { console.error("List PR Mingguan Error:", err); }
+        }
+    }, 35000);
+}
+
+async function sendJadwalBesokManual(sock, targetJid) {
+    try {
+        const now = getWIBDate();
+        const hariIni = now.getDay(); 
+        if (hariIni === 5 || hariIni === 6) return;
+        let hariBesok = (hariIni + 1) % 7;
+        if (hariBesok === 0) hariBesok = 1;
+        const { dates } = getWeekDates();
+        const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const daysKey = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+        const rawMapel = JADWAL_PELAJARAN[hariBesok].split('\n');
+        const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
+        const currentData = db.getAll() || {};
+        const dataPRBesok = (currentData[daysKey[hariBesok]] || "");
+        const tglBesok = dates[hariBesok - 1];
+        let teksPR = `📌 *DAFTAR LIST TUGAS PR* 📢\n📅 Hari: ${dayLabels[hariBesok].toUpperCase()} (${tglBesok})\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
+        if (!dataPRBesok || dataPRBesok === "" || dataPRBesok.includes("Belum ada tugas") || dataPRBesok.includes("Tidak ada PR")) {
+            teksPR += `└─ ✅ _Tidak ada PR_\n\n`;
+        } else {
+            let updatedTugas = dataPRBesok.replace(/⏰ Deadline: .*/g, `⏰ Deadline: ${dayLabels[hariBesok].charAt(0) + dayLabels[hariBesok].slice(1).toLowerCase()}, ${tglBesok}`);
+            teksPR += `${updatedTugas}\n\n`;
+        }
+        teksPR += `━━━━━━━━━━━━━━━━━━━━\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
+        await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: teksPR });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        const jadwalFinal = rawMapel.map(mapel => {
+            const emojiOnly = mapel.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/u);
+            let adaPR = false;
+            if (dataPRBesok !== "" && !dataPRBesok.includes("belum ada tugas") && emojiOnly) {
+                adaPR = dataPRBesok.includes(emojiOnly[0]);
+            }
+            return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
+        }).join('\n');
+        const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${tglBesok}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
+        await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
+    } catch (err) { console.error("Jadwal Manual Error:", err); }
+}
+
 module.exports = { 
     initQuizScheduler, 
     initSmartFeedbackScheduler, 
@@ -288,3 +259,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
+        
