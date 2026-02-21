@@ -12,8 +12,9 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
         "Tetap fokus, hasil tidak akan mengkhianati proses!",
         "Coding adalah seni, dan kamu adalah senimannya.",
         "Jangan berhenti saat lelah, berhentilah saat selesai.",
-        "Error adalah cara kode mengatakan: Ajari aku lebih baik.",
+        "Error adalah cara kode mengatakan: 'Ajari aku lebih baik'.",
         "Jadikan hari ini lebih baik dari kemarin!",
+        "Satu baris kode hari ini, satu langkah menuju sukses.",
         "Bekerja keraslah dalam diam, biarkan botmu yang berisik!"
     ];
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
@@ -23,14 +24,14 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
         <style>
-            body { background: #0b141a; color: #e9edef; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+            body { background: #0b141a; color: #e9edef; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; cursor: pointer; }
             .card-custom { background: #1f2c33; border: 1px solid #2a3942; border-radius: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
             
             @keyframes moodSwing {
                 0% { transform: scale(1) rotate(0deg); }
                 20% { transform: scale(1.1) rotate(-8deg); }
-                40% { transform: translateX(-5px); }
-                60% { transform: translateX(5px); }
+                40% { transform: translateX(-5px) rotate(0deg); }
+                60% { transform: translateX(5px) rotate(0deg); }
                 80% { transform: scale(1.1) rotate(8deg); }
                 100% { transform: scale(1) rotate(0deg); }
             }
@@ -59,9 +60,9 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                 color: #00a884; padding: 8px 30px; border-radius: 50px;
                 font-weight: 800; font-size: 0.8rem; letter-spacing: 1px;
                 display: flex; align-items: center; gap: 10px;
-                transition: 0.3s; cursor: pointer; text-transform: uppercase;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                text-transform: uppercase;
             }
-            .btn-neon-pill.active { background: #00a884; color: white; box-shadow: 0 0 20px rgba(0, 168, 132, 0.5); }
 
             #layoutMenu { 
                 display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
@@ -73,13 +74,15 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
             .menu-card { background: #26353d; border: 1px solid #3b4a54; border-radius: 18px; padding: 12px; text-align: center; }
             .menu-card span { font-size: 0.65rem; font-weight: 800; display: block; margin-bottom: 8px; color: #8696a0; }
 
-            .btn-toggle { border: none; width: 100%; padding: 6px; border-radius: 12px; font-weight: 800; font-size: 0.75rem; transition: 0.4s; }
-            .btn-on { background: #25d366; color: white; box-shadow: 0 4px 12px rgba(37,211,102,0.3); }
+            .btn-toggle { 
+                border: none; width: 100%; padding: 6px; border-radius: 12px; 
+                font-weight: 800; font-size: 0.75rem; transition: 0.4s; 
+            }
+            .btn-on { background: #25d366; color: white; transform: scale(1.02); }
             .btn-off { background: #3b4a54; color: #aebac1; }
             
             .stats-card { background: #2a3942; border-radius: 18px; padding: 12px; text-align: center; }
             .stats-v { color: #00a884; font-weight: 800; display: block; font-size: 1.1rem; }
-            .stats-l { font-size: 0.6rem; color: #8696a0; text-transform: uppercase; }
 
             .log-box { 
                 background: #000; color: #00ff41 !important; border-radius: 18px; 
@@ -88,6 +91,7 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
             }
 
             .footer-tag { font-size: 0.75rem; color: #8696a0; text-align: center; margin-top: 30px; border-top: 1px solid #2a3942; padding-top: 15px; }
+            .zaki-name { color: #00a884; font-weight: bold; text-decoration: none; }
         </style>
     `;
 
@@ -95,19 +99,19 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
         return `
             <html>
                 <head><title>Synectic Core</title>${commonHead}</head>
-                <body class="py-4">
+                <body class="py-4" id="mainBody">
                     <div class="container animate__animated animate__fadeIn" style="max-width: 480px;">
                         <div class="card-custom p-4">
                             
                             <div class="profile-section">
-                                <div class="mood-avatar">${randomMood}</div>
+                                <div class="mood-avatar" onclick="location.reload()">${randomMood}</div>
                                 <h4 style="color:#00a884; margin:0; font-weight:800; letter-spacing:2px;">SYNECTIC <span style="color:#fff">CORE</span></h4>
-                                <div class="badge bg-success mt-2">● ENGINE ACTIVE</div>
+                                <div class="badge bg-success mt-2 animate__animated animate__pulse animate__infinite" style="font-size:0.6rem; border-radius:8px;">● ENGINE ACTIVE</div>
                             </div>
 
                             <div class="quote-container">
-                                <div class="small text-success fw-bold mb-1">CORE VOICE SYSTEM</div>
-                                <span class="quote-text" id="quoteText">"${randomQuote}"</span>
+                                <div class="small text-success fw-bold mb-1" style="font-size:0.6rem; letter-spacing:1px;">CORE FEELING: ${randomMood}</div>
+                                <span class="quote-text" id="voiceTarget">"${randomQuote}"</span>
                             </div>
 
                             <div class="btn-action-area">
@@ -123,47 +127,49 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             </div>
 
                             <div class="row g-2 mt-3 text-center">
-                                <div class="col-3"><div class="stats-card"><span class="stats-l">RAM</span><span class="stats-v">${usedRAM}G</span></div></div>
-                                <div class="col-3"><div class="stats-card"><span class="stats-l">UP</span><span class="stats-v">${uptime}H</span></div></div>
-                                <div class="col-3"><div class="stats-card"><span class="stats-l">CHAT</span><span class="stats-v">${stats.pesanMasuk}</span></div></div>
-                                <div class="col-3"><div class="stats-card"><span class="stats-l">LOGS</span><span class="stats-v">${stats.totalLog}</span></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-v">${usedRAM}G</span></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-v">${uptime}H</span></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-v">${stats.pesanMasuk}</span></div></div>
+                                <div class="col-3"><div class="stats-card"><span class="stats-v">${stats.totalLog}</span></div></div>
                             </div>
 
                             <div class="log-box mt-3" id="logBox">${logs.join('<br>')}</div>
 
-                            <div class="footer-tag">CORE OPERATED BY ZAKI</div>
+                            <div class="footer-tag">CORE OPERATED BY <a href="#" class="zaki-name">ZAKI</a></div>
                         </div>
                     </div>
                     <script>
-                        // Logic Suara Otomatis tanpa kontrol visual
-                        function runVoice() {
-                            const textToSpeak = document.getElementById('quoteText').innerText;
-                            const utterance = new SpeechSynthesisUtterance("Sistem Synectic Core aktif. Pesan untuk hari ini. " + textToSpeak);
-                            utterance.lang = 'id-ID';
-                            utterance.volume = 1;
-                            utterance.rate = 1.0;
-                            window.speechSynthesis.speak(utterance);
+                        let hasSpoken = false;
+
+                        function speak() {
+                            if (hasSpoken) return;
+                            const text = document.getElementById('voiceTarget').innerText;
+                            const msg = new SpeechSynthesisUtterance("Sistem aktif. Pesan hari ini. " + text);
+                            msg.lang = 'id-ID';
+                            msg.rate = 1.0;
+                            window.speechSynthesis.speak(msg);
+                            hasSpoken = true;
                         }
 
-                        // Mencoba jalan otomatis saat load
-                        window.onload = runVoice;
+                        // Coba jalan otomatis, tapi biasanya di-block browser
+                        window.onload = () => { setTimeout(speak, 1000); };
+
+                        // Jaminan: Begitu layar disentuh, suara langsung keluar
+                        document.addEventListener('click', speak);
+                        document.addEventListener('touchstart', speak);
 
                         function toggleMenu() {
                             const m = document.getElementById('layoutMenu');
                             const b = document.getElementById('mainBtn');
                             m.classList.toggle('show');
-                            b.classList.toggle('active');
-                            // Opsional: ngomong saat menu dibuka
-                            if(m.classList.contains('show')) {
-                                window.speechSynthesis.speak(new SpeechSynthesisUtterance("Membuka pengaturan sistem"));
-                            }
                         }
                     </script>
                 </body>
             </html>
         `;
     }
-    return `<html><body>Loading...</body></html>`;
+    return `<html><body>Initialising...</body></html>`;
 };
 
-module.exports = { renderDashboard };                                                                                                                                 
+module.exports = { renderDashboard };
+        
