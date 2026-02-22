@@ -22,14 +22,21 @@ const {
     sendJadwalBesokManual 
 } = require('./scheduler'); 
 const { renderDashboard } = require('./views/dashboard'); 
+// TAMBAHAN: Import view khusus media
+const { renderMediaView } = require('./views/mediaView'); 
 
 // --- DYNAMIC VOLUME PATH ---
 const VOLUME_PATH = '/app/auth_info';
 const CONFIG_PATH = path.join(VOLUME_PATH, 'config.json');
+// Path folder foto
+const PUBLIC_FILES_PATH = path.join(VOLUME_PATH, 'public_files');
 
-// Pastikan folder volume ada
+// Pastikan folder volume dan folder publik ada
 if (!fs.existsSync(VOLUME_PATH)) {
     fs.mkdirSync(VOLUME_PATH, { recursive: true });
+}
+if (!fs.existsSync(PUBLIC_FILES_PATH)) {
+    fs.mkdirSync(PUBLIC_FILES_PATH, { recursive: true });
 }
 
 // Default config: Pastikan semua fitur terdaftar di sini
@@ -69,6 +76,18 @@ const saveConfig = () => {
 const app = express();
 const port = process.env.PORT || 8080;
 let qrCodeData = "", isConnected = false, sock, logs = [], stats = { pesanMasuk: 0, totalLog: 0 };
+
+// --- CONFIGURASI STATIC FILE & MEDIA ROUTE ---
+// 1. Daftarkan folder publik agar file bisa dibaca sistem
+app.use('/files', express.static(PUBLIC_FILES_PATH));
+
+// 2. Rute khusus untuk teman melihat foto tugas (Modular View)
+app.get("/tugas/:filename", (req, res) => {
+    const filename = req.params.filename;
+    const fileUrl = `/files/${filename}`; 
+    res.setHeader('Content-Type', 'text/html');
+    res.send(renderMediaView(fileUrl));
+});
 
 const addLog = (msg) => {
     const time = new Date().toLocaleTimeString('id-ID');
