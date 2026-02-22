@@ -136,19 +136,35 @@ const renderMediaView = (fileUrls) => {
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         <script>
-            // --- OFFLINE & LOADING ENGINE ---
-            window.addEventListener('load', () => {
-                if ('caches' in window && navigator.onLine) {
-                    caches.open('ymb-cache-v3').then(cache => {
-                        cache.addAll([window.location.href, 
-                            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-                            'https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js'
-                        ]);
-                    });
+            // --- OFFLINE ENGINE (Mencegah Dinosaurus) ---
+            async function registerOfflineWorker() {
+                if ('serviceWorker' in navigator) {
+                    const swCode = \`
+                        const CACHE_NAME = 'ymb-v10';
+                        self.addEventListener('install', e => self.skipWaiting());
+                        self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+                        self.addEventListener('fetch', e => {
+                            e.respondWith(
+                                caches.match(e.request).then(res => res || fetch(e.request).then(netRes => {
+                                    return caches.open(CACHE_NAME).then(cache => {
+                                        cache.put(e.request, netRes.clone());
+                                        return netRes;
+                                    });
+                                }))
+                            );
+                        });
+                    \`;
+                    const blob = new Blob([swCode], { type: 'text/javascript' });
+                    const swUrl = URL.createObjectURL(blob);
+                    navigator.serviceWorker.register(swUrl).catch(() => {});
                 }
+            }
+
+            window.addEventListener('load', () => {
+                registerOfflineWorker();
                 setTimeout(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
-                }, 1000);
+                }, 1200);
             });
 
             const quotes = ${JSON.stringify(quotes)};
@@ -179,7 +195,7 @@ const renderMediaView = (fileUrls) => {
                 let currentScale = 1;
 
                 mc.on("pinchmove", (ev) => {
-                    currentScale = Math.max(1, Math.min(ev.scale, 4));
+                    currentScale = Math.max(1, Math.min(ev.scale, 5));
                     img.style.transform = \`scale(\${currentScale})\`;
                 });
 
@@ -195,7 +211,9 @@ const renderMediaView = (fileUrls) => {
 
             function toggleFullScreen(element) {
                 if (!document.fullscreenElement) {
-                    element.requestFullscreen().catch(() => { element.style.transform = "scale(1.5)"; });
+                    element.requestFullscreen().catch(() => { 
+                        element.style.transform = "scale(1.5)"; 
+                    });
                 } else {
                     document.exitFullscreen();
                     element.style.transform = "scale(1)";
@@ -222,4 +240,4 @@ const renderMediaView = (fileUrls) => {
 };
 
 module.exports = { renderMediaView };
-        
+                    
