@@ -256,4 +256,4 @@ const renderMediaView = (fileUrls) => {
 };
 
 module.exports = { renderMediaView };
-                    
+        
