@@ -33,7 +33,7 @@ const renderMediaView = (fileUrls) => {
     <html lang="id">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=7.0, user-scalable=yes">
         <title>Y.M.B ASISTEN - Media View</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -48,10 +48,11 @@ const renderMediaView = (fileUrls) => {
             .media-header h5 { color: var(--primary); font-weight: 800; letter-spacing: 2px; margin: 0; text-transform: uppercase; }
             
             .media-content { padding: 20px; text-align: center; }
-            .media-frame { border-radius: 15px; border: 2px solid var(--primary); box-shadow: 0 0 20px rgba(0,168,132,0.2); max-width: 100%; height: auto; max-height: 60vh; object-fit: contain; cursor: zoom-in; transition: 0.3s; }
+            .media-frame { border-radius: 15px; border: 2px solid var(--primary); box-shadow: 0 0 20px rgba(0,168,132,0.2); max-width: 100%; height: auto; max-height: 60vh; object-fit: contain; cursor: zoom-in; transition: 0.3s; background: #000; }
             
-            /* Support Zoom & Pan in Fullscreen */
-            .media-frame:fullscreen { object-fit: contain; background: black; width: 100vw; height: 100vh; cursor: move; }
+            /* Enhanced Fullscreen for HP */
+            .media-frame:fullscreen { object-fit: contain; background: black; width: 100vw; height: 100vh; cursor: move; border: none; }
+            :-webkit-full-screen { width: 100%; height: 100%; }
 
             .quote-container { margin: 15px 0; padding: 15px; background: rgba(0,168,132,0.1); border-radius: 15px; border-left: 4px solid var(--primary); }
             .quote-text { font-style: italic; font-size: 0.9rem; color: #d1d7db; }
@@ -123,17 +124,18 @@ const renderMediaView = (fileUrls) => {
 
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script>
-            // OFFLINE SUPPORT
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    const code = \`
-                        const cacheName = 'ymb-v1';
-                        self.addEventListener('install', e => e.waitUntil(caches.open(cacheName).then(c => c.addAll([window.location.href]))));
-                        self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
-                    \`;
-                    const blob = new Blob([code], {type: 'text/javascript'});
-                    navigator.serviceWorker.register(URL.createObjectURL(blob));
-                });
+            // --- OFFLINE MODE ENGINE (No more Dinosaur) ---
+            if ('caches' in window) {
+                const cacheName = 'ymb-asisten-cache-v2';
+                // Simpan halaman ini saat dibuka dengan internet
+                if (navigator.onLine) {
+                    caches.open(cacheName).then(cache => {
+                        cache.add(window.location.href);
+                        cache.add('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css');
+                        cache.add('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
+                        cache.add('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css');
+                    });
+                }
             }
 
             // Random Quote Logic
@@ -141,7 +143,7 @@ const renderMediaView = (fileUrls) => {
             const qEl = document.getElementById('randomQuote');
             qEl.innerText = quotes[Math.floor(Math.random() * quotes.length)];
 
-            // Voice: Play Quote (Anywhere click)
+            // Voice: Play Quote
             function playQuoteVoice() {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
@@ -161,7 +163,7 @@ const renderMediaView = (fileUrls) => {
                 }
             }
 
-            // Fullscreen Logic with Zoom Support
+            // Fullscreen & Zooming Logic
             function triggerFullScreen() {
                 const activeImg = document.querySelector('.swiper-slide-active img') || document.querySelector('.media-frame');
                 if(activeImg) toggleFullScreen(activeImg);
@@ -169,9 +171,13 @@ const renderMediaView = (fileUrls) => {
 
             function toggleFullScreen(element) {
                 if (!document.fullscreenElement) {
-                    element.requestFullscreen().catch(err => alert("Error: " + err.message));
+                    element.requestFullscreen().catch(err => {
+                        // Fallback manual zoom jika fullscreen dilarang browser
+                        element.style.transform = "scale(1.5)";
+                    });
                 } else {
                     document.exitFullscreen();
+                    element.style.transform = "scale(1)";
                 }
             }
 
@@ -189,9 +195,9 @@ const renderMediaView = (fileUrls) => {
                 }
             });
 
-            // Offline Check
+            // Status Offline
             window.addEventListener('offline', () => {
-                qEl.innerText = "Mode Offline Aktif! File tetap bisa diakses.";
+                qEl.innerText = "Mode Offline Aktif! Kamu tetap bisa melihat tugas ini.";
                 qEl.style.color = "#ff9800";
             });
         </script>
