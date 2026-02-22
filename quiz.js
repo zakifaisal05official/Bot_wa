@@ -1,104 +1,62 @@
-// quiz.js - VERSI FINAL: SOAL BANYAK & RANDOM (ACAK)
-// Berdasarkan Jadwal SMPN 4 Kota Cirebon Ramadhan 1447 H
-
 const QUIZ_BANK = {
-    // --- PERIODE FEBRUARI ---
-    
-    "16-21 Februari": [ // Libur Imlek & Belajar Mandiri
-        { 
-            question: "📅 [Februari] Lagi masa Belajar Mandiri nih. Apa fokus utamamu di rumah hari ini?", 
-            options: ["Review Materi TKA", "Bantu Orang Tua", "Kegiatan Masjid", "Istirahat"],
-            feedbacks: ["Bagus! Persiapan mandiri bikin kamu selangkah lebih maju.", "Keren, membantu keluarga adalah bagian dari belajar karakter!", "Mantap, menjaga silaturahmi dengan tetangga itu penting.", "Jaga kesehatan ya, jadwal minggu depan bakal padat!"]
-        },
-        { 
-            question: "🏮 Kemarin habis libur Imlek, gimana perasaanmu memulai kegiatan mandiri?", 
-            options: ["Semangat Baru", "Masih Ngantuk", "Biasa Saja", "Siap Tempur"],
-            feedbacks: ["Energi positif! Gunakan buat cicil materi yang sulit.", "Yuk bangun! Dikit lagi kamu bakal menghadapi Simulasi TKA.", "Tetap stabil ya, jangan lupa pantau info dari sekolah.", "Ini baru pejuang kelas 9! Gaspol!"]
-        },
-        {
-            question: "🏠 Belajar di lingkungan keluarga (18-21 Feb) itu asiknya karena...",
-            options: ["Waktunya Fleksibel", "Dekat Orang Tua", "Bisa Sambil Ibadah", "Gak Perlu Seragam"],
-            feedbacks: ["Tapi tetap disiplin ya, jangan kebablasan santainya!", "Minta doa restu orang tua juga biar ujiannya lancar.", "Suasana rumah yang tenang emang pas buat tadarus.", "Tetap rapi dan fokus ya biar ilmunya berkah!"]
-        }
+    // 1. JADWAL RUTIN RAMADHAN (Berdasarkan Hari 1-5)
+    1: [ // SENIN: Tadarus, BING, BCRB, Pancasila
+        { question: "Senin produktif! Tadi diawali Tadarus, lanjut B. Inggris sampe Pancasila. Mana yang paling berkesan?", options: ["Tadarus Pagi", "B. Inggris", "Materi BCRB", "Pancasila"], feedbacks: ["Adem banget mulai pagi dengan mengaji. ✨", "Good job! Skill bahasa Inggris makin terasah. 🇬🇧", "Materi literasi tadi nambah wawasan banget! 📜", "Pancasila bikin jiwa nasionalis makin kuat! 🇮🇩"] },
+        { question: "Gimana materi jam ke-3 & 4 tadi? Materinya masuk ke otak?", options: ["Paham Banget", "Lumayan Lah", "Agak Ngantuk", "Seru Diskusinya"], feedbacks: ["Mantap! Fokus terus biar ilmunya berkah. 🙌", "Gak apa-apa, yang penting inti pelajarannya nyangkut! 🧠", "Wajar, jam rawan ngantuk pas puasa. Segerin lagi mukanya! 💧", "Diskusi bareng temen emang paling asik. 🗣️"] },
+        { question: "Tadarus pagi tadi dapet berapa ayat nih?", options: ["1 Lembar", "Beberapa Ayat", "Fokus Banget", "Lancar"], feedbacks: ["Sedikit demi sedikit yang penting istiqomah! 📖", "Alhamdulillah, awal hari yang baik. ✨", "Kekhusyukan itu kunci ketenangan hati. 🙏", "Mantap, semoga jadi pahala jariyah! 🌟"] },
+        { question: "Materi Bahasa Inggris tadi bahas apa? Udah lancar ngomongnya?", options: ["Vocab Baru", "Grammar", "Listening", "Paham Pol"], feedbacks: ["Keren! Skill bahasa itu jendela dunia. 🌍", "Grammar emang menantang tapi seru kalau paham! ✍️", "Listening melatih telinga makin peka, nice! 👂", "Lanjutkan semangat belajarnya! 🔥"] },
+        { question: "Gimana kondisi fisik setelah hari pertama sekolah Ramadhan?", options: ["On Fire", "Lemas", "Haus", "Semangat"], feedbacks: ["Gaspol! Perjalanan masih panjang. 🔥", "Sabar, bentar lagi jam pulang kok! 🔋", "Tahan ya, bentar lagi bedug Maghrib! 🥤", "Semangat itu energi yang gak boleh abis! 💪"] }
+    ],
+    2: [ // SELASA: Tadarus, SBK, IPS, Pancasila
+        { question: "Selasa Berbudaya! Tadi ada SBK, lanjut IPS, sampe Pancasila. Gimana rasanya?", options: ["Seni (SBK) Seru", "Pelajaran Jam 3-4", "Materi IPS", "Pancasila Lagi"], feedbacks: ["Jiwa seni keluar semua nih di jam SBK! 🎨", "Materi jam segitu emang lagi seru-serunya. 📚", "Belajar IPS jadi makin tau kondisi dunia. 🌍", "Double Pancasila minggu ini biar makin paham ideologi negara! 🇮🇩"] },
+        { question: "Waktunya Seni Budaya! Tadi lagi bahas teori atau praktek?", options: ["Bahas Seni", "Gambar/Praktek", "Materi Seru", "Kreatif"], feedbacks: ["Seni bikin hidup jadi lebih berwarna! 🌈", "Wah, pasti hasilnya kece banget tuh! 🖌️", "Materi asik bikin waktu puasa gak berasa. ✨", "Kreativitas kamu emang juara! 🎸"] },
+        { question: "Pelajaran IPS tadi bahas fenomena apa? Menarik gak?", options: ["Sejarah", "Ekonomi", "Geografi", "Catatan"], feedbacks: ["Belajar sejarah bikin kita makin bijak! ⏳", "Ilmu ekonomi penting buat masa depan kamu. 💰", "Wawasan global bikin kamu siap keliling dunia! 🌍", "Gak apa-apa banyak catatan, yang penting paham! 📝"] },
+        { question: "Lanjut Pancasila sesi kedua. Masih semangat?", options: ["Masih!", "Ngantuk", "Fokus", "Siap Amalkan"], feedbacks: ["Mantap! Ideologi negara harus nempel di kepala. 🇮🇩", "Cuci muka dulu biar semangatnya balik! 💧", "Fokus yang bagus buat bekal jadi pemimpin. 🏆", "Itu yang paling penting, dipraktekkan sehari-hari! 👍"] },
+        { question: "Udah nungguin jam istirahat atau jam pulang nih?", options: ["Banget!", "Sangat Nunggu", "Biasa Aja", "Betah"], feedbacks: ["Sabar, dikit lagi jamnya tiba! ⏳", "Semangat, perjuangan hari ini hampir selesai! 🏁", "Tipe murid teladan yang tenang nih. 😊", "Wah, betah di sekolah ya? Keren! ✨"] }
+    ],
+    3: [ // RABU: Tadarus, TIK, IPA
+        { question: "Rabu Digital & Sains! Tadi ada TIK lanjut ke IPA. Lancar jaya?", options: ["Kelas TIK", "Materi IPA", "Tadarus Pagi", "Fokus"], feedbacks: ["Dunia digital makin paham ya setelah kelas TIK! 💻", "Materi IPA emang selalu bikin mikir tapi seru! 🧪", "Tadarus bikin hati tenang sebelum pelajaran berat. 📖", "Semangat! Puasa bukan halangan buat pinter. 💪"] },
+        { question: "Gimana tadi di kelas TIK? Teknologi apa yang dibahas?", options: ["Internet", "Software", "Hardware", "Browsing"], feedbacks: ["Gunakan internet buat hal positif ya! 🌐", "Skill komputer itu berguna banget nanti. ⌨️", "Makin tau isi komputer, makin pinter! 🖱️", "Browsing buat ilmu itu investasi keren! 🚀"] },
+        { question: "Pelajaran IPA jam terakhir tadi gimana? Kepala aman?", options: ["Aman", "Panas", "Seru", "Rumus Mantap"], feedbacks: ["Hebat! Daya tahan otak kamu luar biasa. 🧠", "Wajar, IPA emang butuh energi ekstra. 🌬️", "Sains itu keajaiban yang bisa dijelaskan! 🔬", "Logika kamu makin terasah dengan rumus tadi! 🧬"] },
+        { question: "Tadi di jam ke-3 & 4 ada materi guru kelas. Masuk materinya?", options: ["Jelas", "Banyak Tugas", "Seru Diskusi", "Nyimak"], feedbacks: ["Bagus, berarti belajarnya efektif! ✅", "Tugas buat melatih pemahaman kamu, semangat! 📝", "Diskusi bikin materi berat jadi ringan. 🗣️", "Menyimak adalah langkah awal untuk paham. 👂"] },
+        { question: "Udah setengah minggu sekolah Ramadhan, gimana evaluasinya?", options: ["Rajin", "Malas", "Stabil", "Perlu Improve"], feedbacks: ["Keren! Pertahankan performanya ya. 🏆", "Ayo bangkit, dikit lagi weekend! 💪", "Stabil itu bagus, yang penting konsisten. ⚖️", "Tahu kekurangan itu bagus buat diperbaiki! ✨"] }
+    ],
+    4: [ // KAMIS: Tadarus, B. Sunda, MTK, PJOK
+        { question: "Kamis Produktif! Ada Basa Sunda, MTK, sampe PJOK. Mana yang paling menantang?", options: ["Basa Sunda", "MTK", "Teori PJOK", "Tadarus"], feedbacks: ["Sampurasun! Lestarikan budaya Sunda itu keren. 🎭", "MTK tadi rumusnya lumayan bikin otak olahraga! 🔢", "Meskipun puasa, materi PJOK tetep seru kan? 🏀", "Tadarus pagi selalu jadi booster energi! ✨"] },
+        { question: "Kumaha pelajaran Basa Sunda tadi? Tiasa?", options: ["Tiasa", "Hese", "Seru", "Ngamumule"], feedbacks: ["Alus pisan! Lestarikan terus basa urang. 🎭", "Teu nanaon, lalaunan pasti bisa! 😊", "Seni bahasa Sunda emang unik dan asik. ✨", "Mantap, jati diri urang Sunda kudu dijaga! 📖"] },
+        { question: "MTK tadi bahas angka atau bangun ruang? Otak masih jalan?", options: ["Lancar", "Berasap", "Seru", "Paham"], feedbacks: ["Calon ahli matematika masa depan! 📐", "Wajar, istirahatin dulu otaknya sebentar. 🔄", "Mecahin soal MTK itu kayak teka-teki! 🔢", "Teori kuat adalah kunci ngerjain soal sulit. 📝"] },
+        { question: "Materi PJOK tadi tetep disimak kan walau lagi puasa?", options: ["Fokus", "Ngantuk", "Materi Sehat", "Seru"], feedbacks: ["Pengetahuan olahraga itu penting buat kesehatan. 🏃", "Segerin lagi pake air wudhu biar melek! 💧", "Pola hidup sehat harus dipahami sejak dini. 🍏", "Teori olahraga bikin kita tau cara gerak bener. ⚽"] },
+        { question: "Besok udah Jumat! Apa rencana penutupan minggu ini?", options: ["Belajar", "Siap Jumsih", "Gas Terus", "Santai"], feedbacks: ["Tutup minggu ini dengan prestasi baik! 🏆", "Jumsih bikin lingkungan bersih, pahala gede! ✨", "Energi kamu luar biasa, salut! 🔥", "Santai tapi tetep dapet ilmunya ya. 😎"] }
+    ],
+    5: [ // JUMAT: Tadarus, B. Indonesia, IPS, Jumsih
+        { question: "Jumat Berkah & Bersih! Tadi ditutup sama B. Indonesia, IPS, dan Jumsih. Gimana?", options: ["B. Indonesia", "Materi IPS", "Jumsih", "Siap Weekend"], feedbacks: ["Bahasa Indonesia bikin kita makin pinter sastra! 📖", "IPS sesi terakhir tetep masuk materinya. 🌍", "Jumsih bikin kelas nyaman buat Senin nanti! 🧹", "Kamu hebat ngelewatin satu minggu Ramadhan! 🏆"] },
+        { question: "Gimana pelajaran Bahasa Indonesia tadi? Ada tugas seru?", options: ["Sastra", "Menulis", "Menarik", "Paham"], feedbacks: ["Sastra bikin kita lebih peka perasaan, cie! 📖", "Menulis cara terbaik abadiin pemikiran kamu. ✍️", "Bahasa yang baik cermin kepribadian. 🇮🇩", "Keren kalau kamu bisa paham cepat! 🌟"] },
+        { question: "IPS di jam terakhir hari Jumat. Masih sanggup mikir?", options: ["Kuat", "Sisa 5%", "Tuntas", "Fokus Pulang"], feedbacks: ["Daya tahan kamu jempolan, dikit lagi libur! 🥇", "Charge energi, bentar lagi weekend! 🔋", "Penyelesaian bagus buat materi minggu ini! 🌍", "Wajar, yang penting materi terserap. 🏁"] },
+        { question: "Kegiatan Jumsih tadi bikin kelas makin rapi?", options: ["Bersih", "Nyaman", "Lelah Berkah", "Siap Belajar"], feedbacks: ["Kelas bersih bikin belajar makin semangat! 🧹", "Kalau nyaman begini, Senin depan jadi betah. ✨", "Capeknya jadi pahala karena jaga kebersihan. 💪", "Semangat bagus buat awali minggu depan! 📚"] },
+        { question: "Satu minggu Ramadhan selesai! Perasaanmu?", options: ["Bangga", "Healing", "Alhamdulillah", "Ready Senin"], feedbacks: ["Kamu hebat ngelewatin minggu ini dengan baik! 🏆", "Selamat istirahat, recharge energimu! 💤", "Bersyukur atas ilmu minggu ini. ❤️", "Mental juara! Sampai ketemu Senin depan! 🔥"] }
     ],
 
-    "24-26 Februari": [ // Simulasi TKA
-        { 
-            question: "📝 [Simulasi TKA] Hari ini jadwal simulasi. Apa hal teknis yang paling kamu perhatikan?", 
-            options: ["Koneksi Internet", "Login & Password", "Waktu Pengerjaan", "Kesiapan Laptop"],
-            feedbacks: ["Penting! Pastikan sinyal stabil biar gak keputus di tengah jalan.", "Jangan sampai lupa ya, kalau bingung langsung tanya proktor.", "Manajemen waktu adalah kunci biar semua soal terbaca.", "Cek baterai juga ya kalau pakai laptop sendiri!"]
-        },
-        { 
-            question: "🤔 Ketemu soal yang sulit pas simulasi TKA tadi? Apa tindakanmu?", 
-            options: ["Lewati Dulu", "Tebak Saja", "Pikir Sampai Bisa", "Tandai Ragu-ragu"],
-            feedbacks: ["Strategi cerdas! Kerjakan yang mudah dulu baru balik lagi.", "Boleh, daripada kosong. Tapi usahakan eliminasi jawaban salah dulu.", "Jangan kelamaan di satu soal ya, nanti waktu habis!", "Gunakan fitur ragu-ragu kalau sistemnya menyediakan!"]
-        }
+    // 2. TANGGAL KHUSUS (Berdasarkan Kalender Kegiatan)
+    "24-26_FEBRUARI": [ // Simulasi TKA
+        { question: "Lagi masa Simulasi TKA nih! Gimana rasanya ngerjain soal tadi?", options: ["Lancar", "Lumayan Sulit", "Bisa Kok", "Butuh Belajar"], feedbacks: ["Mantap! Ini latihan mental yang bagus buat ujian asli. 🎯", "Gak apa-apa, namanya juga simulasi buat ukur kemampuan. 📊", "Kepercayaan diri itu modal 50% kesuksesan! 💪", "Gunakan hasil simulasi buat tahu mana yang perlu diperbaiki. 📝"] },
+        { question: "Ada kendala teknis gak pas Simulasi TKA tadi?", options: ["Aman", "Login Lemot", "Bingung Menu", "Lancar Jaya"], feedbacks: ["Syukurlah kalau lancar, fokus ke soal aja ya! ✅", "Wajar kalau simulasi ada kendala, biar nanti pas asli lancar. 💻", "Nanti tanya pengawas ya kalau masih bingung caranya. 🙋‍♂️", "Keren! Persiapan teknis kamu oke punya. 🖱️"] },
+        { question: "Pelajaran KBM Ramadhan tetep masuk setelah simulasi?", options: ["Tetep Fokus", "Capek", "Ngantuk", "Semangat"], feedbacks: ["Mental baja! Belajar terus tanpa henti. 🏆", "Sabar ya, emang lagi masa padat-padatnya Kelas 9. 🔋", "Istirahat cukup pas malem biar gak ngantuk di sekolah. 💤", "Semangat ini yang bakal bawa kamu ke sekolah impian! 🔥"] },
+        { question: "Udah cek hasil simulasi sementara belum?", options: ["Sudah", "Belum", "Gak Mau Liat", "Nunggu Pengumuman"], feedbacks: ["Jadikan motivasi buat lebih baik lagi! 📈", "Gak usah buru-buru, yang penting tadi ngerjain jujur. 👍", "Santai aja, masih ada waktu buat perbaikan. ✨", "Sabar menanti hasil kerja keras ya! ⏳"] },
+        { question: "Target kamu buat TKA beneran nanti apa nih?", options: ["Nilai Tinggi", "Masuk Target", "Lulus Bagus", "Yang Penting Maksimal"], feedbacks: ["Target tinggi itu bagus buat pemacu semangat! 🎯", "Fokus terus, kamu pasti bisa capai targetnya! 💪", "Lulus dengan hasil memuaskan itu kebanggaan! 🎓", "Usaha maksimal gak akan mengkhianati hasil. ✨"] }
     ],
-
-    // --- PERIODE MARET ---
-
-    "27 Februari - 4 Maret": [ // Pesantren Kilat Kelas 9
-        { 
-            question: "🌙 [Sanlat Kls 9] Lagi jadwal Sanlat nih. Materi apa yang paling bikin kamu 'adem'?", 
-            options: ["Kajian Akhlak", "Tata Cara Shalat", "Kisah Nabi", "Tadarus Bareng"],
-            feedbacks: ["Akhlak mulia adalah identitas siswa SMPN 4 yang sukses.", "Biar ibadah kita makin sempurna di bulan Ramadhan ini.", "Banyak pelajaran hidup yang bisa diambil dari perjuangan Nabi.", "Suasana tenang pas ngaji bareng temen itu mahal harganya."]
-        },
-        { 
-            question: "✨ Pas kamu Sanlat, kelas lain tetap KBM biasa. Gimana perasaanmu?", 
-            options: ["Beruntung Banget", "Fokus Ibadah", "Kangen Belajar", "Nikmati Saja"],
-            feedbacks: ["Gunakan waktu ini buat 'recharge' mental kamu ya!", "Masya Allah, semoga puasanya makin berkah dengan ilmu baru.", "Sabar, nanti juga bakal balik belajar buat persiapan TKA.", "Bener, nikmati kedamaian di masjid sekolah bareng temen."]
-        }
+    "9-14_MARET": [ // Gladi Bersih TKA
+        { question: "Gladi Bersih TKA! Sudah merasa siap 100%?", options: ["Siap!", "90% Siap", "Masih Grogi", "Gaspol"], feedbacks: ["Mantap! Gladi bersih ini langkah terakhir sebelum hari H. 🏁", "Dikit lagi, asah terus bagian yang masih ragu. 🗡️", "Wajar grogi, tarik napas dalam-dalam, kamu pasti bisa! 🌬️", "Energi positif ini yang dibutuhin pas ujian nanti! 🔥"] },
+        { question: "Gimana kondisi PC atau laptop pas gladi tadi?", options: ["Normal", "Sempet Lag", "Lancar", "Aman Banget"], feedbacks: ["Syukurlah, alat tempur udah siap semua! 💻", "Laporin ke teknisi ya biar pas hari H gak kejadian lagi. 🛠️", "Kesiapan alat itu kunci ketenangan ngerjain soal. ✅", "Bagus! Satu beban pikiran hilang. 🖱️"] },
+        { question: "Materi mana yang menurutmu paling keluar pas gladi tadi?", options: ["Saintek", "Soshum", "Logika", "Semua Ada"], feedbacks: ["IPA dan MTK emang butuh fokus ekstra ya. 🧪", "IPS dan Bahasa butuh ketelitian baca soal. 📖", "Logika dasar emang sering jadi jebakan, teliti ya! 🧠", "Berarti persiapannya harus merata semua mapel! 📚"] },
+        { question: "Capek gak harus Gladi TKA sambil tetep sekolah Ramadhan?", options: ["Capek Pol", "Biasa Aja", "Demi Masa Depan", "Tetep Happy"], feedbacks: ["Perjuangan Kelas 9 emang berat, tapi hasilnya bakal manis! 🍬", "Daya tahan tubuhmu oke banget, jaga kesehatan ya! 🍏", "Betul! Lelah sekarang, panen hasilnya nanti. 🎓", "Mood yang bagus itu booster belajar paling ampuh. 😊"] },
+        { question: "Besok udah mau ujian TKA asli, minta doa restu siapa aja?", options: ["Orang Tua", "Guru", "Temen", "Semua"], feedbacks: ["Doa orang tua adalah kunci sukses paling utama. 🙏", "Restu guru bikin ilmu yang didapet jadi berkah. ✨", "Saling dukung bareng temen itu bikin tenang. 🤝", "Semoga semua doa dikabulkan dan ujian lancar! 🌟"] }
     ],
-
-    "9-14 Maret": [ // Gladi Bersih TKA
-        { 
-            question: "💻 [Gladi Bersih] Gladi bersih TKA dimulai! Sudah cek Web TKA hari ini?", 
-            options: ["Sudah Update", "Lagi Loading", "Lupa Alamatnya", "Nunggu Info WA"],
-            feedbacks: ["Mantap! Mandiri cek info adalah ciri siswa siap lulus.", "Sabar ya, mungkin server lagi banyak yang akses.", "Cek di grup kelas atau tanya wali kelas ya, linknya penting!", "Bagus, tapi tetap harus verifikasi sendiri di web resminya ya."]
-        },
-        { 
-            question: "🎯 Gladi bersih bertujuan agar pas hari-H kamu...", 
-            options: ["Gak Grogi", "Paham Teknis", "Soal Terbayang", "Semua Benar"],
-            feedbacks: ["Latihan mental itu penting banget buat kelas 9!", "Biar gak bingung lagi klik sana-sini pas ujian beneran.", "Gambaran tipe soal biasanya mirip-mirip nih pola pengerjaannya.", "Tepat! Ini adalah simulasi final sebelum perang sesungguhnya!"]
-        }
-    ],
-
-    "16-27 Maret": [ // Libur Idul Fitri (Dibuat Banyak & Random)
-        { 
-            question: "🎉 [Lebaran] Selamat Idul Fitri! Apa hidangan wajib yang harus ada di piringmu?", 
-            options: ["Opor Ayam", "Ketupat Sayur", "Rendang Daging", "Kue Kering"],
-            feedbacks: ["Klasik! Lebaran gak lengkap tanpa kuah kuning opor.", "Ketupat dan sambal goreng itu kombinasi maut!", "Wah, selera kelas berat nih! Enak banget!", "Nastar atau kastengel? Hati-hati jangan dihabisin sendiri ya!"]
-        },
-        { 
-            question: "🌙 Momen lebaran paling asik itu pas...", 
-            options: ["Sungkeman", "Ketemu Saudara", "Dapet THR", "Baju Baru"],
-            feedbacks: ["Hati jadi bersih lagi setelah saling memaafkan.", "Rame-rame cerita pengalaman setahun terakhir, seru!", "Alhamdulillah, bisa buat tabungan masa depan atau jajan!", "Tampil beda dan segar di hari kemenangan. Keren!"]
-        },
-        { 
-            question: "📅 Libur sampai tanggal 27 Maret. Gimana caramu menjaga semangat belajar?", 
-            options: ["Baca Buku Dikit", "Gak Belajar Sama Sekali", "Nugas Santai", "Diskusi di Grup"],
-            feedbacks: ["Bagus, biar otak gak 'kaku' pas masuk sekolah nanti.", "Gak apa-apa, namanya juga liburan. Puas-puasin istirahat!", "Cicil dikit-dikit biar pas masuk gak numpuk tugasnya.", "Seru nih, lebaran sambil sharing ilmu bareng temen."]
-        }
-    ],
-
-    "30 Maret": [ // Awal Masuk
-        { 
-            question: "🎒 [30 Maret] Hari pertama masuk! Apa target terbesarmu di sisa semester ini?", 
-            options: ["Lulus Nilai Bagus", "Masuk SMA Impian", "Makin Rajin", "Bahagiain Ortu"],
-            feedbacks: ["Ayo gaspol! Sisa waktu harus dimanfaatkan maksimal.", "Kejar terus! SMPN 4 Cirebon bangga punya pejuang sepertimu.", "Disiplin adalah kunci utama alumni sukses.", "Ibadah dan belajar yang rajin adalah kado terbaik buat mereka."]
-        }
+    "16-27_MARET": [ // Libur Idulfitri
+        { question: "Selamat Libur Lebaran! Udah dapet THR belum?", options: ["Udah!", "Belum", "Lagi Nunggu", "Rahasia"], feedbacks: ["Alhamdulillah, simpen buat kebutuhan sekolah nanti ya! 💰", "Sabar, biasanya pas hari H baru cair. ⏳", "Semoga dapet banyak ya tahun ini! ✨", "Yang penting sehat dan bisa kumpul keluarga. ❤️"] },
+        { question: "Menu lebaran apa yang paling kamu incer hari ini?", options: ["Opor Ayam", "Rendang", "Kue Kering", "Ketupat"], feedbacks: ["Kombinasi opor dan ketupat emang gak ada lawan! 🥘", "Rendang emang juara dunia kuliner! 🥩", "Nastar atau Kastengel? Dua-duanya enak! 🍪", "Makanan khas lebaran emang bikin kangen. 😋"] },
+        { question: "Gimana rencana silaturahmi kamu tahun ini?", options: ["Keliling Saudara", "Open House", "Video Call", "Di Rumah Aja"], feedbacks: ["Seru banget bisa ketemu saudara yang jarang jumpa! 🤝", "Pasti rame banget rumahnya, bagi-bagi kebahagiaan. ✨", "Teknologi bikin yang jauh terasa dekat ya. 📱", "Istirahat di rumah bareng keluarga inti juga asik. 🛋️"] },
+        { question: "Lagi libur gini, masih kepikiran tugas sekolah gak?", options: ["Dikit", "Gak Sama Sekali", "Udah Selesai", "Nanti Aja"], feedbacks: ["Cukup kepikiran dikit, sisanya enjoy liburannya! 🏖️", "Bagus! Manfaatin waktu buat refresh otak total. 🧠", "Keren! Libur jadi tenang tanpa beban. ✅", "Nikmatin dulu momen lebarannya, nugas bisa nanti. ☕"] },
+        { question: "Apa harapan kamu setelah libur lebaran ini selesai?", options: ["Makin Semangat", "Nilai Bagus", "Lulus TKA", "Sehat Selalu"], feedbacks: ["Semoga baterai semangatnya penuh lagi pas masuk! 🔋", "Aamiin! Semoga berkah lebaran nular ke nilai. 📈", "Fokus dikit lagi, perjuangan Kelas 9 mau finish! 🏁", "Kesehatan itu modal paling penting buat ujian nanti. 💪"] }
     ]
 };
-
-// FUNGSI UNTUK MENGAMBIL SOAL SECARA ACAK (LOGIKA RANDOM)
-function getRandomQuiz(dateKey) {
-    const questions = QUIZ_BANK[dateKey];
-    if (questions) {
-        const randomIndex = Math.floor(Math.random() * questions.length);
-        return questions[randomIndex];
-    }
-    return null;
-}
-
-module.exports = { QUIZ_BANK, getRandomQuiz };
-                        
+            
