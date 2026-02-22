@@ -22,7 +22,7 @@ const renderMediaView = (fileUrls) => {
         "Jangan bandingkan prosesmu dengan orang lain.",
         "Kamu lebih kuat dari tantangan yang kamu hadapi.",
         "Kerja keras hari ini, senyum manis hari esok.",
-        "Bikin dirimu bangga hari ini!",
+        "Bikin dirimu proud hari ini!",
         "Tidak ada kata terlambat untuk mulai belajar.",
         "Keberhasilan dimulai dari keputusan untuk mencoba.",
         "Y.M.B ASISTEN selalu mendukung setiap progresmu!"
@@ -136,7 +136,7 @@ const renderMediaView = (fileUrls) => {
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         <script>
-            // --- OFFLINE ENGINE (Mencegah Dinosaurus) ---
+            // --- OFFLINE ENGINE ---
             async function registerOfflineWorker() {
                 if ('serviceWorker' in navigator) {
                     const swCode = \`
@@ -160,12 +160,28 @@ const renderMediaView = (fileUrls) => {
                 }
             }
 
+            // Logic Sembunyikan/Munculkan Tombol Download
+            function updateOnlineStatus() {
+                const dlBtn = document.getElementById('downloadLink');
+                if (navigator.onLine) {
+                    dlBtn.style.display = 'inline-flex';
+                } else {
+                    dlBtn.style.display = 'none';
+                    qEl.innerText = "Mode Offline Aktif! Tombol download disembunyikan.";
+                    qEl.style.color = "#ff9800";
+                }
+            }
+
             window.addEventListener('load', () => {
                 registerOfflineWorker();
+                updateOnlineStatus();
                 setTimeout(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
                 }, 1200);
             });
+
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
 
             const quotes = ${JSON.stringify(quotes)};
             const qEl = document.getElementById('randomQuote');
@@ -229,15 +245,9 @@ const renderMediaView = (fileUrls) => {
                     if (img) document.getElementById('downloadLink').href = img.src;
                 }}
             });
-
-            window.addEventListener('offline', () => {
-                qEl.innerText = "Mode Offline Aktif! Halaman tetap aman.";
-                qEl.style.color = "#ff9800";
-            });
         </script>
     </body>
     </html>`;
 };
 
 module.exports = { renderMediaView };
-        
