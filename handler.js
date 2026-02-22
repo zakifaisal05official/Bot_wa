@@ -1,8 +1,8 @@
 const db = require('./data');
-const { delay, downloadMediaMessage } = require("@whiskeysockets/baileys"); // Tambah downloadMediaMessage
+const { delay, downloadMediaMessage } = require("@whiskeysockets/baileys"); 
 const fs = require('fs');
-const axios = require('axios'); // Tambah axios
-const FormData = require('form-data'); // Tambah FormData
+const axios = require('axios'); 
+const FormData = require('form-data'); 
 const { QUIZ_BANK } = require('./quiz'); 
 const { MAPEL_CONFIG, STRUKTUR_JADWAL, LABELS } = require('./pelajaran');
 
@@ -18,20 +18,17 @@ function getClosestCommand(cmd) {
     });
 }
 
-// STRUKTUR TETAP SAMA: kuisAktif di index.js sekarang mengirimkan botConfig
 async function handleMessages(sock, m, botConfig, utils) {
     try {
         const msg = m.messages[0];
         if (!msg || !msg.message || msg.key.fromMe) return;
 
-        // --- LOGIKA TAMBAHAN UNTUK SMART FEEDBACK (Dashboard Sync) ---
         if (msg.pollUpdates && botConfig?.smartFeedback !== false) {
             const KUIS_PATH = '/app/auth_info/kuis.json';
             if (fs.existsSync(KUIS_PATH)) {
                 let kuisData = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
                 const update = msg.pollUpdates[0];
                 const pollCreationId = msg.key.id;
-                // Jika ID polling cocok, catat suaranya
                 if (kuisData.msgId === pollCreationId || msg.messageContextInfo) {
                     const voter = msg.key.participant || msg.key.remoteJid;
                     const votes = update.vote?.selectedOptions || [];
@@ -42,7 +39,6 @@ async function handleMessages(sock, m, botConfig, utils) {
         }
 
         const sender = msg.key.remoteJid;
-        // Memperluas body agar bisa menangkap caption foto/dokumen
         const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.documentMessage?.caption || "").trim();
         if (!body) return;
         const textLower = body.toLowerCase();
@@ -184,7 +180,6 @@ async function handleMessages(sock, m, botConfig, utils) {
             case '!update_jadwal':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
 
-                // --- LOGIKA OTOMATIS UPLOAD MEDIA (FOTO/PDF) ---
                 let mediaLink = "";
                 const isImage = msg.message.imageMessage;
                 const isDoc = msg.message.documentMessage;
@@ -195,16 +190,23 @@ async function handleMessages(sock, m, botConfig, utils) {
                         const buffer = await downloadMediaMessage(msg, 'buffer', {});
                         const fd = new FormData();
                         
+                        // Konfigurasi Header agar tidak mudah di-block server upload
+                        const axiosConfig = {
+                            headers: {
+                                ...fd.getHeaders(),
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+                            },
+                            timeout: 30000 // Tunggu maksimal 30 detik
+                        };
+
                         if (isImage) {
-                            // Gunakan Telegra.ph jika gambar (Lebih Cepat)
                             fd.append('file', buffer, { filename: 'file.jpg' });
-                            const upload = await axios.post('https://telegra.ph/upload', fd, { headers: fd.getHeaders() });
+                            const upload = await axios.post('https://telegra.ph/upload', fd, axiosConfig);
                             if (upload.data && upload.data[0]) mediaLink = "https://telegra.ph" + upload.data[0].src;
                         } else {
-                            // Gunakan Catbox jika dokumen/PDF
                             fd.append('reqtype', 'fileupload');
                             fd.append('fileToUpload', buffer, { filename: msg.message.documentMessage.fileName || 'file.pdf' });
-                            const upload = await axios.post('https://catbox.moe/user/api.php', fd, { headers: fd.getHeaders() });
+                            const upload = await axios.post('https://catbox.moe/user/api.php', fd, axiosConfig);
                             if (upload.data) mediaLink = upload.data;
                         }
                     } catch (err) {
@@ -226,7 +228,6 @@ async function handleMessages(sock, m, botConfig, utils) {
                     });
                 }
 
-                // Masukkan Link Web ke deskripsi tugas secara otomatis
                 let bodyToProcess = body;
                 if (mediaLink) {
                     bodyToProcess += ` \n🔗 Link Web File: ${mediaLink}`;
@@ -263,4 +264,4 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
-                        
+            
