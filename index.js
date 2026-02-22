@@ -39,6 +39,27 @@ if (!fs.existsSync(PUBLIC_FILES_PATH)) {
     fs.mkdirSync(PUBLIC_FILES_PATH, { recursive: true });
 }
 
+// --- FUNGSI AUTO CLEANING (MENGHAPUS FILE > 7 HARI) ---
+const cleanOldFiles = () => {
+    const MAX_AGE_DAYS = 7;
+    const now = Date.now();
+    if (fs.existsSync(PUBLIC_FILES_PATH)) {
+        const files = fs.readdirSync(PUBLIC_FILES_PATH);
+        files.forEach(file => {
+            const filePath = path.join(PUBLIC_FILES_PATH, file);
+            const stats = fs.statSync(filePath);
+            const fileAgeMs = now - stats.mtimeMs;
+            const maxAgeMs = MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+            if (fileAgeMs > maxAgeMs) {
+                fs.unlinkSync(filePath);
+            }
+        });
+    }
+};
+// Jalankan setiap 24 jam
+setInterval(cleanOldFiles, 24 * 60 * 60 * 1000);
+cleanOldFiles(); 
+
 // Default config: Pastikan semua fitur terdaftar di sini
 let botConfig = { 
     quiz: true, 
@@ -78,15 +99,14 @@ const port = process.env.PORT || 8080;
 let qrCodeData = "", isConnected = false, sock, logs = [], stats = { pesanMasuk: 0, totalLog: 0 };
 
 // --- CONFIGURASI STATIC FILE & MEDIA ROUTE ---
-// 1. Daftarkan folder publik agar file bisa dibaca sistem
 app.use('/files', express.static(PUBLIC_FILES_PATH));
 
-// 2. Rute khusus untuk teman melihat foto tugas (Modular View)
-app.get("/tugas/:filename", (req, res) => {
-    const filename = req.params.filename;
-    const fileUrl = `/files/${filename}`; 
+// UPDATE: Rute untuk mendukung multi-file (Slider)
+app.get("/tugas/:filenames", (req, res) => {
+    const filenames = req.params.filenames.split(','); 
+    const fileUrls = filenames.map(name => `/files/${name}`); 
     res.setHeader('Content-Type', 'text/html');
-    res.send(renderMediaView(fileUrl));
+    res.send(renderMediaView(fileUrls));
 });
 
 const addLog = (msg) => {
@@ -98,7 +118,6 @@ const addLog = (msg) => {
 
 app.get("/toggle/:feature", (req, res) => {
     const feat = req.params.feature;
-    // Perbaikan: Pengecekan hasOwnProperty agar sinkron dengan dashboard
     if (botConfig.hasOwnProperty(feat)) {
         botConfig[feat] = !botConfig[feat];
         saveConfig();
@@ -115,8 +134,6 @@ app.get("/", (req, res) => {
 
 async function start() {
     const { version } = await fetchLatestBaileysVersion();
-    
-    // Auth info disimpan di volume
     const { state, saveCreds } = await useMultiFileAuthState(VOLUME_PATH);
 
     sock = makeWASocket({
@@ -148,7 +165,6 @@ async function start() {
             qrCodeData = "";
             addLog("Bot Terhubung ke WhatsApp!");
             
-            // JALANKAN SEMUA SCHEDULER
             initQuizScheduler(sock, botConfig); 
             initJadwalBesokScheduler(sock, botConfig);
             initSmartFeedbackScheduler(sock, botConfig);
@@ -163,7 +179,6 @@ async function start() {
             if (!msg.message || msg.key.fromMe) return;
             stats.pesanMasuk++;
             addLog(`Pesan dari: ${msg.pushName || 'User'}`);
-            // Mengirim botConfig ke handler jika diperlukan di masa depan
             await handleMessages(sock, m, botConfig, { getWeekDates, sendJadwalBesokManual });
         }
     });
