@@ -52,24 +52,13 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                 border-radius: 18px; padding: 14px 20px; width: 100%; margin-bottom: 18px; 
                 outline: none; transition: 0.3s; text-align: center;
             }
-            .login-input:focus { border-color: #00a884; background: #2a3942; }
-
-            .toggle-eye {
-                position: absolute; right: 20px; top: 18px; color: #8696a0; cursor: pointer;
-            }
+            .toggle-eye { position: absolute; right: 20px; top: 18px; color: #8696a0; cursor: pointer; }
 
             .login-btn {
                 background: #00a884; color: white; border: none; width: 100%;
                 padding: 14px; border-radius: 18px; font-weight: 800; 
-                text-transform: uppercase; letter-spacing: 2px;
-                transition: 0.4s; box-shadow: 0 10px 20px rgba(0, 168, 132, 0.3);
+                text-transform: uppercase; letter-spacing: 2px; transition: 0.4s;
             }
-            .login-btn:hover { background: #06cf9c; transform: translateY(-2px); }
-            .login-btn:disabled { background: #3b4a54; color: #8696a0; cursor: not-allowed; }
-
-            #loginStatus { font-weight: 900; font-size: 1.1rem; margin-bottom: 20px; display: none; }
-            .status-error { color: #ff5252; }
-            .status-success { color: #25d366; }
 
             @keyframes moodSwing {
                 0% { transform: scale(1) rotate(0deg); }
@@ -90,8 +79,22 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
             }
             .quote-container { background: rgba(0, 168, 132, 0.08); border-left: 4px solid #00a884; padding: 15px; margin: 20px 0; border-radius: 15px; }
             .btn-neon-pill { background: rgba(0, 168, 132, 0.05); border: 2px solid #00a884; color: #00a884; padding: 8px 30px; border-radius: 50px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+            
+            #layoutMenu { 
+                display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+                max-height: 0; opacity: 0; overflow: hidden;
+                transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            #layoutMenu.show { max-height: 1000px; opacity: 1; margin-top: 20px; padding: 5px; }
+
+            .menu-card { background: #26353d; border: 1px solid #3b4a54; border-radius: 18px; padding: 12px; text-align: center; }
+            .menu-card span { font-size: 0.65rem; font-weight: 800; display: block; margin-bottom: 8px; color: #8696a0; }
+            .btn-toggle { border: none; width: 100%; padding: 6px; border-radius: 12px; font-weight: 800; font-size: 0.75rem; transition: 0.3s; }
+            .btn-on { background: #25d366; color: white; }
+            .btn-off { background: #3b4a54; color: #aebac1; }
+            
             .stats-card { background: #2a3942; border-radius: 18px; padding: 12px; text-align: center; }
-            .log-box { background: #000; color: #00ff41 !important; border-radius: 18px; height: 180px; overflow-y: auto; padding: 15px; font-family: monospace; }
+            .log-box { background: #000; color: #00ff41 !important; border-radius: 18px; height: 180px; overflow-y: auto; padding: 15px; font-family: monospace; font-size: 0.75rem; }
         </style>
     `;
 
@@ -102,13 +105,9 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                 <body class="py-4">
                     <div id="loginScreen">
                         <div class="login-box animate__animated animate__zoomIn">
-                            <div id="avatarArea" class="login-avatar-area">
-                                ${randomMood}
-                            </div>
+                            <div id="avatarArea" class="login-avatar-area">${randomMood}</div>
                             <h3 id="loginTitle" style="color:#fff; font-weight:900; letter-spacing:3px; margin-bottom:20px;">Y.B.M <span style="color:#00a884">ASISTEN</span></h3>
-                            
                             <div id="loginStatus" class="animate__animated"></div>
-
                             <div id="loginFields">
                                 <input type="text" id="username" class="login-input" placeholder="USERNAME">
                                 <div class="input-container">
@@ -117,9 +116,8 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                 </div>
                                 <button id="submitBtn" onclick="attemptLogin()" class="login-btn">LOGIN</button>
                             </div>
-
                             <div id="loginLoading" style="display:none;" class="mt-3">
-                                <div class="spinner-border text-success" role="status"></div>
+                                <div class="spinner-border text-success"></div>
                                 <div class="mt-2 text-success fw-bold">AUTHENTICATING...</div>
                             </div>
                         </div>
@@ -138,17 +136,22 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             <div class="text-center mb-4">
                                 <div id="mainBtn" class="btn-neon-pill" onclick="toggleMenu()">⚙️ SYSTEM CONFIG</div>
                             </div>
-                            <div id="layoutMenu" style="display:none;" class="row g-2 mb-3">
-                                <div class="col-6"><div class="stats-card"><span>Quiz Bot</span><br><button class="btn btn-sm ${botConfig.quiz ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.quiz ? 'ON' : 'OFF'}</button></div></div>
-                                <div class="col-6"><div class="stats-card"><span>Feedback</span><br><button class="btn btn-sm ${botConfig.smartFeedback ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></div></div>
+
+                            <div id="layoutMenu">
+                                <div class="menu-card"><span>Quiz Bot</span><a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ACTIVE' : 'OFF'}</button></a></div>
+                                <div class="menu-card"><span>Feedback</span><a href="/toggle/smartFeedback"><button class="btn-toggle ${botConfig.smartFeedback ? 'btn-on' : 'btn-off'}">${botConfig.smartFeedback ? 'ACTIVE' : 'OFF'}</button></a></div>
+                                <div class="menu-card"><span>Jadwal</span><a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ACTIVE' : 'OFF'}</button></a></div>
+                                <div class="menu-card"><span>PR Info</span><a href="/toggle/prMingguan"><button class="btn-toggle ${botConfig.prMingguan ? 'btn-on' : 'btn-off'}">${botConfig.prMingguan ? 'ACTIVE' : 'OFF'}</button></a></div>
+                                <div class="menu-card" style="grid-column: span 2;"><span>Sahur Reminder</span><a href="/toggle/sahur"><button class="btn-toggle ${botConfig.sahur ? 'btn-on' : 'btn-off'}">${botConfig.sahur ? 'ACTIVE' : 'OFF'}</button></a></div>
                             </div>
-                            <div class="row g-2 text-center mb-3">
+
+                            <div class="row g-2 text-center mt-3">
                                 <div class="col-3"><div class="stats-card"><small>RAM</small><br><b>${usedRAM}G</b></div></div>
                                 <div class="col-3"><div class="stats-card"><small>UPTIME</small><br><b>${uptime}H</b></div></div>
                                 <div class="col-3"><div class="stats-card"><small>CHAT</small><br><b>${stats.pesanMasuk}</b></div></div>
                                 <div class="col-3"><div class="stats-card"><small>LOGS</small><br><b>${stats.totalLog}</b></div></div>
                             </div>
-                            <div class="log-box" id="logBox">${logs.join('<br>')}</div>
+                            <div class="log-box mt-3" id="logBox">${logs.join('<br>')}</div>
                             <div class="text-center mt-4 small text-muted">CORE OPERATED BY <span class="text-success fw-bold">ZAKI</span></div>
                         </div>
                     </div>
@@ -160,13 +163,8 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                         function togglePass() {
                             const p = document.getElementById('password');
                             const icon = event.target;
-                            if(p.type === "password") {
-                                p.type = "text";
-                                icon.classList.replace('fa-eye-slash', 'fa-eye');
-                            } else {
-                                p.type = "password";
-                                icon.classList.replace('fa-eye', 'fa-eye-slash');
-                            }
+                            if(p.type === "password") { p.type = "text"; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+                            else { p.type = "password"; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
                         }
 
                         function speak(msg) {
@@ -178,7 +176,6 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
 
                         function attemptLogin() {
                             if(isCooldown) return;
-
                             const u = document.getElementById('username').value;
                             const p = document.getElementById('password').value;
                             const status = document.getElementById('loginStatus');
@@ -187,18 +184,15 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             const avatar = document.getElementById('avatarArea');
                             const box = document.querySelector('.login-box');
 
-                            if(u === "Zaki" && p === "ZAKI_DEVELOPER_BOT") {
+                            if(u === "ZAKI" && p === "ZAKI_DEVELOPER_BOT") {
                                 fields.style.display = "none";
                                 loader.style.display = "block";
                                 avatar.innerText = "😉";
-                                
                                 speak("Login sukses. Silakan masuk Zaki.");
-
                                 setTimeout(() => {
                                     status.innerHTML = "ACCESS GRANTED!";
                                     status.className = "status-success animate__animated animate__pulse";
                                     status.style.display = "block";
-                                    
                                     setTimeout(() => {
                                         box.classList.add('animate__animated', 'animate__zoomOut');
                                         setTimeout(() => {
@@ -218,14 +212,11 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                     box.classList.remove('animate__shakeX');
                                     if(!isCooldown) avatar.innerText = "${randomMood}";
                                 }, 500);
-
-                                if(failedAttempts >= 5) {
-                                    startCooldown();
-                                } else {
-                                    status.innerHTML = "⚠️ KAMU BUKAN ZAKI! ("+failedAttempts+"/5)";
-                                    status.className = "status-error animate__animated animate__shakeX";
+                                if(failedAttempts >= 5) startCooldown();
+                                else {
+                                    status.innerHTML = "⚠️ PASSWORD SALAH! ("+failedAttempts+"/5)";
+                                    status.className = "status-error";
                                     status.style.display = "block";
-                                    speak("Akses ditolak.");
                                 }
                             }
                         }
@@ -236,17 +227,13 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             const status = document.getElementById('loginStatus');
                             const btn = document.getElementById('submitBtn');
                             const avatar = document.getElementById('avatarArea');
-
                             btn.disabled = true;
                             avatar.innerText = "🤫";
-                            speak("Sistem dikunci 20 detik.");
-
                             const timer = setInterval(() => {
                                 status.innerHTML = "CORE LOCKED! (" + timeLeft + "s)";
                                 status.className = "status-error";
                                 status.style.display = "block";
                                 timeLeft--;
-
                                 if(timeLeft < 0) {
                                     clearInterval(timer);
                                     isCooldown = false;
@@ -254,14 +241,13 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                     btn.disabled = false;
                                     status.style.display = "none";
                                     avatar.innerText = "${randomMood}";
-                                    speak("Sistem dibuka kembali.");
                                 }
                             }, 1000);
                         }
 
                         function toggleMenu() {
                             const m = document.getElementById('layoutMenu');
-                            m.style.display = m.style.display === 'none' ? 'flex' : 'none';
+                            m.classList.toggle('show');
                         }
                     </script>
                 </body>
@@ -272,4 +258,4 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
 };
 
 module.exports = { renderDashboard };
-                                             
+                                    
