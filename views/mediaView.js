@@ -40,7 +40,17 @@ const renderMediaView = (fileUrls) => {
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
         <style>
             :root { --primary: #00a884; --bg: #0b141a; --card: #1f2c33; }
-            body { background: var(--bg); color: #e9edef; font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-x: hidden; cursor: pointer; }
+            
+            /* LOADING SCREEN */
+            #loading-overlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: var(--bg); display: flex; flex-direction: column;
+                align-items: center; justify-content: center; z-index: 9999;
+            }
+            .spinner { width: 50px; height: 50px; border: 5px solid #2a3942; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+            body { background: var(--bg); color: #e9edef; font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-x: hidden; cursor: pointer; touch-action: manipulation; }
             
             .card-custom { background: var(--card); border: 1px solid #2a3942; border-radius: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); width: 100%; max-width: 800px; overflow: hidden; position: relative; pointer-events: auto; }
             
@@ -48,11 +58,9 @@ const renderMediaView = (fileUrls) => {
             .media-header h5 { color: var(--primary); font-weight: 800; letter-spacing: 2px; margin: 0; text-transform: uppercase; }
             
             .media-content { padding: 20px; text-align: center; }
-            .media-frame { border-radius: 15px; border: 2px solid var(--primary); box-shadow: 0 0 20px rgba(0,168,132,0.2); max-width: 100%; height: auto; max-height: 60vh; object-fit: contain; cursor: zoom-in; transition: 0.3s; background: #000; }
+            .media-frame { border-radius: 15px; border: 2px solid var(--primary); box-shadow: 0 0 20px rgba(0,168,132,0.2); max-width: 100%; height: auto; max-height: 60vh; object-fit: contain; cursor: zoom-in; transition: transform 0.1s ease; background: #000; touch-action: none; }
             
-            /* Enhanced Fullscreen for HP */
-            .media-frame:fullscreen { object-fit: contain; background: black; width: 100vw; height: 100vh; cursor: move; border: none; }
-            :-webkit-full-screen { width: 100%; height: 100%; }
+            .media-frame:fullscreen { object-fit: contain; background: black; width: 100vw; height: 100vh; }
 
             .quote-container { margin: 15px 0; padding: 15px; background: rgba(0,168,132,0.1); border-radius: 15px; border-left: 4px solid var(--primary); }
             .quote-text { font-style: italic; font-size: 0.9rem; color: #d1d7db; }
@@ -68,10 +76,8 @@ const renderMediaView = (fileUrls) => {
                 font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
                 transition: 0.4s; box-shadow: 0 8px 20px rgba(0,168,132,0.3); animation: pulseCustom 2s infinite;
             }
-            .btn-download:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 25px rgba(0,168,132,0.5); color: white; }
             
-            .btn-fullscreen { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 8px 20px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; transition: 0.3s; }
-            .btn-fullscreen:hover { background: var(--primary); color: white; }
+            .btn-fullscreen { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 8px 20px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; }
 
             @keyframes pulseCustom { 0% { box-shadow: 0 0 0 0 rgba(0,168,132,0.4); } 70% { box-shadow: 0 0 0 15px rgba(0,168,132,0); } 100% { box-shadow: 0 0 0 0 rgba(0,168,132,0); } }
 
@@ -82,6 +88,11 @@ const renderMediaView = (fileUrls) => {
         </style>
     </head>
     <body onclick="playQuoteVoice()">
+        <div id="loading-overlay">
+            <div class="spinner"></div>
+            <div style="color:var(--primary); margin-top:15px; font-weight:bold;">MEMUAT MODE OFFLINE...</div>
+        </div>
+
         <div class="card-custom animate__animated animate__zoomIn" onclick="event.stopPropagation(); playQuoteVoice();">
             <div class="media-header">
                 <h5>📁 ${isPdf ? 'LAMPIRAN DOKUMEN' : 'GALERI TUGAS'}</h5>
@@ -99,7 +110,7 @@ const renderMediaView = (fileUrls) => {
                         <div class="swiper-wrapper">
                             ${urls.map(url => `
                                 <div class="swiper-slide">
-                                    <img src="${url}" class="media-frame img-fluid" alt="Tugas" onclick="toggleFullScreen(this)">
+                                    <img src="${url}" class="media-frame img-fluid zoomable" alt="Tugas" onclick="toggleFullScreen(this)">
                                 </div>
                             `).join('')}
                         </div>
@@ -123,27 +134,27 @@ const renderMediaView = (fileUrls) => {
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         <script>
-            // --- OFFLINE MODE ENGINE (No more Dinosaur) ---
-            if ('caches' in window) {
-                const cacheName = 'ymb-asisten-cache-v2';
-                // Simpan halaman ini saat dibuka dengan internet
-                if (navigator.onLine) {
-                    caches.open(cacheName).then(cache => {
-                        cache.add(window.location.href);
-                        cache.add('https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css');
-                        cache.add('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
-                        cache.add('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css');
+            // --- OFFLINE & LOADING ENGINE ---
+            window.addEventListener('load', () => {
+                if ('caches' in window && navigator.onLine) {
+                    caches.open('ymb-cache-v3').then(cache => {
+                        cache.addAll([window.location.href, 
+                            'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+                            'https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js'
+                        ]);
                     });
                 }
-            }
+                setTimeout(() => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                }, 1000);
+            });
 
-            // Random Quote Logic
             const quotes = ${JSON.stringify(quotes)};
             const qEl = document.getElementById('randomQuote');
             qEl.innerText = quotes[Math.floor(Math.random() * quotes.length)];
 
-            // Voice: Play Quote
             function playQuoteVoice() {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
@@ -153,17 +164,30 @@ const renderMediaView = (fileUrls) => {
                 }
             }
 
-            // Voice: Play Success Download
             function playSuccessSound() {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    const msg = new SpeechSynthesisUtterance("Terima kasih sudah mendownload file ini, semangat terus ya kak!");
-                    msg.lang = 'id-ID';
-                    window.speechSynthesis.speak(msg);
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Terima kasih sudah mendownload file ini, semangat terus ya kak!"));
                 }
             }
 
-            // Fullscreen & Zooming Logic
+            // ZOOM ENGINE (Hammer.js)
+            document.querySelectorAll('.zoomable').forEach(img => {
+                const mc = new Hammer.Manager(img);
+                const pinch = new Hammer.Pinch();
+                mc.add(pinch);
+                let currentScale = 1;
+
+                mc.on("pinchmove", (ev) => {
+                    currentScale = Math.max(1, Math.min(ev.scale, 4));
+                    img.style.transform = \`scale(\${currentScale})\`;
+                });
+
+                mc.on("pinchend", () => {
+                    if(currentScale <= 1.1) img.style.transform = 'scale(1)';
+                });
+            });
+
             function triggerFullScreen() {
                 const activeImg = document.querySelector('.swiper-slide-active img') || document.querySelector('.media-frame');
                 if(activeImg) toggleFullScreen(activeImg);
@@ -171,33 +195,25 @@ const renderMediaView = (fileUrls) => {
 
             function toggleFullScreen(element) {
                 if (!document.fullscreenElement) {
-                    element.requestFullscreen().catch(err => {
-                        // Fallback manual zoom jika fullscreen dilarang browser
-                        element.style.transform = "scale(1.5)";
-                    });
+                    element.requestFullscreen().catch(() => { element.style.transform = "scale(1.5)"; });
                 } else {
                     document.exitFullscreen();
                     element.style.transform = "scale(1)";
                 }
             }
 
-            // Swiper Init
             const swiper = new Swiper('.swiper', {
-                grabCursor: true,
-                centeredSlides: true,
+                grabCursor: true, centeredSlides: true,
                 pagination: { el: '.swiper-pagination', clickable: true },
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-                on: {
-                    slideChange: function () {
-                        const img = this.slides[this.activeIndex].querySelector('img');
-                        if (img) document.getElementById('downloadLink').href = img.src;
-                    }
-                }
+                on: { slideChange: function () {
+                    const img = this.slides[this.activeIndex].querySelector('img');
+                    if (img) document.getElementById('downloadLink').href = img.src;
+                }}
             });
 
-            // Status Offline
             window.addEventListener('offline', () => {
-                qEl.innerText = "Mode Offline Aktif! Kamu tetap bisa melihat tugas ini.";
+                qEl.innerText = "Mode Offline Aktif! Halaman tetap aman.";
                 qEl.style.color = "#ff9800";
             });
         </script>
@@ -206,3 +222,4 @@ const renderMediaView = (fileUrls) => {
 };
 
 module.exports = { renderMediaView };
+        
