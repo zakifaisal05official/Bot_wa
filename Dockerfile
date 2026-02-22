@@ -1,4 +1,3 @@
-
 # Gunakan Node.js versi 20 (LTS Iron) agar kompatibel dengan Baileys terbaru
 FROM node:20-bookworm
 
@@ -12,7 +11,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Sekarang npm install pasti lancar karena git sudah ada
-RUN npm install
+# Menambahkan instalasi axios dan form-data untuk fitur link media
+RUN npm install && npm install axios form-data
 
 COPY . .
 
