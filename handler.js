@@ -1,6 +1,8 @@
 const db = require('./data');
-const { delay } = require("@whiskeysockets/baileys");
+const { delay, downloadMediaMessage } = require("@whiskeysockets/baileys"); // Tambah downloadMediaMessage
 const fs = require('fs');
+const axios = require('axios'); // Tambah axios
+const FormData = require('form-data'); // Tambah FormData
 const { QUIZ_BANK } = require('./quiz'); 
 const { MAPEL_CONFIG, STRUKTUR_JADWAL, LABELS } = require('./pelajaran');
 
@@ -40,7 +42,8 @@ async function handleMessages(sock, m, botConfig, utils) {
         }
 
         const sender = msg.key.remoteJid;
-        const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || "").trim();
+        // Memperluas body agar bisa menangkap caption foto/dokumen
+        const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.documentMessage?.caption || "").trim();
         if (!body) return;
         const textLower = body.toLowerCase();
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
@@ -180,6 +183,31 @@ async function handleMessages(sock, m, botConfig, utils) {
             case '!update':
             case '!update_jadwal':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
+
+                // --- LOGIKA OTOMATIS UPLOAD MEDIA (FOTO/PDF) KE CATBOX ---
+                let mediaLink = "";
+                const isImage = msg.message.imageMessage;
+                const isDoc = msg.message.documentMessage;
+
+                if (isImage || isDoc) {
+                    try {
+                        await sock.sendMessage(sender, { text: "⏳ *Sedang memproses file menjadi link web...*" });
+                        const buffer = await downloadMediaMessage(msg, 'buffer', {});
+                        const fd = new FormData();
+                        fd.append('reqtype', 'fileupload');
+                        fd.append('fileToUpload', buffer, { 
+                            filename: isDoc ? msg.message.documentMessage.fileName : 'file_tugas.jpg' 
+                        });
+                        const upload = await axios.post('https://catbox.moe/user/api.php', fd, {
+                            headers: fd.getHeaders()
+                        });
+                        if (upload.data) mediaLink = upload.data; 
+                    } catch (err) {
+                        console.error("Upload Error:", err);
+                        await sock.sendMessage(sender, { text: "⚠️ Gagal membuat link file, tetap memproses teks..." });
+                    }
+                }
+
                 const daysUpdate = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                 const firstPart = args.slice(0, 3).join(' ').toLowerCase();
                 let dIdx = daysUpdate.findIndex(d => firstPart.includes(d));
@@ -192,11 +220,18 @@ async function handleMessages(sock, m, botConfig, utils) {
                         text: `❌ *MAPEL SALAH/TYPO*\n\nMapel hari *${dayKey.toUpperCase()}* adalah:\n> ${mapelList.join(', ')}` 
                     });
                 }
-                let res = getProcessedTask(dayKey, body);
+
+                // Masukkan Link Web ke deskripsi tugas secara otomatis
+                let bodyToProcess = body;
+                if (mediaLink) {
+                    bodyToProcess += ` \n🔗 Link Web File: ${mediaLink}`;
+                }
+
+                let res = getProcessedTask(dayKey, bodyToProcess);
                 if (res) {
                     db.updateTugas(dayKey, res);
                     if (cmd === '!update') await sendToGroupSafe({ text: `📌 *Daftar tugas/ pr di Minggu ini* 📢\n➝ ${periode}\n\n---------------------------------------------------------------------------------\n\n\n*\`📅 ${dayKey.toUpperCase()}\`* ➝ ${dates[dIdx]}\n\n${res}` });
-                    await sock.sendMessage(sender, { text: `✅ Berhasil Update data ${dayKey}!` });
+                    await sock.sendMessage(sender, { text: `✅ Berhasil Update data ${dayKey}! ${mediaLink ? '(File otomatis jadi link web)' : ''}` });
                 }
                 break;
             case '!grup':
@@ -223,3 +258,4 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
+                           
