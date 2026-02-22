@@ -8,7 +8,6 @@ const { QUIZ_BANK } = require('./quiz');
 const { MAPEL_CONFIG, STRUKTUR_JADWAL, LABELS } = require('./pelajaran');
 
 // Pastikan folder untuk simpan file ada di dalam Volume agar tidak hilang saat restart
-// PENYESUAIAN: Path disesuaikan dengan folder auth_info/public_files di index.js
 const PUBLIC_PATH = '/app/auth_info/public_files';
 if (!fs.existsSync(PUBLIC_PATH)) {
     fs.mkdirSync(PUBLIC_PATH, { recursive: true });
@@ -91,6 +90,8 @@ async function handleMessages(sock, m, botConfig, utils) {
             let currentData = String(allData[dayKey] || ""); 
             let organized = [];
             
+            let existingEntries = currentData.split('\n\n').filter(e => e.trim() !== "");
+
             if (!STRUKTUR_JADWAL[dayKey]) return "";
 
             STRUKTUR_JADWAL[dayKey].forEach(mKey => {
@@ -111,13 +112,20 @@ async function handleMessages(sock, m, botConfig, utils) {
                     if (labelsFound.length === 0) labelsFound.push(LABELS['biasa']);
                     let finalLabel = labelsFound.join(' | ');
 
-                    organized.push(`• ${emojiMapel}\n➝ ${desc}\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`);
+                    let newContent = `• ${emojiMapel}\n➝ ${desc}\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`;
+                    
+                    let existingMatchIndex = existingEntries.findIndex(e => e.includes(emojiMapel));
+                    if (existingMatchIndex !== -1) {
+                        existingEntries[existingMatchIndex] += `\n${newContent}`;
+                    } else {
+                        organized.push(newContent);
+                    }
                 } else {
-                    const exist = currentData.split('\n\n').find(s => s.includes(emojiMapel));
-                    if (exist) organized.push(exist);
+                    const exist = existingEntries.find(s => s.includes(emojiMapel));
+                    if (exist && !organized.includes(exist)) organized.push(exist);
                 }
             });
-            return organized.join('\n\n');
+            return [...new Set([...organized, ...existingEntries])].join('\n\n');
         };
 
         const formatRekap = () => {
@@ -197,17 +205,11 @@ async function handleMessages(sock, m, botConfig, utils) {
                     try {
                         await sock.sendMessage(sender, { text: "⏳ *Sedang memproses file menjadi link web...*" });
                         const buffer = await downloadMediaMessage(msg, 'buffer', {});
-                        
-                        // Buat nama file unik dan simpan lokal
                         const ext = isImage ? '.jpg' : path.extname(isDoc.fileName) || '.pdf';
                         const fileName = `tugas_${Date.now()}${ext}`;
                         const fullPath = path.join(PUBLIC_PATH, fileName);
-                        
                         fs.writeFileSync(fullPath, buffer);
-                        
-                        // Link menggunakan domain Railway sendiri dengan rute /tugas/ agar modular view terpanggil
                         mediaLink = `${MY_DOMAIN}/tugas/${fileName}`;
-
                     } catch (err) {
                         console.error("Upload Error:", err);
                         await sock.sendMessage(sender, { text: "⚠️ Gagal membuat link file, tetap memproses teks..." });
@@ -228,9 +230,7 @@ async function handleMessages(sock, m, botConfig, utils) {
                 }
 
                 let bodyToProcess = body;
-                if (mediaLink) {
-                    bodyToProcess += ` \n🔗 Link Web File: ${mediaLink}`;
-                }
+                if (mediaLink) bodyToProcess += ` \n🔗 Link Web File: ${mediaLink}`;
 
                 let res = getProcessedTask(dayKey, bodyToProcess);
                 if (res) {
@@ -251,11 +251,38 @@ async function handleMessages(sock, m, botConfig, utils) {
             case '!hapus':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
                 const targetHapus = args[1]?.toLowerCase();
-                if (['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'deadline'].includes(targetHapus)) {
-                    db.updateTugas(targetHapus, "");
-                    await sock.sendMessage(sender, { text: `✅ Data *${targetHapus}* berhasil dihapus!` });
+                const targetMapel = args.slice(2).join(' ').toLowerCase();
+
+                if (['senin', 'selasa', 'rabu', 'kamis', 'jumat'].includes(targetHapus)) {
+                    if (!targetMapel) {
+                        await sock.sendMessage(sender, { text: `⚠️ *Format Salah!*\n\nGunakan: *!hapus ${targetHapus} [nama mapel]*\nContoh: *!hapus ${targetHapus} mtk*\n\nAtau ketik *!hapus ${targetHapus} semua*` });
+                        return;
+                    }
+
+                    if (targetMapel === 'semua') {
+                        db.updateTugas(targetHapus, "");
+                        await sock.sendMessage(sender, { text: `✅ Semua data hari *${targetHapus.toUpperCase()}* dihapus!` });
+                        return;
+                    }
+
+                    const mList = STRUKTUR_JADWAL[targetHapus];
+                    const findM = mList.find(m => new RegExp(`\\b${targetMapel}\\b`, 'i').test(m));
+                    if (!findM) {
+                        return await sock.sendMessage(sender, { text: `❌ *MAPEL TIDAK DITEMUKAN*\n\nMapel hari *${targetHapus.toUpperCase()}* adalah:\n> ${mList.join(', ')}` });
+                    }
+
+                    let allD = db.getAll() || {};
+                    let currentD = allD[targetHapus] || "";
+                    const emojiM = MAPEL_CONFIG[findM];
+                    let entries = currentD.split('\n\n');
+                    let filtered = entries.filter(e => !e.includes(emojiM));
+                    db.updateTugas(targetHapus, filtered.join('\n\n'));
+                    await sock.sendMessage(sender, { text: `✅ Berhasil menghapus tugas *${findM}* di hari *${targetHapus}*!` });
+                } else if (targetHapus === 'deadline') {
+                    db.updateTugas('deadline', "");
+                    await sock.sendMessage(sender, { text: `✅ Data *deadline* berhasil dihapus!` });
                 } else {
-                    await sock.sendMessage(sender, { text: "⚠️ Contoh: !hapus deadline" });
+                    await sock.sendMessage(sender, { text: "⚠️ Contoh: !hapus senin mtk" });
                 }
                 break;
         }
@@ -263,4 +290,3 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
-                           
