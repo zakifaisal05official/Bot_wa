@@ -68,17 +68,28 @@ async function initQuizScheduler(sock, botConfig) {
         const menit = now.getMinutes();
         const tgl = now.getDate();
         const bln = now.getMonth() + 1;
+        const thn = now.getFullYear();
         const hariAngka = now.getDay(); 
         const tglID = `${tgl}-${now.getMonth()}`;
 
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
-                let fase = 0;
-                if (tgl >= 18 && tgl <= 21 && bln === 2) fase = 1; 
-                else if (tgl >= 24 && tgl <= 26 && bln === 2) fase = 2; 
-                else if ((tgl >= 27 && bln === 2) || (tgl <= 4 && bln === 3)) fase = 3; 
-                else if (tgl >= 9 && tgl <= 14 && bln === 3) fase = 4; 
-                else if (tgl >= 16 && tgl <= 27 && bln === 3) fase = 5; 
+                let fase;
+                
+                // LOGIKA SINKRONISASI TANGGAL KHUSUS KALENDER 2026
+                if (thn === 2026 && bln === 2 && tgl >= 24 && tgl <= 26) {
+                    fase = "24-26_FEBRUARI"; // Simulasi TKA
+                } 
+                else if (thn === 2026 && bln === 3 && tgl >= 9 && tgl <= 14) {
+                    fase = "9-14_MARET"; // Gladi Bersih TKA
+                }
+                else if (thn === 2026 && bln === 3 && tgl >= 16 && tgl <= 27) {
+                    fase = "16-27_MARET"; // Libur Idulfitri
+                }
+                else {
+                    // JIKA TIDAK ADA TANGGAL KHUSUS, GUNAKAN KUIS HARIAN BIASA (1-5)
+                    fase = hariAngka; 
+                }
 
                 const kuisHariIni = QUIZ_BANK[fase];
                 if (kuisHariIni && kuisHariIni.length > 0) {
@@ -259,4 +270,3 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-        
