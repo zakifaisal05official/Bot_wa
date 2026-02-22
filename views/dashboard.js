@@ -29,34 +29,51 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
             /* --- LOGIN STYLES --- */
             #loginScreen {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: #0b141a; z-index: 10000; display: flex; align-items: center; justify-content: center;
+                background: radial-gradient(circle, #121d23 0%, #0b141a 100%);
+                z-index: 10000; display: flex; align-items: center; justify-content: center;
             }
             .login-box {
-                background: #1f2c33; border: 1px solid #00a884; border-radius: 35px;
-                padding: 40px; width: 90%; max-width: 400px; text-align: center;
-                box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;
+                background: #1f2c33; border: 1px solid #2a3942; border-radius: 40px;
+                padding: 45px 35px; width: 90%; max-width: 420px; text-align: center;
+                box-shadow: 0 30px 60px rgba(0,0,0,0.7); position: relative;
             }
-            .login-profile-wrapper { position: relative; width: 100px; height: 100px; margin: 0 auto 20px; }
-            .login-profile-img { width: 100%; height: 100%; border-radius: 50%; border: 3px solid #00a884; object-fit: cover; }
+            .login-avatar-area {
+                width: 120px; height: 120px; margin: 0 auto 25px;
+                position: relative; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .login-profile-img { 
+                width: 100%; height: 100%; border-radius: 50%; 
+                border: 4px solid #00a884; object-fit: cover;
+                box-shadow: 0 0 20px rgba(0, 168, 132, 0.4);
+            }
             .login-emoji-state { 
-                position: absolute; bottom: 0; right: 0; background: #1f2c33; 
-                border-radius: 50%; width: 35px; height: 35px; display: flex; 
-                align-items: center; justify-content: center; font-size: 20px; border: 2px solid #00a884;
+                position: absolute; top: -10px; right: -10px; background: #1f2c33; 
+                border-radius: 50%; width: 45px; height: 45px; display: flex; 
+                align-items: center; justify-content: center; font-size: 24px; 
+                border: 3px solid #00a884; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             }
 
             .login-input {
-                background: #2a3942; border: 1px solid #3b4a54; color: white;
-                border-radius: 15px; padding: 12px 20px; width: 100%; margin-bottom: 15px; outline: none;
+                background: rgba(42, 57, 66, 0.5); border: 1px solid #3b4a54; color: white;
+                border-radius: 18px; padding: 14px 20px; width: 100%; margin-bottom: 18px; 
+                outline: none; transition: 0.3s; text-align: center;
             }
+            .login-input:focus { border-color: #00a884; background: #2a3942; }
+
             .login-btn {
                 background: #00a884; color: white; border: none; width: 100%;
-                padding: 12px; border-radius: 15px; font-weight: 800; text-transform: uppercase; transition: 0.3s;
+                padding: 14px; border-radius: 18px; font-weight: 800; 
+                text-transform: uppercase; letter-spacing: 2px;
+                transition: 0.4s; box-shadow: 0 10px 20px rgba(0, 168, 132, 0.3);
+                position: relative; overflow: hidden;
             }
-            .login-btn:disabled { background: #3b4a54; color: #8696a0; cursor: not-allowed; }
-            
-            #loginStatus { font-weight: 900; font-size: 1rem; margin-bottom: 15px; display: none; }
-            .status-error { color: #ff5252; }
-            .status-success { color: #25d366; }
+            .login-btn:hover { background: #06cf9c; transform: translateY(-2px); box-shadow: 0 15px 25px rgba(0, 168, 132, 0.4); }
+            .login-btn:active { transform: translateY(0); }
+            .login-btn:disabled { background: #3b4a54; color: #8696a0; cursor: not-allowed; box-shadow: none; }
+
+            #loginStatus { font-weight: 900; font-size: 1.1rem; margin-bottom: 20px; display: none; }
+            .status-error { color: #ff5252; text-shadow: 0 0 10px rgba(255, 82, 82, 0.3); }
+            .status-success { color: #25d366; text-shadow: 0 0 10px rgba(37, 211, 102, 0.3); }
 
             /* --- DASHBOARD STYLES --- */
             .card-custom { background: #1f2c33; border: 1px solid #2a3942; border-radius: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
@@ -68,7 +85,6 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                 80% { transform: scale(1.1) rotate(8deg); }
                 100% { transform: scale(1) rotate(0deg); }
             }
-            .profile-section { text-align: center; margin-bottom: 20px; }
             .mood-avatar { 
                 font-size: 55px; width: 100px; height: 100px; 
                 background: rgba(0, 168, 132, 0.1); border: 3px solid #00a884; border-radius: 50%;
@@ -76,17 +92,9 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                 animation: moodSwing 5s infinite ease-in-out;
             }
             .quote-container { background: rgba(0, 168, 132, 0.08); border-left: 4px solid #00a884; padding: 15px; margin: 20px 0; border-radius: 15px; }
-            .quote-text { font-style: italic; font-size: 0.85rem; color: #d1d7db; line-height: 1.5; }
-            .btn-action-area { display: flex; justify-content: center; margin: 15px 0; }
-            .btn-neon-pill { background: rgba(0, 168, 132, 0.05); border: 2px solid #00a884; color: #00a884; padding: 8px 30px; border-radius: 50px; font-weight: 800; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; }
-            #layoutMenu { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 0; opacity: 0; overflow: hidden; transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-            #layoutMenu.show { max-height: 1000px; opacity: 1; margin-top: 20px; }
-            .menu-card { background: #26353d; border: 1px solid #3b4a54; border-radius: 18px; padding: 12px; text-align: center; }
-            .btn-toggle { border: none; width: 100%; padding: 6px; border-radius: 12px; font-weight: 800; font-size: 0.75rem; }
-            .btn-on { background: #25d366; color: white; }
-            .btn-off { background: #3b4a54; color: #aebac1; }
+            .btn-neon-pill { background: rgba(0, 168, 132, 0.05); border: 2px solid #00a884; color: #00a884; padding: 8px 30px; border-radius: 50px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
             .stats-card { background: #2a3942; border-radius: 18px; padding: 12px; text-align: center; }
-            .log-box { background: #000; color: #00ff41 !important; border-radius: 18px; height: 180px; overflow-y: auto; padding: 15px; font-family: monospace; font-size: 0.75rem; }
+            .log-box { background: #000; color: #00ff41 !important; border-radius: 18px; height: 180px; overflow-y: auto; padding: 15px; font-family: monospace; }
         </style>
     `;
 
@@ -97,45 +105,49 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                 <body class="py-4">
                     <div id="loginScreen">
                         <div class="login-box animate__animated animate__zoomIn">
-                            <div class="login-profile-wrapper">
-                                <img src="${profilePic || 'https://via.placeholder.com/100'}" class="login-profile-img">
-                                <div id="emojiState" class="login-emoji-state">😕</div>
+                            <div id="avatarArea" class="login-avatar-area">
+                                <img src="${profilePic || 'https://via.placeholder.com/150'}" class="login-profile-img">
+                                <div id="emojiState" class="login-emoji-state">😉</div>
                             </div>
-                            <h4 id="loginTitle" style="color:#00a884; font-weight:800;">SYNECTIC LOGIN</h4>
-                            <div id="loginStatus"></div>
+                            <h3 id="loginTitle" style="color:#fff; font-weight:900; letter-spacing:3px; margin-bottom:20px;">ACCESS <span style="color:#00a884">CORE</span></h3>
+                            
+                            <div id="loginStatus" class="animate__animated"></div>
+
                             <div id="loginFields">
-                                <input type="text" id="username" class="login-input" placeholder="User">
-                                <input type="password" id="password" class="login-input" placeholder="Password">
-                                <button id="submitBtn" onclick="attemptLogin()" class="login-btn">Initialize Core</button>
+                                <input type="text" id="username" class="login-input" placeholder="USERNAME">
+                                <input type="password" id="password" class="login-input" placeholder="PASSWORD">
+                                <button id="submitBtn" onclick="attemptLogin()" class="login-btn">
+                                    <span id="btnText">INITIALIZE SYSTEM</span>
+                                </button>
                             </div>
                         </div>
                     </div>
 
                     <div id="mainContent" class="container" style="max-width: 480px; display:none;">
                         <div class="card-custom p-4">
-                            <div class="profile-section">
+                            <div class="text-center mb-4">
                                 <div class="mood-avatar">${randomMood}</div>
-                                <h4 style="color:#00a884; margin:0; font-weight:800;">SYNECTIC <span style="color:#fff">CORE</span></h4>
+                                <h4 style="color:#00a884; margin:0; font-weight:800; letter-spacing:2px;">SYNECTIC <span style="color:#fff">CORE</span></h4>
                                 <div class="badge bg-success mt-2">● ENGINE ACTIVE</div>
                             </div>
                             <div class="quote-container">
-                                <span class="quote-text" id="quoteText">"${randomQuote}"</span>
+                                <span class="quote-text" id="quoteText" style="font-style:italic; font-size:0.85rem;">"${randomQuote}"</span>
                             </div>
-                            <div class="btn-action-area">
+                            <div class="text-center mb-4">
                                 <div id="mainBtn" class="btn-neon-pill" onclick="toggleMenu()">⚙️ SYSTEM CONFIG</div>
                             </div>
-                            <div id="layoutMenu">
-                                <div class="menu-card"><span>Quiz</span><a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a></div>
-                                <div class="menu-card"><span>Feedback</span><a href="/toggle/smartFeedback"><button class="btn-toggle ${botConfig.smartFeedback ? 'btn-on' : 'btn-off'}">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a></div>
+                            <div id="layoutMenu" style="display:none;" class="row g-2 mb-3">
+                                <div class="col-6"><div class="stats-card"><span>Quiz Bot</span><br><button class="btn btn-sm ${botConfig.quiz ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.quiz ? 'ON' : 'OFF'}</button></div></div>
+                                <div class="col-6"><div class="stats-card"><span>Feedback</span><br><button class="btn btn-sm ${botConfig.smartFeedback ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></div></div>
                             </div>
-                            <div class="row g-2 mt-3 text-center">
-                                <div class="col-3"><div class="stats-card"><span style="font-size:0.6rem">RAM</span><br>${usedRAM}G</div></div>
-                                <div class="col-3"><div class="stats-card"><span style="font-size:0.6rem">UPTIME</span><br>${uptime}H</div></div>
-                                <div class="col-3"><div class="stats-card"><span style="font-size:0.6rem">CHAT</span><br>${stats.pesanMasuk}</div></div>
-                                <div class="col-3"><div class="stats-card"><span style="font-size:0.6rem">LOGS</span><br>${stats.totalLog}</div></div>
+                            <div class="row g-2 text-center mb-3">
+                                <div class="col-3"><div class="stats-card"><small>RAM</small><br><b>${usedRAM}G</b></div></div>
+                                <div class="col-3"><div class="stats-card"><small>UPTIME</small><br><b>${uptime}H</b></div></div>
+                                <div class="col-3"><div class="stats-card"><small>CHAT</small><br><b>${stats.pesanMasuk}</b></div></div>
+                                <div class="col-3"><div class="stats-card"><small>LOGS</small><br><b>${stats.totalLog}</b></div></div>
                             </div>
-                            <div class="log-box mt-3" id="logBox">${logs.join('<br>')}</div>
-                            <div class="footer-tag mt-3 text-center small text-muted">CORE OPERATED BY ZAKI</div>
+                            <div class="log-box" id="logBox">${logs.join('<br>')}</div>
+                            <div class="text-center mt-4 small text-muted">CORE OPERATED BY <span class="text-success fw-bold">ZAKI</span></div>
                         </div>
                     </div>
 
@@ -158,18 +170,20 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             const status = document.getElementById('loginStatus');
                             const fields = document.getElementById('loginFields');
                             const emoji = document.getElementById('emojiState');
-                            const btn = document.getElementById('submitBtn');
+                            const avatar = document.getElementById('avatarArea');
                             const box = document.querySelector('.login-box');
 
                             if(u === "Zaki" && p === "ZAKI_DEVELOPER_BOT") {
                                 fields.style.display = "none";
                                 document.getElementById('loginTitle').style.display = "none";
                                 emoji.innerText = "😉";
-                                status.innerHTML = "LOGIN SUKSES! <br> MENGHUBUNGKAN KE INTI...";
-                                status.className = "status-success";
+                                avatar.style.transform = "scale(1.2)";
+                                
+                                status.innerHTML = "ACCESS GRANTED!<br><small>Welcome back, Zaki</small>";
+                                status.className = "status-success animate__animated animate__pulse";
                                 status.style.display = "block";
                                 
-                                speak("Login sukses. Silakan masuk Zaki.");
+                                speak("Akses diterima. Silakan masuk Zaki.");
 
                                 setTimeout(() => {
                                     box.classList.add('animate__animated', 'animate__zoomOut');
@@ -180,7 +194,7 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                         main.classList.add('animate__animated', 'animate__fadeInUp');
                                         speak("Sistem Synectic Core aktif. " + document.getElementById('quoteText').innerText);
                                     }, 500);
-                                }, 1500);
+                                }, 1800);
                             } else {
                                 failedAttempts++;
                                 emoji.innerText = "😡";
@@ -190,8 +204,8 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                 if(failedAttempts >= 5) {
                                     startCooldown();
                                 } else {
-                                    status.innerHTML = "⚠️ KAMU BUKAN ZAKI! ("+failedAttempts+"/5)";
-                                    status.className = "status-error";
+                                    status.innerHTML = "⚠️ KAMU BUKAN ZAKI!<br><small>("+failedAttempts+"/5 attempts)</small>";
+                                    status.className = "status-error animate__animated animate__shakeX";
                                     status.style.display = "block";
                                     speak("Akses ditolak. Kamu bukan Zaki.");
                                 }
@@ -207,10 +221,10 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
 
                             btn.disabled = true;
                             emoji.innerText = "🤫";
-                            speak("Terlalu banyak percobaan. Sistem dikunci 20 detik.");
+                            speak("Sistem dikunci sementara selama 20 detik.");
 
                             const timer = setInterval(() => {
-                                status.innerHTML = "CORE TERKUNCI! <br> TUNGGU " + timeLeft + " DETIK";
+                                status.innerHTML = "CORE LOCKED!<br><small>Cooldown: " + timeLeft + "s</small>";
                                 status.className = "status-error";
                                 status.style.display = "block";
                                 timeLeft--;
@@ -222,25 +236,23 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                     btn.disabled = false;
                                     status.style.display = "none";
                                     emoji.innerText = "😕";
-                                    speak("Sistem dibuka kembali.");
+                                    speak("Sistem dibuka kembali. Silakan coba lagi.");
                                 }
                             }, 1000);
                         }
 
                         function toggleMenu() {
-                            document.getElementById('layoutMenu').classList.toggle('show');
+                            const m = document.getElementById('layoutMenu');
+                            m.style.display = m.style.display === 'none' ? 'flex' : 'none';
                         }
                     </script>
                 </body>
             </html>
         `;
     }
-
-    if (qrCodeData) {
-        return `<html><head>${commonHead}</head><body class="vh-100 d-flex align-items-center justify-content-center"><div class="card-custom p-5 text-center"><h5>SCAN WHATSAPP</h5><img src="${qrCodeData}" class="img-fluid"></div></body></html>`;
-    }
-
-    return `<html><head>${commonHead}</head><body class="vh-100 d-flex align-items-center justify-content-center"><div class="text-center"><div class="spinner-border text-success"></div><div class="mt-2">INITIALIZING...</div></div></body></html>`;
+    // QR & Initializing remains basic logic
+    return `<html><head>${commonHead}</head><body class="vh-100 d-flex align-items-center justify-content-center"><div class="text-center"><div class="spinner-border text-success"></div><div class="mt-3">INITIALIZING CORE...</div></div></body></html>`;
 };
 
 module.exports = { renderDashboard };
+                                             
