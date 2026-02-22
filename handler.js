@@ -184,7 +184,7 @@ async function handleMessages(sock, m, botConfig, utils) {
             case '!update_jadwal':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
 
-                // --- LOGIKA OTOMATIS UPLOAD MEDIA (FOTO/PDF) KE CATBOX ---
+                // --- LOGIKA OTOMATIS UPLOAD MEDIA (FOTO/PDF) ---
                 let mediaLink = "";
                 const isImage = msg.message.imageMessage;
                 const isDoc = msg.message.documentMessage;
@@ -194,14 +194,19 @@ async function handleMessages(sock, m, botConfig, utils) {
                         await sock.sendMessage(sender, { text: "⏳ *Sedang memproses file menjadi link web...*" });
                         const buffer = await downloadMediaMessage(msg, 'buffer', {});
                         const fd = new FormData();
-                        fd.append('reqtype', 'fileupload');
-                        fd.append('fileToUpload', buffer, { 
-                            filename: isDoc ? msg.message.documentMessage.fileName : 'file_tugas.jpg' 
-                        });
-                        const upload = await axios.post('https://catbox.moe/user/api.php', fd, {
-                            headers: fd.getHeaders()
-                        });
-                        if (upload.data) mediaLink = upload.data; 
+                        
+                        if (isImage) {
+                            // Gunakan Telegra.ph jika gambar (Lebih Cepat)
+                            fd.append('file', buffer, { filename: 'file.jpg' });
+                            const upload = await axios.post('https://telegra.ph/upload', fd, { headers: fd.getHeaders() });
+                            if (upload.data && upload.data[0]) mediaLink = "https://telegra.ph" + upload.data[0].src;
+                        } else {
+                            // Gunakan Catbox jika dokumen/PDF
+                            fd.append('reqtype', 'fileupload');
+                            fd.append('fileToUpload', buffer, { filename: msg.message.documentMessage.fileName || 'file.pdf' });
+                            const upload = await axios.post('https://catbox.moe/user/api.php', fd, { headers: fd.getHeaders() });
+                            if (upload.data) mediaLink = upload.data;
+                        }
                     } catch (err) {
                         console.error("Upload Error:", err);
                         await sock.sendMessage(sender, { text: "⚠️ Gagal membuat link file, tetap memproses teks..." });
@@ -258,4 +263,4 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
-                           
+                        
