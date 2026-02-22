@@ -1,13 +1,21 @@
 const db = require('./data');
 const { delay, downloadMediaMessage } = require("@whiskeysockets/baileys"); 
 const fs = require('fs');
+const path = require('path');
 const axios = require('axios'); 
 const FormData = require('form-data'); 
 const { QUIZ_BANK } = require('./quiz'); 
 const { MAPEL_CONFIG, STRUKTUR_JADWAL, LABELS } = require('./pelajaran');
 
+// Pastikan folder untuk simpan file ada di dalam Volume agar tidak hilang saat restart
+const PUBLIC_PATH = '/app/auth_info/public_files';
+if (!fs.existsSync(PUBLIC_PATH)) {
+    fs.mkdirSync(PUBLIC_PATH, { recursive: true });
+}
+
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155' , '241849843351688' , '254326740103190' , '8474121494667']; 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
+const MY_DOMAIN = 'https://botwa-production-d0da.up.railway.app';
 
 function getClosestCommand(cmd) {
     const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim', '!data', '!cek_db'];
@@ -188,27 +196,17 @@ async function handleMessages(sock, m, botConfig, utils) {
                     try {
                         await sock.sendMessage(sender, { text: "⏳ *Sedang memproses file menjadi link web...*" });
                         const buffer = await downloadMediaMessage(msg, 'buffer', {});
-                        const fd = new FormData();
                         
-                        // Konfigurasi Header agar tidak mudah di-block server upload
-                        const axiosConfig = {
-                            headers: {
-                                ...fd.getHeaders(),
-                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-                            },
-                            timeout: 30000 // Tunggu maksimal 30 detik
-                        };
+                        // Buat nama file unik dan simpan lokal
+                        const ext = isImage ? '.jpg' : path.extname(isDoc.fileName) || '.pdf';
+                        const fileName = `tugas_${Date.now()}${ext}`;
+                        const fullPath = path.join(PUBLIC_PATH, fileName);
+                        
+                        fs.writeFileSync(fullPath, buffer);
+                        
+                        // Link menggunakan domain Railway sendiri
+                        mediaLink = `${MY_DOMAIN}/tugas/${fileName}`;
 
-                        if (isImage) {
-                            fd.append('file', buffer, { filename: 'file.jpg' });
-                            const upload = await axios.post('https://telegra.ph/upload', fd, axiosConfig);
-                            if (upload.data && upload.data[0]) mediaLink = "https://telegra.ph" + upload.data[0].src;
-                        } else {
-                            fd.append('reqtype', 'fileupload');
-                            fd.append('fileToUpload', buffer, { filename: msg.message.documentMessage.fileName || 'file.pdf' });
-                            const upload = await axios.post('https://catbox.moe/user/api.php', fd, axiosConfig);
-                            if (upload.data) mediaLink = upload.data;
-                        }
                     } catch (err) {
                         console.error("Upload Error:", err);
                         await sock.sendMessage(sender, { text: "⚠️ Gagal membuat link file, tetap memproses teks..." });
@@ -264,4 +262,4 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
-            
+                
