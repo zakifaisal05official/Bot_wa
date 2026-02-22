@@ -5,7 +5,6 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
     const usedRAM = ((os.totalmem() - os.freemem()) / (1024 ** 3)).toFixed(2);
     const uptime = (os.uptime() / 3600).toFixed(1);
 
-    // Koleksi 8 Emoji Mood (Hanya wajah)
     const moodEmojis = ["😅", "🤣", "😁", "😕", "🤫", "😆", "😗", "😂"];
     const randomMood = moodEmojis[Math.floor(Math.random() * moodEmojis.length)];
 
@@ -26,9 +25,36 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
         <style>
             body { background: #0b141a; color: #e9edef; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+            
+            /* --- LOGIN STYLES --- */
+            #loginScreen {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: #0b141a; z-index: 10000; display: flex; align-items: center; justify-content: center;
+            }
+            .login-box {
+                background: #1f2c33; border: 1px solid #00a884; border-radius: 35px;
+                padding: 40px; width: 90%; max-width: 400px; text-align: center;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            }
+            .login-profile-img {
+                width: 100px; height: 100px; border-radius: 50%; border: 3px solid #00a884;
+                margin: 0 auto 20px; object-fit: cover; display: block;
+            }
+            .login-input {
+                background: #2a3942; border: 1px solid #3b4a54; color: white;
+                border-radius: 15px; padding: 12px 20px; width: 100%; margin-bottom: 15px; outline: none;
+            }
+            .login-btn {
+                background: #00a884; color: white; border: none; width: 100%;
+                padding: 12px; border-radius: 15px; font-weight: 800; text-transform: uppercase;
+            }
+            #loginStatus { font-weight: bold; font-size: 0.85rem; margin-bottom: 15px; display: none; }
+            .status-error { color: #ff5252; }
+            .status-success { color: #25d366; }
+
+            /* --- DASHBOARD STYLES --- */
             .card-custom { background: #1f2c33; border: 1px solid #2a3942; border-radius: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
             
-            /* Animasi Emoji Mood (Gerak Lirik & Ketawa) */
             @keyframes moodSwing {
                 0% { transform: scale(1) rotate(0deg); }
                 20% { transform: scale(1.1) rotate(-8deg); }
@@ -108,14 +134,27 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
         </style>
     `;
 
+    const authHTML = `
+        <div id="loginScreen">
+            <div class="login-box animate__animated animate__zoomIn">
+                <img src="${profilePic || 'https://via.placeholder.com/100'}" class="login-profile-img">
+                <h4 class="mb-4" style="color:#00a884; font-weight:800;">SYNECTIC LOGIN</h4>
+                <div id="loginStatus"></div>
+                <input type="text" id="username" class="login-input" placeholder="User">
+                <input type="password" id="password" class="login-input" placeholder="Password">
+                <button onclick="attemptLogin()" class="login-btn">Initialize Core</button>
+            </div>
+        </div>
+    `;
+
     if (isConnected) {
         return `
             <html>
                 <head><title>Synectic Core</title>${commonHead}</head>
                 <body class="py-4">
-                    <div class="container animate__animated animate__fadeIn" style="max-width: 480px;">
+                    ${authHTML}
+                    <div id="mainContent" class="container animate__animated animate__fadeIn" style="max-width: 480px; display:none;">
                         <div class="card-custom p-4">
-                            
                             <div class="profile-section">
                                 <div class="mood-avatar" onclick="location.reload()">
                                     ${randomMood}
@@ -165,34 +204,44 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                     <script>
                         let voiceActivated = false;
 
-                        function speak() {
-                            // Selalu reset status suara agar tidak macet
+                        function speak(msg) {
                             window.speechSynthesis.cancel();
-                            
-                            const text = document.getElementById('quoteText').innerText;
-                            const utterance = new SpeechSynthesisUtterance("Sistem Synectic Core aktif. Pesan untuk Zaki hari ini. " + text);
+                            const utterance = new SpeechSynthesisUtterance(msg);
                             utterance.lang = 'id-ID';
                             utterance.rate = 1.0;
-                            utterance.volume = 1;
-
-                            // Atasi bug Chrome yang kadang pause sendiri
                             window.speechSynthesis.speak(utterance);
-                            
-                            // Re-trigger jika browser mencoba mematikan suara di tengah jalan
-                            const keepAlive = setInterval(() => {
-                                if (!window.speechSynthesis.speaking) {
-                                    clearInterval(keepAlive);
-                                } else {
-                                    window.speechSynthesis.resume();
-                                }
-                            }, 500);
-
-                            voiceActivated = true;
                         }
 
-                        // Trigger suara begitu user menyentuh layar dashboard
-                        document.addEventListener('click', () => { if(!voiceActivated) speak(); });
-                        document.addEventListener('touchstart', () => { if(!voiceActivated) speak(); });
+                        function attemptLogin() {
+                            const u = document.getElementById('username').value;
+                            const p = document.getElementById('password').value;
+                            const status = document.getElementById('loginStatus');
+                            const box = document.querySelector('.login-box');
+
+                            if(u === "Zaki" && p === "ZAKI_DEVELOPER_BOT") {
+                                status.innerHTML = "LOGIN SUKSES! MENGHUBUNGKAN...";
+                                status.className = "status-success";
+                                status.style.display = "block";
+                                
+                                speak("Akses diterima. Silakan masuk Zaki.");
+
+                                setTimeout(() => {
+                                    document.getElementById('loginScreen').classList.add('animate__animated', 'animate__fadeOut');
+                                    setTimeout(() => {
+                                        document.getElementById('loginScreen').style.display = "none";
+                                        document.getElementById('mainContent').style.display = "block";
+                                        const quote = document.getElementById('quoteText').innerText;
+                                        speak("Sistem Synectic Core aktif. Pesan untuk Zaki hari ini: " + quote);
+                                    }, 500);
+                                }, 1500);
+                            } else {
+                                status.innerHTML = "KAMU BUKAN ZAKI!";
+                                status.className = "status-error";
+                                status.style.display = "block";
+                                box.classList.add('animate__shakeX');
+                                setTimeout(() => box.classList.remove('animate__shakeX'), 500);
+                            }
+                        }
 
                         function toggleMenu() {
                             const m = document.getElementById('layoutMenu');
@@ -201,7 +250,7 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             b.classList.toggle('active');
                         }
                         const bBox = document.getElementById('logBox');
-                        bBox.scrollTop = bBox.scrollHeight;
+                        if(bBox) bBox.scrollTop = bBox.scrollHeight;
                     </script>
                 </body>
             </html>
@@ -216,4 +265,4 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
 };
 
 module.exports = { renderDashboard };
-                                             
+        
