@@ -88,9 +88,8 @@ async function handleMessages(sock, m, botConfig, utils) {
             const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
             let allData = db.getAll() || {};
             let currentData = String(allData[dayKey] || ""); 
-            let organized = [];
             
-            let existingEntries = currentData.split('\n\n').filter(e => e.trim() !== "");
+            let existingEntries = currentData.split(/\n(?=•)/g).filter(e => e.trim() !== "");
 
             if (!STRUKTUR_JADWAL[dayKey]) return "";
 
@@ -112,20 +111,29 @@ async function handleMessages(sock, m, botConfig, utils) {
                     if (labelsFound.length === 0) labelsFound.push(LABELS['biasa']);
                     let finalLabel = labelsFound.join(' | ');
 
-                    let newContent = `• ${emojiMapel}\n➝ ${desc}\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`;
-                    
-                    let existingMatchIndex = existingEntries.findIndex(e => e.includes(emojiMapel));
-                    if (existingMatchIndex !== -1) {
-                        existingEntries[existingMatchIndex] += `\n${newContent}`;
+                    let existingIndex = existingEntries.findIndex(e => e.includes(emojiMapel));
+
+                    if (existingIndex !== -1) {
+                        let lines = existingEntries[existingIndex].split('\n');
+                        let separatorIdx = lines.findIndex(l => l.includes('------'));
+                        let labelLineIdx = lines.findIndex(l => l.includes('--}'));
+                        
+                        if (!existingEntries[existingIndex].includes(desc)) {
+                            if (separatorIdx !== -1) {
+                                lines.splice(separatorIdx, 0, `➝ ${desc}`);
+                                existingEntries[existingIndex] = lines.join('\n');
+                            } else if (labelLineIdx !== -1) {
+                                lines.splice(labelLineIdx, 0, `➝ ${desc}`, `------`);
+                                existingEntries[existingIndex] = lines.join('\n');
+                            }
+                        }
                     } else {
-                        organized.push(newContent);
+                        let newContent = `• ${emojiMapel}\n➝ ${desc}\n------\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`;
+                        existingEntries.push(newContent);
                     }
-                } else {
-                    const exist = existingEntries.find(s => s.includes(emojiMapel));
-                    if (exist && !organized.includes(exist)) organized.push(exist);
                 }
             });
-            return [...new Set([...organized, ...existingEntries])].join('\n\n');
+            return existingEntries.join('\n\n').trim();
         };
 
         const formatRekap = () => {
@@ -235,7 +243,10 @@ async function handleMessages(sock, m, botConfig, utils) {
                 let res = getProcessedTask(dayKey, bodyToProcess);
                 if (res) {
                     db.updateTugas(dayKey, res);
-                    if (cmd === '!update') await sendToGroupSafe({ text: `📌 *Daftar tugas/ pr di Minggu ini* 📢\n➝ ${periode}\n\n---------------------------------------------------------------------------------\n\n\n*\`📅 ${dayKey.toUpperCase()}\`* ➝ ${dates[dIdx]}\n\n${res}` });
+                    // PEMBEDA: Hanya !update yang mengirim pesan ke grup
+                    if (cmd === '!update') {
+                        await sendToGroupSafe({ text: `📌 *Daftar tugas/ pr di Minggu ini* 📢\n➝ ${periode}\n\n---------------------------------------------------------------------------------\n\n\n*\`📅 ${dayKey.toUpperCase()}\`* ➝ ${dates[dIdx]}\n\n${res}` });
+                    }
                     await sock.sendMessage(sender, { text: `✅ Berhasil Update data ${dayKey}! ${mediaLink ? '(File otomatis jadi link web)' : ''}` });
                 }
                 break;
