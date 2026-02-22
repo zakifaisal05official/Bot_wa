@@ -8,6 +8,7 @@ const { QUIZ_BANK } = require('./quiz');
 const { MAPEL_CONFIG, STRUKTUR_JADWAL, LABELS } = require('./pelajaran');
 
 // Pastikan folder untuk simpan file ada di dalam Volume agar tidak hilang saat restart
+// PENYESUAIAN: Path disesuaikan dengan folder auth_info/public_files di index.js
 const PUBLIC_PATH = '/app/auth_info/public_files';
 if (!fs.existsSync(PUBLIC_PATH)) {
     fs.mkdirSync(PUBLIC_PATH, { recursive: true });
@@ -204,7 +205,7 @@ async function handleMessages(sock, m, botConfig, utils) {
                         
                         fs.writeFileSync(fullPath, buffer);
                         
-                        // Link menggunakan domain Railway sendiri
+                        // Link menggunakan domain Railway sendiri dengan rute /tugas/ agar modular view terpanggil
                         mediaLink = `${MY_DOMAIN}/tugas/${fileName}`;
 
                     } catch (err) {
@@ -262,4 +263,4 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
-                
+                           
