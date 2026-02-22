@@ -71,9 +71,11 @@ const renderMediaView = (fileUrls) => {
 
             .btn-group-custom { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 15px; }
             
+            /* Perbaikan: Default disembunyikan agar saat load/refresh offline tidak muncul */
             .btn-download { 
+                display: none; 
                 background: linear-gradient(135deg, var(--primary), #06cf9c); color: white; border: none; padding: 14px 35px; border-radius: 50px; 
-                font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+                font-weight: 800; text-decoration: none; align-items: center; gap: 10px;
                 transition: 0.4s; box-shadow: 0 8px 20px rgba(0,168,132,0.3); animation: pulseCustom 2s infinite;
             }
             
@@ -163,18 +165,21 @@ const renderMediaView = (fileUrls) => {
             // Logic Sembunyikan/Munculkan Tombol Download
             function updateOnlineStatus() {
                 const dlBtn = document.getElementById('downloadLink');
+                const qEl = document.getElementById('randomQuote');
                 if (navigator.onLine) {
                     dlBtn.style.display = 'inline-flex';
                 } else {
                     dlBtn.style.display = 'none';
-                    qEl.innerText = "Mode Offline Aktif! Tombol download disembunyikan.";
-                    qEl.style.color = "#ff9800";
+                    if(qEl) {
+                        qEl.innerText = "Mode Offline Aktif! Tombol download disembunyikan.";
+                        qEl.style.color = "#ff9800";
+                    }
                 }
             }
 
             window.addEventListener('load', () => {
                 registerOfflineWorker();
-                updateOnlineStatus();
+                updateOnlineStatus(); // Cek langsung saat load
                 setTimeout(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
                 }, 1200);
@@ -251,3 +256,4 @@ const renderMediaView = (fileUrls) => {
 };
 
 module.exports = { renderMediaView };
+                    
