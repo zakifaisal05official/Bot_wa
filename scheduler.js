@@ -37,7 +37,7 @@ async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
     let lastSentSahur = "";
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD
+        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.sahur === false) return;
 
         const now = getWIBDate();
@@ -60,7 +60,7 @@ async function initQuizScheduler(sock, botConfig) {
     console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
     let lastSentDate = ""; 
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD
+        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.quiz === false) return;
 
         const now = getWIBDate();
@@ -75,20 +75,15 @@ async function initQuizScheduler(sock, botConfig) {
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
                 let fase;
-                
-                // LOGIKA SINKRONISASI TANGGAL KHUSUS KALENDER 2026
-                if (thn === 2026 && bln === 2 && tgl >= 24 && tgl <= 26) {
-                    fase = "24-26_FEBRUARI"; // Simulasi TKA
-                } 
-                else if (thn === 2026 && bln === 3 && tgl >= 9 && tgl <= 14) {
-                    fase = "9-14_MARET"; // Gladi Bersih TKA
-                }
-                else if (thn === 2026 && bln === 3 && tgl >= 16 && tgl <= 27) {
-                    fase = "16-27_MARET"; // Libur Idulfitri
-                }
-                else {
-                    // JIKA TIDAK ADA TANGGAL KHUSUS, GUNAKAN KUIS HARIAN BIASA (1-5)
-                    fase = hariAngka; 
+                // Logika Sinkronisasi Tanggal Khusus vs Harian (1-5)
+                if (thn === 2026 && tgl >= 24 && tgl <= 26 && bln === 2) {
+                    fase = "24-26_FEBRUARI";
+                } else if (thn === 2026 && tgl >= 9 && tgl <= 14 && bln === 3) {
+                    fase = "9-14_MARET";
+                } else if (thn === 2026 && tgl >= 16 && tgl <= 27 && bln === 3) {
+                    fase = "16-27_MARET";
+                } else {
+                    fase = hariAngka; // Gunakan 1-5 untuk Senin-Jumat
                 }
 
                 const kuisHariIni = QUIZ_BANK[fase];
@@ -119,7 +114,7 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
     console.log("✅ Scheduler Smart Feedback Aktif");
     let lastProcessedId = "";
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD
+        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.smartFeedback === false) return;
 
         let kuisAktif = {};
@@ -168,7 +163,7 @@ async function initJadwalBesokScheduler(sock, botConfig) {
     console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
     let lastSentJadwal = "";
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD
+        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.jadwalBesok === false) return;
 
         const now = getWIBDate();
@@ -187,7 +182,7 @@ async function initListPrMingguanScheduler(sock, botConfig) {
     console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
     let lastSentList = "";
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD
+        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.prMingguan === false) return;
 
         const now = getWIBDate();
@@ -270,3 +265,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
+    
