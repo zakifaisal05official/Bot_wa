@@ -1,7 +1,7 @@
 {
   "name": "wa-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "WhatsApp Bot dengan Asisten AI",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
