@@ -57,12 +57,11 @@ async function handleMessages(sock, m, botConfig, utils) {
         const nonAdminMsg = "🚫 *AKSES DITOLAK*\n\nMaaf, fitur ini hanya bisa diakses oleh *Pengurus*. Kamu adalah pengguna biasa, silakan gunakan fitur pengguna seperti *!pr* atau *!deadline* saja ya! 😊";
 
         // --- TAMBAHAN: Logika AI Asisten ---
-        // Menangkap kata "asisten" (huruf besar/kecil sama saja)
         if (textLower.includes('asisten')) {
             await sock.sendPresenceUpdate('composing', sender);
             const response = await askAI(body);
             await sock.sendMessage(sender, { text: response }, { quoted: msg });
-            return; // Berhenti di sini agar tidak memicu error perintah lain
+            return; 
         }
 
         if (body === '!reset-bot') {
@@ -156,7 +155,9 @@ async function handleMessages(sock, m, botConfig, utils) {
                 const dayLabelsSmall = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
                 rekap += `📅 *${dayLabelsFull[i]}* (${dates[i]})\n`;
                 let tugas = currentData[day];
-                if (!tugas || tugas.includes("Belum ada tugas") || tugas === "") {
+                
+                // Perbaikan Bug: Memastikan data dibaca dengan benar
+                if (!tugas || tugas.trim() === "" || tugas.toLowerCase().includes("tidak ada pr")) {
                     rekap += `└─ ✅ _Tidak ada PR_\n\n`;
                 } else { 
                     let cleanTugas = tugas.split('\n').filter(line => !line.includes('⏰ Deadline:')).join('\n').trim();
@@ -255,7 +256,6 @@ async function handleMessages(sock, m, botConfig, utils) {
                 let res = getProcessedTask(dayKey, bodyToProcess);
                 if (res) {
                     db.updateTugas(dayKey, res);
-                    // PEMBEDA: Hanya !update yang mengirim pesan ke grup
                     if (cmd === '!update') {
                         await sendToGroupSafe({ text: `📌 *Daftar tugas/ pr di Minggu ini* 📢\n➝ ${periode}\n\n---------------------------------------------------------------------------------\n\n\n*\`📅 ${dayKey.toUpperCase()}\`* ➝ ${dates[dIdx]}\n\n${res}` });
                     }
@@ -268,8 +268,8 @@ async function handleMessages(sock, m, botConfig, utils) {
                 break;
             case '!info':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const info = body.slice(6).trim();
-                if (info) await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${info}\n\n_— Pengurus_` });
+                const infoMsg = body.slice(6).trim();
+                if (infoMsg) await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${infoMsg}\n\n_— Pengurus_` });
                 break;
             case '!hapus':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
@@ -313,3 +313,4 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
+                          
