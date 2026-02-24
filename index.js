@@ -27,7 +27,8 @@ const { renderMediaView } = require('./views/mediaView');
 
 // --- DYNAMIC VOLUME PATH ---
 const VOLUME_PATH = '/app/auth_info';
-const CONFIG_PATH = path.join(VOLUME_PATH, 'config.json');
+// Perubahan kecil: Pakai ridfot sesuai identitasmu
+const CONFIG_PATH = path.join(VOLUME_PATH, 'config.ridfot'); 
 // Path folder foto
 const PUBLIC_FILES_PATH = path.join(VOLUME_PATH, 'public_files');
 
@@ -132,6 +133,11 @@ app.get("/", (req, res) => {
     res.send(renderDashboard(isConnected, qrCodeData, botConfig, stats, logs, port));
 });
 
+// --- PERUBAHAN: Jalankan listen di atas agar Zeabur mendeteksi servis aktif ---
+app.listen(port, "0.0.0.0", () => {
+    console.log(`✅ Web Dashboard aktif di port ${port}`);
+});
+
 async function start() {
     const { version } = await fetchLatestBaileysVersion();
     const { state, saveCreds } = await useMultiFileAuthState(VOLUME_PATH);
@@ -184,5 +190,5 @@ async function start() {
     });
 }
 
+// Jalankan bot setelah server web siap
 start();
-app.listen(port, "0.0.0.0");
