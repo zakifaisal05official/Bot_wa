@@ -100,6 +100,10 @@ async function handleMessages(sock, m, botConfig, utils) {
             let allData = db.getAll() || {};
             let currentData = String(allData[dayKey] || ""); 
             
+            if (currentData.includes("Belum ada tugas")) {
+                currentData = "";
+            }
+
             let existingEntries = currentData.split(/\n(?=•)/g).filter(e => e.trim() !== "");
 
             if (!STRUKTUR_JADWAL[dayKey]) return "";
@@ -110,8 +114,18 @@ async function handleMessages(sock, m, botConfig, utils) {
                 
                 if (mapelRegex.test(input)) {
                     let parts = input.split(mapelRegex);
-                    let desc = (parts[1] && parts[1].trim() !== "") ? parts[1].split(/label:/i)[0].trim() : "";
+                    // Ambil deskripsi dasar (sebelum link pembatas)
+                    let desc = (parts[1] && parts[1].trim() !== "") ? parts[1].split(/label:/i)[0].split(/━━━━━━━━━━━━━━━━━━━━/)[0].trim() : "";
                     if (desc === "") return;
+
+                    // Ambil bagian link jika ada pembatasnya
+                    let linkSection = "";
+                    if (input.includes('━━━━━━━━━━━━━━━━━━━━')) {
+                        const partsLink = input.split('━━━━━━━━━━━━━━━━━━━━');
+                        if (partsLink.length >= 3) {
+                            linkSection = `\n━━━━━━━━━━━━━━━━━━━━${partsLink[1]}━━━━━━━━━━━━━━━━━━━━`;
+                        }
+                    }
 
                     let labelsFound = [];
                     for (let l in LABELS) { 
@@ -127,19 +141,15 @@ async function handleMessages(sock, m, botConfig, utils) {
                     if (existingIndex !== -1) {
                         let lines = existingEntries[existingIndex].split('\n');
                         let separatorIdx = lines.findIndex(l => l.includes('------'));
-                        let labelLineIdx = lines.findIndex(l => l.includes('--}'));
                         
                         if (!existingEntries[existingIndex].includes(desc)) {
                             if (separatorIdx !== -1) {
-                                lines.splice(separatorIdx, 0, `➝ ${desc}`);
-                                existingEntries[existingIndex] = lines.join('\n');
-                            } else if (labelLineIdx !== -1) {
-                                lines.splice(labelLineIdx, 0, `➝ ${desc}`, `------`);
+                                lines.splice(separatorIdx, 0, `➝ ${desc}${linkSection}`);
                                 existingEntries[existingIndex] = lines.join('\n');
                             }
                         }
                     } else {
-                        let newContent = `• ${emojiMapel}\n➝ ${desc}\n------\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`;
+                        let newContent = `• ${emojiMapel}\n➝ ${desc}${linkSection}\n------\n--} ${finalLabel} |\n⏰ Deadline: ${dayLabels[dayMap[dayKey]]}, ${dates[dayMap[dayKey]]}`;
                         existingEntries.push(newContent);
                     }
                 }
@@ -156,8 +166,7 @@ async function handleMessages(sock, m, botConfig, utils) {
                 rekap += `📅 *${dayLabelsFull[i]}* (${dates[i]})\n`;
                 let tugas = currentData[day];
                 
-                // Perbaikan Bug: Memastikan data dibaca dengan benar
-                if (!tugas || tugas.trim() === "" || tugas.toLowerCase().includes("tidak ada pr")) {
+                if (!tugas || tugas.trim() === "" || tugas.includes("Belum ada tugas")) {
                     rekap += `└─ ✅ _Tidak ada PR_\n\n`;
                 } else { 
                     let cleanTugas = tugas.split('\n').filter(line => !line.includes('⏰ Deadline:')).join('\n').trim();
@@ -218,7 +227,7 @@ async function handleMessages(sock, m, botConfig, utils) {
             case '!update_jadwal':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
 
-                let mediaLink = "";
+                let mediaSection = "";
                 const isImage = msg.message.imageMessage;
                 const isDoc = msg.message.documentMessage;
 
@@ -227,10 +236,13 @@ async function handleMessages(sock, m, botConfig, utils) {
                         await sock.sendMessage(sender, { text: "⏳ *Sedang memproses file menjadi link web...*" });
                         const buffer = await downloadMediaMessage(msg, 'buffer', {});
                         const ext = isImage ? '.jpg' : path.extname(isDoc.fileName) || '.pdf';
+                        const fileLabel = isImage ? "Gambar" : "PDF/File";
                         const fileName = `tugas_${Date.now()}${ext}`;
                         const fullPath = path.join(PUBLIC_PATH, fileName);
                         fs.writeFileSync(fullPath, buffer);
-                        mediaLink = `${MY_DOMAIN}/tugas/${fileName}`;
+                        
+                        // Format link dibungkus pembatas
+                        mediaSection = `\n━━━━━━━━━━━━━━━━━━━━\n🔗 Link Web File ${fileLabel}:\n${MY_DOMAIN}/tugas/${fileName}\n━━━━━━━━━━━━━━━━━━━━`;
                     } catch (err) {
                         console.error("Upload Error:", err);
                         await sock.sendMessage(sender, { text: "⚠️ Gagal membuat link file, tetap memproses teks..." });
@@ -251,7 +263,7 @@ async function handleMessages(sock, m, botConfig, utils) {
                 }
 
                 let bodyToProcess = body;
-                if (mediaLink) bodyToProcess += ` \n🔗 Link Web File: ${mediaLink}`;
+                if (mediaSection) bodyToProcess += mediaSection;
 
                 let res = getProcessedTask(dayKey, bodyToProcess);
                 if (res) {
@@ -259,7 +271,7 @@ async function handleMessages(sock, m, botConfig, utils) {
                     if (cmd === '!update') {
                         await sendToGroupSafe({ text: `📌 *Daftar tugas/ pr di Minggu ini* 📢\n➝ ${periode}\n\n---------------------------------------------------------------------------------\n\n\n*\`📅 ${dayKey.toUpperCase()}\`* ➝ ${dates[dIdx]}\n\n${res}` });
                     }
-                    await sock.sendMessage(sender, { text: `✅ Berhasil Update data ${dayKey}! ${mediaLink ? '(File otomatis jadi link web)' : ''}` });
+                    await sock.sendMessage(sender, { text: `✅ Berhasil Update data ${dayKey}!` });
                 }
                 break;
             case '!grup':
@@ -268,8 +280,8 @@ async function handleMessages(sock, m, botConfig, utils) {
                 break;
             case '!info':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
-                const infoMsg = body.slice(6).trim();
-                if (infoMsg) await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${infoMsg}\n\n_— Pengurus_` });
+                const infoMsgText = body.slice(6).trim();
+                if (infoMsgText) await sendToGroupSafe({ text: `📢 *PENGUMUMAN*\n\n${infoMsgText}\n\n_— Pengurus_` });
                 break;
             case '!hapus':
                 if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
@@ -313,4 +325,4 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
-                          
+    
