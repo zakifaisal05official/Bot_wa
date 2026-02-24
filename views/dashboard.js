@@ -139,10 +139,15 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             <div class="text-center mb-4">
                                 <div id="mainBtn" class="btn-neon-pill" onclick="toggleMenu()">⚙️ SYSTEM CONFIG</div>
                             </div>
-                            <div id="layoutMenu" style="display:none;" class="row g-2 mb-3">
+                            
+                            <div id="layoutMenu" style="display:none;" class="row g-2 mb-3 animate__animated animate__fadeIn">
                                 <div class="col-6"><div class="stats-card"><span>Quiz Bot</span><br><a href="/toggle/quiz"><button class="btn btn-sm ${botConfig.quiz ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.quiz ? 'ON' : 'OFF'}</button></a></div></div>
                                 <div class="col-6"><div class="stats-card"><span>Feedback</span><br><a href="/toggle/smartFeedback"><button class="btn btn-sm ${botConfig.smartFeedback ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a></div></div>
+                                <div class="col-6"><div class="stats-card"><span>Jadwal</span><br><a href="/toggle/jadwalBesok"><button class="btn btn-sm ${botConfig.jadwalBesok ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a></div></div>
+                                <div class="col-6"><div class="stats-card"><span>PR Minggu</span><br><a href="/toggle/prMingguan"><button class="btn btn-sm ${botConfig.prMingguan ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.prMingguan ? 'ON' : 'OFF'}</button></a></div></div>
+                                <div class="col-12"><div class="stats-card"><span>Pengingat Sahur</span><br><a href="/toggle/sahur"><button class="btn btn-sm ${botConfig.sahur ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.sahur ? 'ON' : 'OFF'}</button></a></div></div>
                             </div>
+
                             <div class="row g-2 text-center mb-3">
                                 <div class="col-3"><div class="stats-card"><small>RAM</small><br><b>${usedRAM}G</b></div></div>
                                 <div class="col-3"><div class="stats-card"><small>UPTIME</small><br><b>${uptime}H</b></div></div>
@@ -188,7 +193,7 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             const avatar = document.getElementById('avatarArea');
                             const box = document.querySelector('.login-box');
 
-                            if(u === "Zaki" && p === "ZAKI_DEVELOPER_BOT") {
+                            if(u === "ZAKI" && p === "ZAKI_DEVELOPER_BOT") {
                                 fields.style.display = "none";
                                 loader.style.display = "block";
                                 avatar.innerText = "😉";
@@ -270,7 +275,6 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
         `;
     }
 
-    // Tampilan SCAN QR (Jika belum terhubung)
     return `
         <html>
             <head><title>SCAN QR - Y.B.M ASISTEN</title>${commonHead}</head>
