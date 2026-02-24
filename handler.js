@@ -7,6 +7,9 @@ const FormData = require('form-data');
 const { QUIZ_BANK } = require('./quiz'); 
 const { MAPEL_CONFIG, STRUKTUR_JADWAL, LABELS } = require('./pelajaran');
 
+// --- TAMBAHAN: Import AI Handler ---
+const { askAI } = require('./ai_handler');
+
 // Pastikan folder untuk simpan file ada di dalam Volume agar tidak hilang saat restart
 const PUBLIC_PATH = '/app/auth_info/public_files';
 if (!fs.existsSync(PUBLIC_PATH)) {
@@ -52,6 +55,15 @@ async function handleMessages(sock, m, botConfig, utils) {
         const textLower = body.toLowerCase();
         const isAdmin = ADMIN_RAW.some(admin => sender.includes(admin));
         const nonAdminMsg = "🚫 *AKSES DITOLAK*\n\nMaaf, fitur ini hanya bisa diakses oleh *Pengurus*. Kamu adalah pengguna biasa, silakan gunakan fitur pengguna seperti *!pr* atau *!deadline* saja ya! 😊";
+
+        // --- TAMBAHAN: Logika AI Asisten ---
+        // Menangkap kata "asisten" (huruf besar/kecil sama saja)
+        if (textLower.includes('asisten')) {
+            await sock.sendPresenceUpdate('composing', sender);
+            const response = await askAI(body);
+            await sock.sendMessage(sender, { text: response }, { quoted: msg });
+            return; // Berhenti di sini agar tidak memicu error perintah lain
+        }
 
         if (body === '!reset-bot') {
             if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
