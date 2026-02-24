@@ -93,6 +93,13 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
             .stats-card { background: #2a3942; border-radius: 18px; padding: 12px; text-align: center; }
             .log-box { background: #000; color: #00ff41 !important; border-radius: 18px; height: 180px; overflow-y: auto; padding: 15px; font-family: monospace; }
             .qr-container { background: white; padding: 15px; border-radius: 20px; display: inline-block; margin-bottom: 20px; }
+            
+            .logout-btn {
+                background: transparent; border: 1px solid #ff5252; color: #ff5252;
+                padding: 5px 15px; border-radius: 50px; font-size: 0.7rem; font-weight: bold;
+                transition: 0.3s; margin-top: 10px; cursor: pointer;
+            }
+            .logout-btn:hover { background: #ff5252; color: white; }
         </style>
     `;
 
@@ -155,13 +162,34 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                 <div class="col-3"><div class="stats-card"><small>LOGS</small><br><b>${stats.totalLog}</b></div></div>
                             </div>
                             <div class="log-box" id="logBox">${logs.join('<br>')}</div>
-                            <div class="text-center mt-4 small text-muted">CORE OPERATED BY <span class="text-success fw-bold">ZAKI</span></div>
+                            <div class="text-center mt-4">
+                                <div class="small text-muted">CORE OPERATED BY <span class="text-success fw-bold">ZAKI</span></div>
+                                <button class="logout-btn" onclick="logoutSystem()"><i class="fa-solid fa-right-from-bracket"></i> KELUAR UNTU KEMBALI KE LOGIN</button>
+                            </div>
                         </div>
                     </div>
 
                     <script>
                         let failedAttempts = 0;
                         let isCooldown = false;
+                        const authChannel = new BroadcastChannel('auth_sync');
+
+                        // --- AUTO LOGIN CHECK ---
+                        window.onload = () => {
+                            if(localStorage.getItem('zaki_auth') === 'true') {
+                                showMainContent(true);
+                                authChannel.postMessage({ type: 'LOGIN_NEW', id: Math.random() });
+                            }
+                        };
+
+                        // --- SINGLE DEVICE KICK SYSTEM ---
+                        authChannel.onmessage = (event) => {
+                            if(event.data.type === 'LOGIN_NEW' && localStorage.getItem('zaki_auth') === 'true') {
+                                speak("Peringatan. Perangkat lain mencoba masuk. Sesi ini dihentikan.");
+                                alert("DIVACE LAIN MASUK! ANDA MENTAL!");
+                                logoutSystem();
+                            }
+                        };
 
                         function togglePass() {
                             const p = document.getElementById('password');
@@ -194,6 +222,7 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             const box = document.querySelector('.login-box');
 
                             if(u === "ZAKI" && p === "ZAKI_DEVELOPER_BOT") {
+                                localStorage.setItem('zaki_auth', 'true');
                                 fields.style.display = "none";
                                 loader.style.display = "block";
                                 avatar.innerText = "😉";
@@ -208,11 +237,8 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                     setTimeout(() => {
                                         box.classList.add('animate__animated', 'animate__zoomOut');
                                         setTimeout(() => {
-                                            document.getElementById('loginScreen').style.display = "none";
-                                            const main = document.getElementById('mainContent');
-                                            main.style.display = "block";
-                                            main.classList.add('animate__animated', 'animate__fadeInUp');
-                                            speak("Sistem Y.B.M ASISTEN aktif. " + document.getElementById('quoteText').innerText);
+                                            authChannel.postMessage({ type: 'LOGIN_NEW', id: Math.random() });
+                                            showMainContent(false);
                                         }, 500);
                                     }, 1000);
                                 }, 1500);
@@ -234,6 +260,19 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                                     speak("Akses ditolak.");
                                 }
                             }
+                        }
+
+                        function showMainContent(isAuto) {
+                            document.getElementById('loginScreen').style.display = "none";
+                            const main = document.getElementById('mainContent');
+                            main.style.display = "block";
+                            main.classList.add('animate__animated', 'animate__fadeInUp');
+                            if(!isAuto) speak("Sistem Y.B.M ASISTEN aktif. " + document.getElementById('quoteText').innerText);
+                        }
+
+                        function logoutSystem() {
+                            localStorage.removeItem('zaki_auth');
+                            location.reload();
                         }
 
                         function startCooldown() {
