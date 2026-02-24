@@ -47,14 +47,13 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port) 
                 background: #00a884; color: white; border: none; width: 100%;
                 padding: 14px; border-radius: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;
             }
-            .qr-container { background: white; padding: 20px; border-radius: 20px; display: inline-block; margin-top: 20px; }
+            .qr-container { background: white; padding: 15px; border-radius: 20px; display: inline-block; margin: 15px 0; }
             .card-custom { background: #1f2c33; border: 1px solid #2a3942; border-radius: 30px; padding: 25px; }
             .status-error { color: #ff5252; font-weight: bold; margin-bottom: 15px; }
             @keyframes moodSwing {
                 0%, 100% { transform: scale(1); }
                 50% { transform: scale(1.1); }
             }
-            /* Style Log Box */
             .log-box { background: #000; color: #00ff41 !important; border-radius: 18px; height: 180px; overflow-y: auto; padding: 15px; font-family: monospace; font-size: 0.75rem; text-align: left; }
             .stats-card { background: #2a3942; border-radius: 18px; padding: 10px; margin-bottom: 5px; }
             #layoutMenu { display: none; margin-top: 20px; }
@@ -72,49 +71,53 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port) 
                 <div id="loginScreen">
                     <div class="login-box animate__animated animate__zoomIn">
                         <div id="avatarArea" class="login-avatar-area">${randomMood}</div>
-                        <h3 style="color:#fff; font-weight:900; letter-spacing:3px; margin-bottom:20px;">Y.B.M <span style="color:#00a884">ASISTEN</span></h3>
+                        <h3 style="color:#fff; font-weight:900; letter-spacing:3px; margin-bottom:10px;">Y.B.M <span style="color:#00a884">ASISTEN</span></h3>
+                        
+                        ${!isConnected ? `
+                            <p class="small text-muted">Bot belum terhubung. Silakan scan QR:</p>
+                            <div class="qr-container">
+                                ${qrCodeData ? `<img src="${qrCodeData}" width="220">` : `<div class="spinner-border text-success"></div><p class="text-dark mt-2">Menunggu QR...</p>`}
+                            </div>
+                            <button class="btn btn-sm btn-outline-light w-100 mb-3" onclick="location.reload()">🔄 REFRESH QR</button>
+                        ` : `
+                            <p class="small text-muted mb-4">Bot Aktif. Masukkan kredensial admin.</p>
+                        `}
+
                         <div id="loginStatus" style="display:none;"></div>
+                        
                         <div id="loginFields">
                             <input type="text" id="username" class="login-input" placeholder="USERNAME">
                             <input type="password" id="password" class="login-input" placeholder="PASSWORD">
-                            <button onclick="attemptLogin()" class="login-btn">LOGIN</button>
+                            <button onclick="attemptLogin()" class="login-btn">MASUK DASHBOARD</button>
                         </div>
                     </div>
                 </div>
 
                 <div id="mainContent" class="container" style="max-width: 480px; display:none; padding-top: 50px;">
                     <div class="card-custom text-center">
-                        ${isConnected ? `
-                            <div class="mood-avatar" style="font-size: 50px;">${randomMood}</div>
-                            <h4 style="color:#00a884; font-weight:800;">Y.B.M <span style="color:#fff">ASISTEN</span></h4>
-                            <div class="badge bg-success mb-3">● ENGINE ACTIVE</div>
-                            
-                            <div style="background: rgba(0, 168, 132, 0.08); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-                                <small id="quoteText">"${randomQuote}"</small>
-                            </div>
+                        <div class="mood-avatar" style="font-size: 50px;">${randomMood}</div>
+                        <h4 style="color:#00a884; font-weight:800;">Y.B.M <span style="color:#fff">ASISTEN</span></h4>
+                        <div class="badge ${isConnected ? 'bg-success' : 'bg-danger'} mb-3">
+                            ● ${isConnected ? 'ENGINE ACTIVE' : 'DISCONNECTED'}
+                        </div>
+                        
+                        <div style="background: rgba(0, 168, 132, 0.08); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                            <small id="quoteText">"${randomQuote}"</small>
+                        </div>
 
-                            <button class="btn btn-outline-success w-100 mb-3" style="border-radius: 50px; font-weight: 800;" onclick="toggleMenu()">⚙️ SYSTEM CONFIG</button>
+                        <button class="btn btn-outline-success w-100 mb-3" style="border-radius: 50px; font-weight: 800;" onclick="toggleMenu()">⚙️ SYSTEM CONFIG</button>
 
-                            <div id="layoutMenu">
-                                <div class="stats-card"><small>Quiz</small><br><a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a></div>
-                                <div class="stats-card"><small>Jadwal</small><br><a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a></div>
-                            </div>
+                        <div id="layoutMenu">
+                            <div class="stats-card"><small>Quiz</small><br><a href="/toggle/quiz"><button class="btn-toggle ${botConfig.quiz ? 'btn-on' : 'btn-off'}">${botConfig.quiz ? 'ON' : 'OFF'}</button></a></div>
+                            <div class="stats-card"><small>Jadwal</small><br><a href="/toggle/jadwalBesok"><button class="btn-toggle ${botConfig.jadwalBesok ? 'btn-on' : 'btn-off'}">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a></div>
+                        </div>
 
-                            <div class="row g-2 mt-2">
-                                <div class="col-6"><div class="stats-card"><small>RAM</small><br><b>${usedRAM}GB</b></div></div>
-                                <div class="col-6"><div class="stats-card"><small>UPTIME</small><br><b>${uptime}H</b></div></div>
-                            </div>
-                            <div class="log-box mt-3">${logs.join('<br>')}</div>
-                        ` : `
-                            <h4 style="color:#fff; font-weight:800;">SCAN WHATSAPP QR</h4>
-                            <p class="small text-muted">Silakan scan untuk menyambungkan bot</p>
-                            <div class="qr-container">
-                                ${qrCodeData ? `<img src="${qrCodeData}" width="250">` : `<div class="spinner-border text-success"></div><p>Menunggu QR...</p>`}
-                            </div>
-                            <div class="mt-3">
-                                <button class="btn btn-sm btn-dark" onclick="window.location.reload()">🔄 REFRESH QR</button>
-                            </div>
-                        `}
+                        <div class="row g-2 mt-2">
+                            <div class="col-6"><div class="stats-card"><small>RAM</small><br><b>${usedRAM}GB</b></div></div>
+                            <div class="col-6"><div class="stats-card"><small>UPTIME</small><br><b>${uptime}H</b></div></div>
+                        </div>
+                        <div class="log-box mt-3">${logs.join('<br>')}</div>
+                        
                         <div class="mt-4 small text-muted">CORE BY <span class="text-success fw-bold">ZAKI</span></div>
                     </div>
                 </div>
