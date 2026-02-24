@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 
-// Inisialisasi API
+// Inisialisasi API dengan Key Baru
 const genAI = new GoogleGenerativeAI("AIzaSyAqLg4A-W-M-zjynUDMAm1Esmg_G4djgJM");
 
 // Merapikan Jadwal Pelajaran agar mudah dibaca AI
@@ -26,7 +26,6 @@ const model = genAI.getGenerativeModel({
     3. Jika siswa terlihat malas, berikan salah satu motivasi dari data di atas.
     4. Kamu bisa menjawab pertanyaan umum di luar sekolah, tapi tetap sopan.`,
     
-    // Menambahkan Safety Settings agar AI tidak mudah error/block
     safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -37,18 +36,26 @@ const model = genAI.getGenerativeModel({
 
 async function askAI(query) {
     try {
-        // Proses kirim pertanyaan ke AI
         const result = await model.generateContent(query);
         const response = await result.response;
         const text = response.text();
         
-        // Pastikan teks tidak kosong
         return text && text.length > 0 ? text : "Maaf, Asisten tidak bisa menemukan jawaban yang tepat.";
         
     } catch (error) {
-        // Log error ke terminal agar kamu bisa cek penyebab aslinya (API Key/Quota/Network)
+        // Mencatat error di console terminal
         console.error("LOG ERROR ASISTEN AI:", error);
-        return "Aduh, otak Asisten lagi nge-lag. Coba lagi ya!";
+
+        // Memberikan jawaban yang memberitahu jenis errornya agar mudah dilacak
+        let errorMessage = error.message;
+        
+        if (errorMessage.includes("API key not valid")) {
+            return "❌ API Key tidak valid. Coba buat Key baru di Google AI Studio.";
+        } else if (errorMessage.includes("quota")) {
+            return "⏳ Maaf, Asisten lagi capek (Quota Habis). Tunggu 1 menit ya!";
+        } else {
+            return `Aduh, otak Asisten lagi nge-lag. (Detail: ${errorMessage})`;
+        }
     }
 }
 
