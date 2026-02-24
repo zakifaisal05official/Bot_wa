@@ -1,5 +1,5 @@
 const { QUIZ_BANK } = require('./quiz'); 
-const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
+const { JADWAL_PELAJARAN: JADWAL_STATIS, MOTIVASI_SEKOLAH } = require('./constants');
 const db = require('./data');
 const fs = require('fs'); 
 
@@ -225,14 +225,21 @@ async function sendJadwalBesokManual(sock, targetJid) {
         if (hariIni === 5 || hariIni === 6) return;
         let hariBesok = (hariIni + 1) % 7;
         if (hariBesok === 0) hariBesok = 1;
+        
+        // REFRESH CACHE JADWAL AGAR UPDATE
+        delete require.cache[require.resolve('./constants')];
+        const { JADWAL_PELAJARAN } = require('./constants');
+
         const { dates } = getWeekDates();
         const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const daysKey = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+        
         const rawMapel = JADWAL_PELAJARAN[hariBesok].split('\n');
         const motivasi = MOTIVASI_SEKOLAH[Math.floor(Math.random() * MOTIVASI_SEKOLAH.length)];
         const currentData = db.getAll() || {};
         const dataPRBesok = (currentData[daysKey[hariBesok]] || "");
         const tglBesok = dates[hariBesok - 1];
+        
         let teksPR = `📌 *DAFTAR LIST TUGAS PR* 📢\n📅 Hari: ${dayLabels[hariBesok].toUpperCase()} (${tglBesok})\n\n━━━━━━━━━━━━━━━━━━━━\n\n`;
         if (!dataPRBesok || dataPRBesok === "" || dataPRBesok.includes("Belum ada tugas") || dataPRBesok.includes("Tidak ada PR")) {
             teksPR += `└─ ✅ _Tidak ada PR_\n\n`;
@@ -243,6 +250,7 @@ async function sendJadwalBesokManual(sock, targetJid) {
         teksPR += `━━━━━━━━━━━━━━━━━━━━\n⚠️ *Salah list tugas?*\nHubungi nomor: *089531549103*`;
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: teksPR });
         await new Promise(resolve => setTimeout(resolve, 5000));
+        
         const jadwalFinal = rawMapel.map(mapel => {
             const emojiOnly = mapel.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/u);
             let adaPR = false;
@@ -251,6 +259,7 @@ async function sendJadwalBesokManual(sock, targetJid) {
             }
             return `${mapel} ➝ ${adaPR ? "ada pr" : "gak ada pr"}`;
         }).join('\n');
+        
         const formatPesan = `🚀 *PERSIAPAN JADWAL BESOK*\n📅 *${dayLabels[hariBesok].toUpperCase()}, ${tglBesok}*\n━━━━━━━━━━━━━━━━━━━━\n\n${jadwalFinal}\n\n━━━━━━━━━━━━━━━━━━━━\n💡 _"${motivasi}"_\n\n*Tetap semangat ya!* 😇`;
         await sock.sendMessage(targetJid || ID_GRUP_TUJUAN, { text: formatPesan });
     } catch (err) { console.error("Jadwal Manual Error:", err); }
@@ -265,4 +274,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-    
+                         
