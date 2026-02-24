@@ -8,9 +8,12 @@
   },
   "dependencies": {
     "@whiskeysockets/baileys": "latest",
+    "@google/generative-ai": "^0.21.0",
     "pino": "latest",
     "express": "latest",
     "qrcode": "latest",
-    "link-preview-js": "latest"
+    "link-preview-js": "latest",
+    "axios": "latest",
+    "form-data": "latest"
   }
 }
