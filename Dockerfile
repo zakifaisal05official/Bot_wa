@@ -1,21 +1,23 @@
 # Gunakan Node.js versi 20 (LTS Iron)
 FROM node:20-bookworm
 
-# 1. Instal GIT hanya sekali (Layer OS)
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+# 1. Command Cepat: Install GIT & Bersihkan Cache APT dalam satu langkah
+RUN apt-get update && apt-get install -y git && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 2. Copy package.json TERPISAH sebelum copy kode sumber
-# Ini kunci agar Docker tidak mengulang npm install jika package.json tidak berubah
+# 2. Copy Manifest (Hanya package.json)
+# Docker akan stop di sini jika tidak ada perubahan package, jadi npm install tidak diulang
 COPY package*.json ./
 
-# 3. Gabungkan semua instalasi library di satu layer
-# Ini memastikan axios dan form-data masuk ke dalam cache yang sama dengan library lainnya
-RUN npm install && npm install axios form-data
+# 3. Command Cepat: Install semua depedensi sekaligus & Hapus Cache NPM
+# Menggunakan --no-audit dan --no-fund agar proses install lebih ringan dan cepat
+RUN npm install --no-audit --no-fund && \
+    npm install axios form-data --no-audit --no-fund && \
+    npm cache clean --force
 
-# 4. Baru copy semua file sisa (handler, views, scheduler, dll)
-# Layer ini sering berubah, tapi tidak akan memicu 'npm install' ulang karena posisinya di bawah
+# 4. Copy sisa kode (Hanya dijalankan jika ada perubahan file .js)
 COPY . .
 
+# Command jalankan aplikasi
 CMD ["node", "index.js"]
