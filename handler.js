@@ -15,7 +15,7 @@ if (!fs.existsSync(PUBLIC_PATH)) {
 
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155' , '241849843351688' , '254326740103190' , '8474121494667']; 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
-const MY_DOMAIN = 'https://botwa-production-d0da.up.railway.app';
+const MY_DOMAIN = 'https://assitenymb.zeabur.app';
 
 function getClosestCommand(cmd) {
     const validCommands = ['!p', '!pr', '!deadline', '!menu', '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!polling_kirim', '!data', '!cek_db'];
