@@ -11,9 +11,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # 3. Command Cepat: Install semua depedensi sekaligus & Hapus Cache NPM
-# Menggunakan --no-audit dan --no-fund agar proses install lebih ringan dan cepat
 RUN npm install --no-audit --no-fund && \
-    npm install axios form-data --no-audit --no-fund && \
+    npm install axios form-data @google/generative-ai --no-audit --no-fund && \
     npm cache clean --force
 
 # 4. Copy sisa kode (Hanya dijalankan jika ada perubahan file .js)
