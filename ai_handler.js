@@ -2,7 +2,7 @@ const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@googl
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 
 // Inisialisasi API
-const genAI = new GoogleGenerativeAI("AIzaSyDF3G1s3pGc68uRFTuw5DekkLb19bi0jho");
+const genAI = new GoogleGenerativeAI("AIzaSyAYlvxa22FTMHiOuw_K7R-UYDOWNQK4bac");
 
 // Merapikan Jadwal Pelajaran agar mudah dibaca AI
 const daftarJadwal = Object.entries(JADWAL_PELAJARAN)
