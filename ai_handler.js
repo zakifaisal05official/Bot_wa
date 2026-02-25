@@ -1,44 +1,40 @@
-const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
+const axios = require('axios');
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 
-// API Key kamu
-const genAI = new GoogleGenerativeAI("AIzaSyAqLg4A-W-M-zjynUDMAm1Esmg_G4djgJM");
-
+// Merapikan Jadwal Pelajaran agar AI paham
 const daftarJadwal = Object.entries(JADWAL_PELAJARAN)
     .map(([hari, mapel]) => `Hari ke-${hari}: ${mapel.replace(/\n/g, ', ')}`)
     .join('\n');
 
-// GANTI KE GEMINI-PRO (Paling stabil, anti 404)
-const model = genAI.getGenerativeModel({ 
-    model: "gemini-pro", 
-});
-
 async function askAI(query) {
     try {
-        const chat = model.startChat({
-            history: [
-                {
-                    role: "user",
-                    parts: [{ text: `Kamu adalah asisten kelas cerdas bernama Asisten (extension: ridfot). Jadwal: ${daftarJadwal}. Motivasi: ${MOTIVASI_SEKOLAH.join(' | ')}` }],
-                },
-                {
-                    role: "model",
-                    parts: [{ text: "Halo! Asisten siap membantu menjawab jadwal atau kasih motivasi. Ada apa nih?" }],
-                },
-            ],
+        // Kita menggunakan provider AI gratis yang tetap pintar (Hercai)
+        // Keuntungan: Nggak perlu API Key, nggak bakal Error 404
+        const response = await axios.get(`https://hercai.onrender.com/v3/hercai`, {
+            params: {
+                question: `Instruksi: Kamu adalah Asisten kelas yang cerdas (nama extension sistem: ridfot). 
+                Panggil dirimu 'Asisten'. Jawablah dengan ramah, santai, dan gunakan emoji.
+                
+                DATA JADWAL:
+                ${daftarJadwal}
+                
+                DATA MOTIVASI:
+                ${MOTIVASI_SEKOLAH.join(' | ')}
+                
+                Pertanyaan User: ${query}`
+            }
         });
 
-        const result = await chat.sendMessage(query);
-        const response = await result.response;
-        const text = response.text();
+        // Mengambil jawaban teks
+        const reply = response.data.reply;
         
-        return text;
+        return reply && reply.length > 0 ? reply : "Maaf, Asisten lagi bingung jawabnya.";
         
     } catch (error) {
         console.error("LOG ERROR ASISTEN AI:", error);
         
-        // Jika gemini-pro pun gagal, berarti ada masalah koneksi dari server ke Google
-        return "Aduh, otak Asisten lagi beneran nge-lag. Coba tanya lagi ya!";
+        // Pesan jika koneksi ke API gratisannya lagi gangguan
+        return "Aduh, otak Asisten lagi nge-lag koneksinya. Coba tanya lagi ya!";
     }
 }
 
