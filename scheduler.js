@@ -38,7 +38,7 @@ async function initSahurScheduler(sock, botConfig) {
     let lastSentSahur = "";
     
     // List audio sahur random
-    const AUDIO_SAHUR_LIST = ['./sahur1.mp3', './sahur2.mp3', './sahur3.mp3'];
+    const AUDIO_SAHUR_LIST = ['./sahur1.mp3', './sahur2.mp3'];
     
     // Variasi pesan sahur agar random
     const PESAN_SAHUR_LIST = [
