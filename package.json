@@ -1,14 +1,13 @@
 {
   "name": "wa-bot",
   "version": "1.0.0",
-  "description": "WhatsApp Bot dengan Asisten AI",
+  "description": "WhatsApp Bot dengan Asisten AI Ridfot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "latest",
-    "@google/generative-ai": "^0.21.0",
     "pino": "latest",
     "express": "latest",
     "qrcode": "latest",
