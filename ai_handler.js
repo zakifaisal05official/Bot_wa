@@ -1,18 +1,16 @@
 const axios = require('axios');
 const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 
-// Merapikan Jadwal Pelajaran agar AI paham
 const daftarJadwal = Object.entries(JADWAL_PELAJARAN)
     .map(([hari, mapel]) => `Hari ke-${hari}: ${mapel.replace(/\n/g, ', ')}`)
     .join('\n');
 
 async function askAI(query) {
     try {
-        // Kita menggunakan provider AI gratis yang tetap pintar (Hercai)
-        // Keuntungan: Nggak perlu API Key, nggak bakal Error 404
-        const response = await axios.get(`https://hercai.onrender.com/v3/hercai`, {
+        // Menggunakan API Itzpire (Jalur Cadangan yang lebih stabil)
+        const response = await axios.get(`https://itzpire.com/ai/gpt-4o`, {
             params: {
-                question: `Instruksi: Kamu adalah Asisten kelas yang cerdas (nama extension sistem: ridfot). 
+                prompt: `Kamu adalah Asisten kelas yang cerdas (nama extension sistem: ridfot). 
                 Panggil dirimu 'Asisten'. Jawablah dengan ramah, santai, dan gunakan emoji.
                 
                 DATA JADWAL:
@@ -25,16 +23,16 @@ async function askAI(query) {
             }
         });
 
-        // Mengambil jawaban teks
-        const reply = response.data.reply;
+        // Mengambil jawaban (struktur data Itzpire biasanya response.data.data atau response.data.result)
+        const reply = response.data.data || response.data.result || response.data.reply;
         
-        return reply && reply.length > 0 ? reply : "Maaf, Asisten lagi bingung jawabnya.";
+        return reply ? reply : "Maaf, Asisten lagi bingung menyusun kata-kata.";
         
     } catch (error) {
         console.error("LOG ERROR ASISTEN AI:", error);
         
-        // Pesan jika koneksi ke API gratisannya lagi gangguan
-        return "Aduh, otak Asisten lagi nge-lag koneksinya. Coba tanya lagi ya!";
+        // Pesan cadangan jika API Itzpire pun down
+        return "⚠️ Asisten sedang istirahat sebentar (Server AI Down). Coba tanya jadwal pakai !pr dulu ya!";
     }
 }
 
