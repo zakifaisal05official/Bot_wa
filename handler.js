@@ -57,6 +57,7 @@ async function handleMessages(sock, m, botConfig, utils) {
         const nonAdminMsg = "🚫 *AKSES DITOLAK*\n\nMaaf, fitur ini hanya bisa diakses oleh *Pengurus*. Kamu adalah pengguna biasa, silakan gunakan fitur pengguna seperti *!pr* atau *!deadline* saja ya! 😊";
 
         // --- TAMBAHAN: Logika AI Asisten ---
+        // Jika pesan mengandung kata 'asisten', bot akan menjawab lewat AI
         if (textLower.includes('asisten')) {
             await sock.sendPresenceUpdate('composing', sender);
             const response = await askAI(body);
@@ -325,4 +326,3 @@ async function handleMessages(sock, m, botConfig, utils) {
 }
 
 module.exports = { handleMessages };
-    
