@@ -36,6 +36,18 @@ function getWeekDates() {
 async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
     let lastSentSahur = "";
+    
+    // Variasi pesan sahur agar random
+    const PESAN_SAHUR_LIST = [
+        `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nSelamat makan sahur semuanya! Jangan lupa niat puasa dan perbanyak minum air putih ya.\n\n_🕒 Waktu: 04:00 WIB (Sebelum Subuh)_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga puasanya lancar!* ✨`,
+        
+        `🌙 *SAHUR.. SAHURRR!* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nAyo bangun, waktunya mengisi energi untuk ibadah hari ini. Jangan lupa niatnya ya!\n\n_🕒 Waktu: 04:00 WIB_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semangat puasanya, ridfot fams!* 💪`,
+        
+        `🌙 *BERKAH SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\n"Bersahurlah kalian, karena pada sahur itu ada keberkahan." (HR. Bukhari & Muslim). Selamat makan sahur!\n\n_🕒 Waktu: 04:00 WIB_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga berkah dan kuat sampai Maghrib!* 😇`,
+        
+        `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nMasih ada waktu buat makan dan minum. Yuk, disegerakan sahurnya sebelum imsak tiba!\n\n_🕒 Waktu: 04:00 WIB_\n\n━━━━━━━━━━━━━━━━━━━━\n*Happy Fasting everyone!* ✨`
+    ];
+
     setInterval(async () => {
         // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.sahur === false) return;
@@ -47,14 +59,15 @@ async function initSahurScheduler(sock, botConfig) {
         
         if (jam === 4 && menit === 0 && lastSentSahur !== tglID) {
             try {
-                const pesanSahur = `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nSelamat makan sahur semuanya! Jangan lupa niat puasa dan perbanyak minum air putih ya.\n\n_🕒 Waktu: 04:00 WIB (Sebelum Subuh)_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga puasanya lancar!* ✨`;
-                await sock.sendMessage(ID_GRUP_TUJUAN, { text: pesanSahur });
+                // Mengambil pesan secara acak (Random)
+                const pesanRandom = PESAN_SAHUR_LIST[Math.floor(Math.random() * PESAN_SAHUR_LIST.length)];
+                
+                await sock.sendMessage(ID_GRUP_TUJUAN, { text: pesanRandom });
                 lastSentSahur = tglID;
             } catch (err) { console.error("Sahur Error:", err); }
         }
     }, 35000);
 }
-
 // --- FUNGSI QUIZ ---
 async function initQuizScheduler(sock, botConfig) {
     console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
