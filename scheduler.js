@@ -37,6 +37,9 @@ async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
     let lastSentSahur = "";
     
+    // List audio sahur random
+    const AUDIO_SAHUR_LIST = ['./sahur1.mp3', './sahur2.mp3', './sahur3.mp3'];
+    
     // Variasi pesan sahur agar random
     const PESAN_SAHUR_LIST = [
         `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nSelamat makan sahur semuanya! Jangan lupa niat puasa dan perbanyak minum air putih ya.\n\n_🕒 Waktu: 04:00 WIB (Sebelum Subuh)_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga puasanya lancar!* ✨`,
@@ -59,10 +62,22 @@ async function initSahurScheduler(sock, botConfig) {
         
         if (jam === 4 && menit === 0 && lastSentSahur !== tglID) {
             try {
-                // Mengambil pesan secara acak (Random)
+                // Mengambil pesan dan audio secara acak (Random)
                 const pesanRandom = PESAN_SAHUR_LIST[Math.floor(Math.random() * PESAN_SAHUR_LIST.length)];
+                const audioRandom = AUDIO_SAHUR_LIST[Math.floor(Math.random() * AUDIO_SAHUR_LIST.length)];
                 
+                // Kirim teks sahur
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: pesanRandom });
+                
+                // Kirim audio sahur (PTT/VN) jika file ditemukan
+                if (fs.existsSync(audioRandom)) {
+                    await sock.sendMessage(ID_GRUP_TUJUAN, { 
+                        audio: { url: audioRandom }, 
+                        mimetype: 'audio/mp4', 
+                        ptt: true 
+                    });
+                }
+                
                 lastSentSahur = tglID;
             } catch (err) { console.error("Sahur Error:", err); }
         }
