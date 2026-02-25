@@ -7,15 +7,14 @@ RUN apt-get update && apt-get install -y git && apt-get clean && rm -rf /var/lib
 WORKDIR /app
 
 # 2. Copy Manifest (Hanya package.json)
-# Docker akan stop di sini jika tidak ada perubahan package, jadi npm install tidak diulang
 COPY package*.json ./
 
-# 3. Command Cepat: Install semua depedensi sekaligus & Hapus Cache NPM
+# 3. Update: Install Axios & Form-Data (Hapus Google AI karena sudah tidak pakai Key)
 RUN npm install --no-audit --no-fund && \
-    npm install axios form-data @google/generative-ai --no-audit --no-fund && \
+    npm install axios form-data --no-audit --no-fund && \
     npm cache clean --force
 
-# 4. Copy sisa kode (Hanya dijalankan jika ada perubahan file .js)
+# 4. Copy sisa kode
 COPY . .
 
 # Command jalankan aplikasi
