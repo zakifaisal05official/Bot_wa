@@ -66,27 +66,14 @@ async function initQuizScheduler(sock, botConfig) {
         const now = getWIBDate();
         const jam = now.getHours();
         const menit = now.getMinutes();
-        const tgl = now.getDate();
-        const bln = now.getMonth() + 1;
-        const thn = now.getFullYear();
         const hariAngka = now.getDay(); 
-        const tglID = `${tgl}-${now.getMonth()}`;
+        const tglID = `${now.getDate()}-${now.getMonth()}`;
 
+        // Sinkronisasi: Hanya kirim Senin-Jumat (1-5) berdasarkan hariAngka
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
-                let fase;
-                // Logika Sinkronisasi Tanggal Khusus vs Harian (1-5)
-                if (thn === 2026 && tgl >= 24 && tgl <= 26 && bln === 2) {
-                    fase = "24-26_FEBRUARI";
-                } else if (thn === 2026 && tgl >= 9 && tgl <= 14 && bln === 3) {
-                    fase = "9-14_MARET";
-                } else if (thn === 2026 && tgl >= 16 && tgl <= 27 && bln === 3) {
-                    fase = "16-27_MARET";
-                } else {
-                    fase = hariAngka; // Gunakan 1-5 untuk Senin-Jumat
-                }
-
-                const kuisHariIni = QUIZ_BANK[fase];
+                // Mengambil kuis langsung berdasarkan urutan hari 1-5
+                const kuisHariIni = QUIZ_BANK[hariAngka];
                 if (kuisHariIni && kuisHariIni.length > 0) {
                     const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
                     const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
@@ -274,4 +261,3 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-                         
