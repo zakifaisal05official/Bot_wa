@@ -32,6 +32,8 @@ function getWeekDates() {
     return { dates, periode };
 }
 
+
+
 // --- FUNGSI SAHUR (VERSI TEKS SAJA) ---
 async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
@@ -66,9 +68,9 @@ async function initSahurScheduler(sock, botConfig) {
             }
         }
     }, 35000); // Cek setiap 35 detik
-            }
-            
-                                                                     }                                                                                                     
+}
+                    
+
 // --- FUNGSI QUIZ ---
 async function initQuizScheduler(sock, botConfig) {
     console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
