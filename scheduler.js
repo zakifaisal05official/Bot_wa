@@ -32,16 +32,10 @@ function getWeekDates() {
     return { dates, periode };
 }
 
-// --- FUNGSI SAHUR ---
+// --- FUNGSI SAHUR (VERSI TEKS SAJA) ---
 async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
     let lastSentSahur = "";
-    
-    // Sesuaikan dengan file yang ada di screenshot kamu (sahur1 & sahur2)
-    const AUDIO_SAHUR_LIST = [
-        './audio/sahur1.mp3',
-        './audio/sahur2.mp3'
-    ];
 
     const PESAN_SAHUR_LIST = [
         `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nSelamat makan sahur semuanya! Jangan lupa niat puasa dan perbanyak minum air putih ya.\n\n_🕒 Waktu: 04:00 WIB (Sebelum Subuh)_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga puasanya lancar!* ✨`,
@@ -58,27 +52,22 @@ async function initSahurScheduler(sock, botConfig) {
         const menit = now.getMinutes();
         const tglID = `${now.getDate()}-${now.getMonth()}`;
         
+        // Trigger tepat jam 04:00 WIB
         if (jam === 4 && menit === 0 && lastSentSahur !== tglID) {
             try {
                 const pesanRandom = PESAN_SAHUR_LIST[Math.floor(Math.random() * PESAN_SAHUR_LIST.length)];
-                const audioRandom = AUDIO_SAHUR_LIST[Math.floor(Math.random() * AUDIO_SAHUR_LIST.length)];
                 
-                // 1. Kirim Teks
+                // Kirim Teks saja agar lebih ringan dan pasti terbaca
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: pesanRandom });
 
-                // 2. Kirim Audio menggunakan Buffer (Lebih Stabil)
-                if (fs.existsSync(audioRandom)) {
-                    await sock.sendMessage(ID_GRUP_TUJUAN, { 
-                        audio: fs.readFileSync(audioRandom), // Membaca file secara fisik
-                        mimetype: 'audio/mpeg', // Standar untuk MP3
-                        ptt: true 
-                    });
-                }
-
                 lastSentSahur = tglID;
-            } catch (err) { console.error("Sahur Error:", err); }
+            } catch (err) { 
+                console.error("Sahur Error:", err); 
+            }
         }
-    }, 35000);
+    }, 35000); // Cek setiap 35 detik
+            }
+            
                                                                      }                                                                                                     
 // --- FUNGSI QUIZ ---
 async function initQuizScheduler(sock, botConfig) {
