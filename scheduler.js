@@ -83,9 +83,9 @@ async function initQuizScheduler(sock, botConfig) {
         const jam = now.getHours();
         const menit = now.getMinutes();
         const hariAngka = now.getDay(); 
-        const tglID = `${now.getDate()}-${now.getMonth()}`;
+        const tglID = `${now.getDate()}-${now.getMonth()}-${now.getFullYear()}`;
 
-        // Sinkronisasi: Hanya kirim Senin-Jumat (1-5) berdasarkan hariAngka
+        // Sinkronisasi: Hanya kirim Senin-Jumat (1-5) jam 13:00 WIB
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
                 // Mengambil kuis langsung berdasarkan urutan hari 1-5
@@ -127,7 +127,7 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
 
         const now = getWIBDate();
         const jamSekarang = now.getHours();
-        const tglSekarang = `${now.getDate()}-${now.getMonth()}`;
+        const tglSekarang = `${now.getDate()}-${now.getMonth()}-${now.getFullYear()}`;
         
         if (kuisAktif.msgId && kuisAktif.data && kuisAktif.targetJam === jamSekarang && kuisAktif.tglID === tglSekarang) {
             if (lastProcessedId === kuisAktif.msgId) return;
@@ -277,3 +277,4 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
+    
