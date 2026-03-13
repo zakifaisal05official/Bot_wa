@@ -32,8 +32,6 @@ function getWeekDates() {
     return { dates, periode };
 }
 
-
-
 // --- FUNGSI SAHUR (VERSI TEKS SAJA) ---
 async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
@@ -54,29 +52,23 @@ async function initSahurScheduler(sock, botConfig) {
         const menit = now.getMinutes();
         const tglID = `${now.getDate()}-${now.getMonth()}`;
         
-        // Trigger tepat jam 04:00 WIB
         if (jam === 4 && menit === 0 && lastSentSahur !== tglID) {
             try {
                 const pesanRandom = PESAN_SAHUR_LIST[Math.floor(Math.random() * PESAN_SAHUR_LIST.length)];
-                
-                // Kirim Teks saja agar lebih ringan dan pasti terbaca
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: pesanRandom });
-
                 lastSentSahur = tglID;
             } catch (err) { 
                 console.error("Sahur Error:", err); 
             }
         }
-    }, 35000); // Cek setiap 35 detik
+    }, 35000);
 }
-                    
 
 // --- FUNGSI QUIZ ---
 async function initQuizScheduler(sock, botConfig) {
     console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
     let lastSentDate = ""; 
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.quiz === false) return;
 
         const now = getWIBDate();
@@ -85,10 +77,8 @@ async function initQuizScheduler(sock, botConfig) {
         const hariAngka = now.getDay(); 
         const tglID = `${now.getDate()}-${now.getMonth()}-${now.getFullYear()}`;
 
-        // Sinkronisasi: Hanya kirim Senin-Jumat (1-5) jam 13:00 WIB
         if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
             try {
-                // Mengambil kuis langsung berdasarkan urutan hari 1-5
                 const kuisHariIni = QUIZ_BANK[hariAngka];
                 if (kuisHariIni && kuisHariIni.length > 0) {
                     const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
@@ -117,7 +107,6 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
     console.log("✅ Scheduler Smart Feedback Aktif");
     let lastProcessedId = "";
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.smartFeedback === false) return;
 
         let kuisAktif = {};
@@ -166,7 +155,6 @@ async function initJadwalBesokScheduler(sock, botConfig) {
     console.log("✅ Scheduler Jadwal Besok Aktif (17:00 WIB)");
     let lastSentJadwal = "";
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.jadwalBesok === false) return;
 
         const now = getWIBDate();
@@ -185,7 +173,6 @@ async function initListPrMingguanScheduler(sock, botConfig) {
     console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
     let lastSentList = "";
     setInterval(async () => {
-        // CEK ON/OFF DASHBOARD (Paling Atas)
         if (!botConfig || botConfig.prMingguan === false) return;
 
         const now = getWIBDate();
@@ -229,9 +216,8 @@ async function sendJadwalBesokManual(sock, targetJid) {
         let hariBesok = (hariIni + 1) % 7;
         if (hariBesok === 0) hariBesok = 1;
         
-        // REFRESH CACHE JADWAL AGAR UPDATE
         delete require.cache[require.resolve('./constants')];
-        const { JADWAL_PELAJARAN } = require('./constants');
+        const { JADWAL_PELAJARAN, MOTIVASI_SEKOLAH } = require('./constants');
 
         const { dates } = getWeekDates();
         const dayLabels = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -277,4 +263,3 @@ module.exports = {
     getWeekDates,
     sendJadwalBesokManual
 };
-    
