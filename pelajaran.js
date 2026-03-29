@@ -1,25 +1,29 @@
 // pelajaran.js
 
 const MAPEL_CONFIG = {
+    'UB': 'Upacara Bendera 🇮🇩',
+    'PAIBP': 'Agama 🌟',
     'BING': 'Bahasa Inggris 💂',
-    'BCRB': 'Bahasa Cirebon ☁️༄.°',
-    'PANCASILA': 'Pancasila 🦅',
-    'SBK': 'Sbk 🎨',
+    'IPA': 'Ipa 🔬',
+    'BIND': 'Bahasa Indonesia 🐦‍🔥',
+    'PJOK': 'Pjok 🏃',
+    'MTK': 'Matematika 🧮',
     'IPS': 'Ips 🌍',
     'TIK': 'Informatika 📡',
-    'IPA': 'Ipa 🔬',
     'BSUN': 'Bahasa Sunda 🦚',
-    'MTK': 'Matematika 🧮',
-    'PJOK': 'Pjok 🏃',
-    'BIND': 'Bahasa Indonesia 🐦‍🔥'
+    'PANCASILA': 'Pancasila 🦅',
+    'SBK': 'Sbk 🎨',
+    'YASINAN': 'Yasinan 📖',
+    'JUMSIH': 'Jumat Bersih 🧹',
+    'BCRB': 'Bahasa Cirebon ☁️༄.°'
 };
 
 const STRUKTUR_JADWAL = {
-    'senin': ['BING', 'BCRB', 'PANCASILA'],
-    'selasa': ['SBK', 'IPS', 'PANCASILA'],
-    'rabu': ['TIK', 'IPA'],
-    'kamis': ['BSUN', 'MTK', 'PJOK'],
-    'jumat': ['BIND', 'IPS']
+    'senin': ['UB', 'PAIBP', 'BING', 'IPA', 'BIND'],
+    'selasa': ['PJOK', 'MTK', 'IPS', 'TIK'],
+    'rabu': ['BIND', 'BSUN', 'IPS', 'MTK'],
+    'kamis': ['IPA', 'PANCASILA', 'SBK'],
+    'jumat': ['YASINAN', 'JUMSIH', 'BING', 'BCRB']
 };
 
 const LABELS = {
