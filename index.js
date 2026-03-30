@@ -22,7 +22,7 @@ const {
     sendJadwalBesokManual 
 } = require('./scheduler'); 
 // --- TAMBAHAN IMPORT SCHEDULER TKA ---
-const { initTkaScheduler } = require('./tkaReminder'); 
+const { initTkaScheduler } = require('./tkaReminder.js'); 
 const { renderDashboard } = require('./views/dashboard'); 
 // TAMBAHAN: Import view khusus media
 const { renderMediaView } = require('./views/mediaView'); 
