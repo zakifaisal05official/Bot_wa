@@ -2,6 +2,7 @@ const { QUIZ_BANK } = require('./quiz');
 const { JADWAL_PELAJARAN: JADWAL_STATIS, MOTIVASI_SEKOLAH } = require('./constants');
 const db = require('./data');
 const fs = require('fs'); 
+const axios = require('axios'); // Ditambahkan untuk hit API tanggal merah
 
 const ID_GRUP_TUJUAN = '120363403625197368@g.us'; 
 const KUIS_PATH = '/app/auth_info/kuis.json'; // Path volume agar sync
@@ -32,6 +33,26 @@ function getWeekDates() {
     return { dates, periode };
 }
 
+// --- FITUR BARU: CEK TANGGAL MERAH ---
+async function isTanggalMerah() {
+    try {
+        const now = getWIBDate();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const tglSekarang = `${yyyy}-${mm}-${dd}`;
+
+        const response = await axios.get(`https://dayoffapi.vercel.app/api?year=${yyyy}`);
+        const holidays = response.data;
+
+        const libur = holidays.find(h => h.holiday_date === tglSekarang);
+        return !!libur; 
+    } catch (error) {
+        console.error("Gagal cek tanggal merah:", error.message);
+        return false; 
+    }
+}
+
 // --- FUNGSI SAHUR (VERSI TEKS SAJA) ---
 async function initSahurScheduler(sock, botConfig) {
     console.log("✅ Scheduler Sahur Aktif (04:00 WIB)");
@@ -39,7 +60,7 @@ async function initSahurScheduler(sock, botConfig) {
 
     const PESAN_SAHUR_LIST = [
         `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nSelamat makan sahur semuanya! Jangan lupa niat puasa dan perbanyak minum air putih ya.\n\n_🕒 Waktu: 04:00 WIB (Sebelum Subuh)_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga puasanya lancar!* ✨`,
-        `🌙 *SAHUR.. SAHURRR!* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nAyo bangun, waktunya mengisi energi untuk ibadah hari ini. Jangan lupa niatnya ya!\n\n_🕒 Waktu: 04:00 WIB_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semangat puasanya, ridfot fams!* 💪`,
+        `🌙 *SAHUR.. SAHURRR!* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nAyo bangun, waktunya mengisi energi untuk ibadah hari ini. Jangan lupa niatnya ya!\n\n_🕒 Waktu: 04:00 WIB_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semangat puasanya!* 💪`,
         `🌙 *BERKAH SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\n"Bersahurlah kalian, karena pada sahur itu ada keberkahan." (HR. Bukhari & Muslim). Selamat makan sahur!\n\n_🕒 Waktu: 04:00 WIB_\n\n━━━━━━━━━━━━━━━━━━━━\n*Semoga berkah dan kuat sampai Maghrib!* 😇`,
         `🌙 *REMINDER SAHUR* 🕌\n━━━━━━━━━━━━━━━━━━━━\n\nMasih ada waktu buat makan dan minum. Yuk, disegerakan sahurnya sebelum imsak tiba!\n\n_🕒 Waktu: 04:00 WIB_\n\n━━━━━━━━━━━━━━━━━━━━\n*Happy Fasting everyone!* ✨`
     ];
@@ -64,9 +85,9 @@ async function initSahurScheduler(sock, botConfig) {
     }, 35000);
 }
 
-// --- FUNGSI QUIZ ---
+// --- FUNGSI QUIZ (DIUPDATE: WAKTU KHUSUS SENIN & JUMAT + CEK LIBUR + FIX ERROR) ---
 async function initQuizScheduler(sock, botConfig) {
-    console.log("✅ Scheduler Polling Aktif (Sen-Jum 13:00 WIB)");
+    console.log("✅ Scheduler Polling Aktif (Menyesuaikan Hari & Jam)");
     let lastSentDate = ""; 
     setInterval(async () => {
         if (!botConfig || botConfig.quiz === false) return;
@@ -77,9 +98,26 @@ async function initQuizScheduler(sock, botConfig) {
         const hariAngka = now.getDay(); 
         const tglID = `${now.getDate()}-${now.getMonth()}-${now.getFullYear()}`;
 
-        if (jam === 13 && menit === 0 && hariAngka >= 1 && hariAngka <= 5 && lastSentDate !== tglID) {
+        // Hanya berjalan di hari sekolah (Senin - Jumat)
+        if (hariAngka < 1 || hariAngka > 5) return;
+
+        // Tentukan jam kirim
+        let jamKirim = 13; // Selasa - Kamis jam 13:00
+        if (hariAngka === 1) jamKirim = 14; // Senin jam 14:00
+        if (hariAngka === 5) jamKirim = 11; // Jumat jam 11:00
+
+        if (jam === jamKirim && menit === 0 && lastSentDate !== tglID) {
             try {
-                const kuisHariIni = QUIZ_BANK[hariAngka];
+                // Cek tanggal merah
+                const statusLibur = await isTanggalMerah();
+                if (statusLibur) {
+                    console.log(`[QUIZ] Hari ini tanggal merah. Bot tidak mengirim kuis.`);
+                    lastSentDate = tglID;
+                    return; 
+                }
+
+                // Membaca objek QUIZ_BANK menggunakan string key
+                const kuisHariIni = QUIZ_BANK[hariAngka.toString()];
                 if (kuisHariIni && kuisHariIni.length > 0) {
                     const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
                     const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
@@ -90,7 +128,7 @@ async function initQuizScheduler(sock, botConfig) {
                         msgId: sentMsg.key.id,
                         data: randomQuiz,
                         votes: {},
-                        targetJam: 15,
+                        targetJam: jamKirim + 2, // Feedback menyusul 2 jam setelah kuis dikirim
                         tglID: tglID
                     };
 
@@ -168,7 +206,7 @@ async function initJadwalBesokScheduler(sock, botConfig) {
     }, 35000); 
 }
 
-// --- FUNGSI LIST PR MINGGUAN ---
+// --- FUNGSI LIST PR MINGGUAN (DIUPDATE: CEK LIBUR) ---
 async function initListPrMingguanScheduler(sock, botConfig) {
     console.log("✅ Scheduler List PR Mingguan Aktif (Sabtu 10:00 WIB)");
     let lastSentList = "";
@@ -183,6 +221,14 @@ async function initListPrMingguanScheduler(sock, botConfig) {
         
         if (hariIni === 6 && jam === 10 && menit === 0 && lastSentList !== tglID) {
             try {
+                // Cek tanggal merah
+                const statusLibur = await isTanggalMerah();
+                if (statusLibur) {
+                    console.log(`[PR] Hari libur nasional. Bot tidak mengirim list PR.`);
+                    lastSentList = tglID;
+                    return; 
+                }
+
                 const { dates, periode } = getWeekDates();
                 const daysKey = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
                 const dayLabels = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
