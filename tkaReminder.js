@@ -2,7 +2,7 @@ const ID_GRUP_TUJUAN = '120363403625197368@g.us';
 
 // 🔗 LINK FOLDER KHUSUS KISI-KISI
 // Silakan ganti link di bawah ini dengan link Google Drive kamu yang sebenarnya
-const LINK_FOLDER_KISIKISI = 'https://drive.google.com/drive/folders/xxxxxxxxx';
+const LINK_FOLDER_KISIKISI = 'https://drive.google.com/drive/folders/1STfjwjZioRCk-77rp5HGA617WgxTFCzn';
 
 function getWIBDate() {
     return new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
