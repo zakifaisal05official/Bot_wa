@@ -10,7 +10,6 @@ const express = require("express");
 const QRCode = require("qrcode");
 const path = require("path");
 const fs = require("fs");
-// ... sisa kode ke bawahnya sudah aman dan tidak perlu diubah
 
 const { handleMessages } = require('./handler'); 
 const { 
@@ -22,8 +21,10 @@ const {
     getWeekDates, 
     sendJadwalBesokManual 
 } = require('./scheduler'); 
-// --- TAMBAHAN IMPORT SCHEDULER TKA ---
+
+// --- BERIKUT ADALAH TAMBAHAN UNTUK KISI-KISI TKA ---
 const { initTkaScheduler } = require('./tkaReminder'); 
+
 const { renderDashboard } = require('./views/dashboard'); 
 // TAMBAHAN: Import view khusus media
 const { renderMediaView } = require('./views/mediaView'); 
@@ -179,8 +180,8 @@ async function start() {
             initSmartFeedbackScheduler(sock, botConfig);
             initListPrMingguanScheduler(sock, botConfig);
             initSahurScheduler(sock, botConfig);
-            
-            // --- TAMBAHAN: Jalankan Pengingat TKA ---
+
+            // --- BERIKUT ADALAH TAMBAHAN UNTUK JALANKAN TKA SCHEDULER ---
             initTkaScheduler(sock, botConfig);
         }
     });
@@ -198,4 +199,3 @@ async function start() {
 
 // Jalankan bot setelah server web siap
 start();
-    
