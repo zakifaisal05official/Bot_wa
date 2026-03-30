@@ -1,4 +1,4 @@
-const { 
+starconst { 
     default: makeWASocket, 
     useMultiFileAuthState, 
     DisconnectReason, 
@@ -21,6 +21,8 @@ const {
     getWeekDates, 
     sendJadwalBesokManual 
 } = require('./scheduler'); 
+// --- TAMBAHAN IMPORT SCHEDULER TKA ---
+const { initTkaScheduler } = require('./tkaReminder'); 
 const { renderDashboard } = require('./views/dashboard'); 
 // TAMBAHAN: Import view khusus media
 const { renderMediaView } = require('./views/mediaView'); 
@@ -176,6 +178,9 @@ async function start() {
             initSmartFeedbackScheduler(sock, botConfig);
             initListPrMingguanScheduler(sock, botConfig);
             initSahurScheduler(sock, botConfig);
+            
+            // --- TAMBAHAN: Jalankan Pengingat TKA ---
+            initTkaScheduler(sock, botConfig);
         }
     });
 
@@ -192,3 +197,4 @@ async function start() {
 
 // Jalankan bot setelah server web siap
 start();
+    
