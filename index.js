@@ -1,4 +1,4 @@
-starconst { 
+const { 
     default: makeWASocket, 
     useMultiFileAuthState, 
     DisconnectReason, 
@@ -10,6 +10,7 @@ const express = require("express");
 const QRCode = require("qrcode");
 const path = require("path");
 const fs = require("fs");
+// ... sisa kode ke bawahnya sudah aman dan tidak perlu diubah
 
 const { handleMessages } = require('./handler'); 
 const { 
