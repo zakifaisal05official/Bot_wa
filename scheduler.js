@@ -34,6 +34,7 @@ function getWeekDates() {
 }
 
 // --- FITUR BARU: CEK TANGGAL MERAH ---
+// (Fungsi ini dibiarkan ada agar fungsi lain tidak error, tapi di Quiz sudah tidak dipakai)
 async function isTanggalMerah() {
     try {
         const now = getWIBDate();
@@ -85,7 +86,7 @@ async function initSahurScheduler(sock, botConfig) {
     }, 35000);
 }
 
-// --- FUNGSI QUIZ (DIUPDATE: WAKTU KHUSUS SENIN & JUMAT + CEK LIBUR + FIX ERROR) ---
+// --- FUNGSI QUIZ (DIUPDATE: TANPA CEK API TANGGAL MERAH + PROTEKSI CRASH) ---
 async function initQuizScheduler(sock, botConfig) {
     console.log("✅ Scheduler Polling Aktif (Menyesuaikan Hari & Jam)");
     let lastSentDate = ""; 
@@ -108,39 +109,37 @@ async function initQuizScheduler(sock, botConfig) {
 
         if (jam === jamKirim && menit === 0 && lastSentDate !== tglID) {
             try {
-                // Cek tanggal merah
-                const statusLibur = await isTanggalMerah();
-                if (statusLibur) {
-                    console.log(`[QUIZ] Hari ini tanggal merah. Bot tidak mengirim kuis.`);
-                    lastSentDate = tglID;
-                    return; 
-                }
-
                 // Membaca objek QUIZ_BANK menggunakan string key
                 const kuisHariIni = QUIZ_BANK[hariAngka.toString()];
+                
+                // Pengaman: pastikan array kuis ada dan tidak kosong
                 if (kuisHariIni && kuisHariIni.length > 0) {
                     const randomQuiz = kuisHariIni[Math.floor(Math.random() * kuisHariIni.length)];
-                    const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
-                        poll: { name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`, values: randomQuiz.options, selectableCount: 1 }
-                    });
                     
-                    let kuisAktif = {
-                        msgId: sentMsg.key.id,
-                        data: randomQuiz,
-                        votes: {},
-                        targetJam: jamKirim + 2, // Feedback menyusul 2 jam setelah kuis dikirim
-                        tglID: tglID
-                    };
+                    // Pengaman: pastikan properti question dan options ada agar tidak undefined
+                    if (randomQuiz && randomQuiz.question && randomQuiz.options) {
+                        const sentMsg = await sock.sendMessage(ID_GRUP_TUJUAN, {
+                            poll: { name: `🕒 *PULANG SEKOLAH CHECK*\n${randomQuiz.question}`, values: randomQuiz.options, selectableCount: 1 }
+                        });
+                        
+                        let kuisAktif = {
+                            msgId: sentMsg.key.id,
+                            data: randomQuiz,
+                            votes: {},
+                            targetJam: jamKirim + 2, // Feedback menyusul 2 jam setelah kuis dikirim
+                            tglID: tglID
+                        };
 
-                    fs.writeFileSync(KUIS_PATH, JSON.stringify(kuisAktif, null, 2));
-                    lastSentDate = tglID; 
+                        fs.writeFileSync(KUIS_PATH, JSON.stringify(kuisAktif, null, 2));
+                        lastSentDate = tglID; 
+                    }
                 }
             } catch (err) { console.error("Quiz Error:", err); }
         }
     }, 35000);
 }
 
-// --- FUNGSI SMART FEEDBACK ---
+// --- FUNGSI SMART FEEDBACK (DIUPDATE: PROTEKSI UNDEFINED DI BARIS BARU) ---
 async function initSmartFeedbackScheduler(sock, botConfig) {
     console.log("✅ Scheduler Smart Feedback Aktif");
     let lastProcessedId = "";
@@ -149,7 +148,9 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
 
         let kuisAktif = {};
         if (fs.existsSync(KUIS_PATH)) {
-            kuisAktif = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
+            try {
+                kuisAktif = JSON.parse(fs.readFileSync(KUIS_PATH, 'utf-8'));
+            } catch (e) { return; }
         } else { return; }
 
         const now = getWIBDate();
@@ -172,13 +173,20 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
                         }
                     });
                     
-                    for (let i = 0; i < kuisAktif.data.options.length; i++) {
-                        let currentCount = counts[i] || 0;
-                        if (currentCount > maxVotes) { maxVotes = currentCount; topIdx = i; }
+                    // Pengaman: Pastikan data options-nya terbaca
+                    if (kuisAktif.data && kuisAktif.data.options) {
+                        for (let i = 0; i < kuisAktif.data.options.length; i++) {
+                            let currentCount = counts[i] || 0;
+                            if (currentCount > maxVotes) { maxVotes = currentCount; topIdx = i; }
+                        }
                     }
                 }
 
-                const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${kuisAktif.data.options[topIdx]}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${kuisAktif.data.feedbacks[topIdx]}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
+                // Pengaman: Mencegah error pembacaan array string jika datanya tidak lengkap
+                const teksOpsi = (kuisAktif.data.options && kuisAktif.data.options[topIdx]) || "Pilihan Kosong";
+                const teksFeedback = (kuisAktif.data.feedbacks && kuisAktif.data.feedbacks[topIdx]) || "Terima kasih sudah memilih!";
+
+                const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${teksOpsi}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${teksFeedback}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
                 await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
                 
                 lastProcessedId = kuisAktif.msgId;
