@@ -88,30 +88,10 @@ const QUIZ_BANK = {
 
     // 4. KAMIS: IPA, PANCASILA, SBK
     4: [
-        { 
-            question: "Kamis Sains! Tadi IPA di jam pertama. Bahas apa?", 
-            options: ["Biologi", "Fisika", "Kimia", "Teori"], 
-            feedbacks: ["Belajar makhluk hidup emang menarik! 🌿", "Fisika melatih logika berpikir. ⚙️", "Reaksi kimia emang seru buat dipelajari! 🧪", "Teori adalah dasar buat praktek nanti. 📚"] 
-        },
-        { 
-            question: "Pancasila di jam ke-4. Gimana pemahaman ideologinya?", 
-            options: ["Paham", "Amalkan", "Menarik", "Diskusi"], 
-            feedbacks: ["Nasionalisme kamu mantap! 🇮🇩", "Itu yang paling penting, dipraktekkan! 👍", "Sejarah bangsa emang harus diingat. 📜", "Diskusi bikin kita makin toleran. 🤝"] 
-        },
-        { 
-            question: "Seni Budaya (SBK) jam ke-7. Lagi ngerjain karya apa?", 
-            options: ["Menggambar", "Musik", "Teori Seni", "Kreatif"], 
-            feedbacks: ["Karya kamu pasti estetik banget! 🎨", "Musik bikin jiwa tenang. 🎵", "Seni itu luas wawasannya. ✨", "Teruslah berkarya, Zaki! 🖌️"] 
-        },
-        { 
-            question: "Gimana suasana kelas pas jam terakhir tadi?", 
-            options: ["Kondusif", "Rame", "Ngantuk", "Seru"], 
-            feedbacks: ["Bagus, belajar jadi lebih masuk. ✅", "Kelas rame tapi tetep asik ya? 😂", "Coba gerakin badan dikit biar melek! 🕺", "Hari Kamis ditutup dengan asik! 🌟"] 
-        },
-        { 
-            question: "Besok udah Jumat! Siap buat penutupan minggu ini?", 
-            options: ["Siap!", "Alhamdulillah", "Gas Terus", "Santai"], 
-            feedbacks: ["Mantap, tuntaskan minggu ini! 🏁", "Bersyukur sudah sampai sejauh ini. ❤️", "Energi yang stabil, keren! 🔥", "Jumat biasanya lebih santai ya. 😎"] 
+       { 
+            question: "Udah siap buat tempur di TKA minggu depan? Semangat ya!", 
+            options: ["Siap!", "Pasti Bisa", "Bismillah", "Gas Pol"], 
+            feedbacks: ["Selamat berjuang! Doa terbaik buat kamu. 🥇", "Kejar nilai terbaik, banggain orang tua! 🌟", "Semoga diberi kemudahan di setiap soal. 🙏", "Energi penuh buat TKA! Kamu hebat! 💪"] 
         }
     ],
 
@@ -123,9 +103,9 @@ const QUIZ_BANK = {
             feedbacks: ["Alhamdulillah, semoga dilancarkan ujiannya nanti! ✨", "Ketenangan hati itu modal utama ujian. 🙏", "Doa bersama bikin mental makin kuat. 🤝", "Semoga berkah buat perjuanganmu minggu depan! 📖"] 
         },
         { 
-            question: "Jumat depan udah mulai TKA (April 6-16). Gimana persiapannya?", 
+            question: "Jumat depan udah mulai TKA. Gimana persiapannya?", 
             options: ["Lagi Belajar", "Siap Tempur", "Deg-degan", "Optimis"], 
-            feedbacks: ["Semangat! Kamu pasti bisa ngerjainnya. 📚", "Mental juara! Gas terus, Zaki! 🔥", "Wajar kok, tarik napas dan fokus ya. 🌬️", "Keyakinan adalah 50% kemenangan! 🏆"] 
+            feedbacks: ["Semangat! Kamu pasti bisa ngerjainnya. 📚", "Mental juara! Gas terus! 🔥", "Wajar kok, tarik napas dan fokus ya. 🌬️", "Keyakinan adalah 50% kemenangan! 🏆"] 
         },
         { 
             question: "Bahasa Inggris (BING) tadi ngebahas kisi-kisi buat ujian?", 
@@ -135,13 +115,11 @@ const QUIZ_BANK = {
         { 
             question: "Literasi BCRB tadi bantu buat pemahaman bacaan TKA gak?", 
             options: ["Bantu Banget", "Lumayan", "Fokus Baca", "Selesai"], 
-            feedbacks: ["Membaca teliti itu kunci ngerjain soal cerita! 📖", "Nambah wawasan biar gak kaget liat soal. ✨", "Fokus adalah kekuatan utama kamu. 🎯", "Satu minggu selesai, tinggal hadapi ujian! 🏁"] 
-        },
-        { 
-            question: "Udah siap buat tempur di TKA minggu depan? Semangat ya, Zaki!", 
-            options: ["Siap!", "Pasti Bisa", "Bismillah", "Gas Pol"], 
-            feedbacks: ["Selamat berjuang! Doa terbaik buat kamu. 🥇", "Kejar nilai terbaik, banggain orang tua! 🌟", "Semoga diberi kemudahan di setiap soal. 🙏", "Energi penuh buat TKA! Kamu hebat! 💪"] 
+            // BAGIAN INI SUDAH SAYA LENGKAPI AGAR TIDAK EROR LAGI
+            feedbacks: ["Membaca teliti itu kunci ngerjain soal cerita! 📖", "Nambah wawasan biar gak kaget liat soal. ✨", "Fokus adalah kekuatan utama kamu. 🎯", "Tuntas semua tugas, tinggal hadapi ujian! 🏁"] 
         }
     ]
 };
-                      
+
+// Jangan lupa tambahkan module export di paling bawah agar bisa dibaca scheduler.js
+module.exports = { QUIZ_BANK };
