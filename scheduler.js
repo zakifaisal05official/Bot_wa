@@ -139,7 +139,7 @@ async function initQuizScheduler(sock, botConfig) {
     }, 35000);
 }
 
-// --- FUNGSI SMART FEEDBACK (DIUPDATE: PROTEKSI UNDEFINED DI BARIS BARU) ---
+// --- FUNGSI SMART FEEDBACK (DIUPDATE: ANTI ERROR 0 SUARA & HANDLE HASIL SERI) ---
 async function initSmartFeedbackScheduler(sock, botConfig) {
     console.log("✅ Scheduler Smart Feedback Aktif");
     let lastProcessedId = "";
@@ -162,8 +162,8 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
             
             try {
                 const votesArray = Object.values(kuisAktif.votes || {});
-                let topIdx = 0; 
                 let maxVotes = 0;
+                let topIdxs = []; // Menggunakan array untuk menampung jika ada hasil seri
 
                 if (votesArray.length > 0) {
                     const counts = {};
@@ -173,24 +173,45 @@ async function initSmartFeedbackScheduler(sock, botConfig) {
                         }
                     });
                     
-                    // Pengaman: Pastikan data options-nya terbaca
+                    // Mencari suara terbanyak
                     if (kuisAktif.data && kuisAktif.data.options) {
                         for (let i = 0; i < kuisAktif.data.options.length; i++) {
                             let currentCount = counts[i] || 0;
-                            if (currentCount > maxVotes) { maxVotes = currentCount; topIdx = i; }
+                            if (currentCount > maxVotes) { 
+                                maxVotes = currentCount; 
+                                topIdxs = [i]; // Reset list pemenang dengan yang tertinggi
+                            } else if (currentCount === maxVotes && currentCount > 0) {
+                                topIdxs.push(i); // Tambahkan ke list jika jumlah suaranya sama kuat
+                            }
                         }
                     }
                 }
 
-                // Pengaman: Mencegah error pembacaan array string jika datanya tidak lengkap
-                const teksOpsi = (kuisAktif.data.options && kuisAktif.data.options[topIdx]) || "Pilihan Kosong";
-                const teksFeedback = (kuisAktif.data.feedbacks && kuisAktif.data.feedbacks[topIdx]) || "Terima kasih sudah memilih!";
+                // Logika Pengiriman Pesan
+                if (maxVotes === 0) {
+                    // JIKA TIDAK ADA YANG MEMILIH SAMA SEKALI
+                    console.log("Belum ada yang mengisi polling. Bot tidak mengirimkan feedback.");
+                    
+                } else if (topIdxs.length > 1) {
+                    // JIKA HASILNYA SERI
+                    const teksSeri = `⚔️ *HASIL SERI!* \nWah, pendapat kalian seimbang nih antara beberapa pilihan. Kompak banget kelas 9G! \n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
+                    await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksSeri });
+                    
+                    lastProcessedId = kuisAktif.msgId;
+                    if (fs.existsSync(KUIS_PATH)) fs.unlinkSync(KUIS_PATH);
+                    
+                } else {
+                    // JIKA ADA PEMENANG TUNGGAL (SEPERTI BIASA)
+                    const topIdx = topIdxs[0];
+                    const teksOpsi = (kuisAktif.data.options && kuisAktif.data.options[topIdx]) || "Pilihan Kosong";
+                    const teksFeedback = (kuisAktif.data.feedbacks && kuisAktif.data.feedbacks[topIdx]) || "Terima kasih sudah memilih!";
 
-                const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${teksOpsi}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${teksFeedback}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
-                await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
-                
-                lastProcessedId = kuisAktif.msgId;
-                if (fs.existsSync(KUIS_PATH)) fs.unlinkSync(KUIS_PATH);
+                    const teksHasil = `📊 *HASIL PILIHAN TERBANYAK KELAS*\nPilihan: *${teksOpsi}* (${maxVotes} suara)\n━━━━━━━━━━━━━━━━━━━━\n\n${teksFeedback}\n\n━━━━━━━━━━━━━━━━━━━━\n_Respon otomatis jam ${jamSekarang}:00_`;
+                    await sock.sendMessage(ID_GRUP_TUJUAN, { text: teksHasil });
+                    
+                    lastProcessedId = kuisAktif.msgId;
+                    if (fs.existsSync(KUIS_PATH)) fs.unlinkSync(KUIS_PATH);
+                }
             } catch (err) { console.error("Feedback Error:", err); }
         }
     }, 35000);
