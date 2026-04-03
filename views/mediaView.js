@@ -33,7 +33,7 @@ const renderMediaView = (fileUrls) => {
     <html lang="id">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=7.0, user-scalable=yes">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-width=7.0, user-scalable=yes">
         <title>Y.M.B ASISTEN - Media View</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -41,7 +41,6 @@ const renderMediaView = (fileUrls) => {
         <style>
             :root { --primary: #00a884; --bg: #0b141a; --card: #1f2c33; --danger: #ff4b4b; }
             
-            /* LOADING SCREEN */
             #loading-overlay {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                 background: var(--bg); display: flex; flex-direction: column;
@@ -62,10 +61,10 @@ const renderMediaView = (fileUrls) => {
             
             .media-frame:fullscreen { object-fit: contain; background: black; width: 100vw; height: 100vh; }
 
-            /* ERROR STYLING */
-            #error-container { display: none; padding: 30px; background: rgba(255, 75, 75, 0.1); border: 1px dashed var(--danger); border-radius: 20px; margin-top: 10px; }
-            .btn-admin { background: var(--danger); color: white; border: none; padding: 10px 25px; border-radius: 50px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; transition: 0.3s; }
-            .btn-admin:hover { background: #ff1f1f; color: white; transform: scale(1.05); }
+            /* ERROR BOX STYLING */
+            #error-box { display: none; padding: 30px; background: rgba(255, 75, 75, 0.1); border: 1px dashed var(--danger); border-radius: 25px; margin: 10px 0; }
+            .btn-admin { background: var(--danger); color: white; border: none; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px; margin-top: 15px; transition: 0.3s; box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3); }
+            .btn-admin:hover { background: #ff1f1f; color: white; transform: translateY(-2px); }
 
             .quote-container { margin: 15px 0; padding: 15px; background: rgba(0,168,132,0.1); border-radius: 15px; border-left: 4px solid var(--primary); }
             .quote-text { font-style: italic; font-size: 0.9rem; color: #d1d7db; }
@@ -96,12 +95,12 @@ const renderMediaView = (fileUrls) => {
     <body onclick="playQuoteVoice()">
         <div id="loading-overlay">
             <div class="spinner"></div>
-            <div style="color:var(--primary); margin-top:15px; font-weight:bold;">MEMUAT MODE OFFLINE...</div>
+            <div style="color:var(--primary); margin-top:15px; font-weight:bold;">MEMUAT MEDIA...</div>
         </div>
 
         <div class="card-custom animate__animated animate__zoomIn" onclick="event.stopPropagation(); playQuoteVoice();">
             <div class="media-header">
-                <h5>📁 ${isPdf ? 'LAMPIRAN DOKUMEN' : 'GALERI TUGAS'}</h5>
+                <h5>📁 ${isPdf ? 'DOKUMEN FILE' : 'GALLERY VIEW'}</h5>
             </div>
             
             <div class="media-content">
@@ -110,20 +109,24 @@ const renderMediaView = (fileUrls) => {
                     <div style="font-size: 0.6rem; color: var(--primary); margin-top: 5px; opacity: 0.7;">🔊 Klik layar untuk suara & Full screen untuk zoom</div>
                 </div>
 
-                <div id="error-container" class="animate__animated animate__shakeX">
-                    <div style="color: var(--danger); font-weight: bold; font-size: 1.1rem;">⚠️ WADUH, ADA MASALAH!</div>
-                    <p style="font-size: 0.85rem; color: #d1d7db; margin-top: 10px;">File mungkin sudah dihapus oleh Admin atau terjadi gangguan pada sistem kami.</p>
-                    <a href="https://wa.me/628123456789" class="btn-admin">📞 HUBUNGI ADMIN</a>
+                <div id="error-box" class="animate__animated animate__headShake">
+                    <div style="color: var(--danger); font-weight: 900; font-size: 1.2rem;">⚠️ FILE TIDAK DITEMUKAN</div>
+                    <p style="color: #d1d7db; font-size: 0.85rem; margin-top: 10px;">
+                        Maaf, file ini tidak bisa dibuka karena sudah dihapus oleh Admin atau terjadi gangguan pada server.
+                    </p>
+                    <a href="https://wa.me/6289531549103?text=Halo%20Admin,%20file%20media%20saya%20tidak%20bisa%20dibuka/error." class="btn-admin">
+                        <span>📞 HUBUNGI ADMIN</span>
+                    </a>
                 </div>
 
-                <div id="media-wrapper">
+                <div id="media-display-area">
                     ${isPdf ? 
-                        `<iframe src="${urls[0]}" width="100%" height="500px" class="media-frame" onerror="handleError()"></iframe>` :
+                        `<iframe src="${urls[0]}" width="100%" height="500px" class="media-frame" onerror="showErrorView()"></iframe>` :
                         `<div class="swiper">
                             <div class="swiper-wrapper">
                                 ${urls.map(url => `
                                     <div class="swiper-slide">
-                                        <img src="${url}" class="media-frame img-fluid zoomable" alt="Tugas" onclick="toggleFullScreen(this)" onerror="handleError()">
+                                        <img src="${url}" class="media-frame img-fluid zoomable" alt="Tugas" onclick="toggleFullScreen(this)" onerror="showErrorView()">
                                     </div>
                                 `).join('')}
                             </div>
@@ -134,7 +137,7 @@ const renderMediaView = (fileUrls) => {
                     }
                 </div>
 
-                <div class="btn-group-custom" id="button-group">
+                <div class="btn-group-custom" id="action-buttons">
                     ${!isPdf ? `<button class="btn-fullscreen" onclick="triggerFullScreen()">⛶ LIHAT FULL LAYAR</button>` : ''}
                     <a href="${urls[0]}" id="downloadLink" download class="btn-download" onclick="event.stopPropagation(); playSuccessSound()">
                         <span>📥 DOWNLOAD FILE</span>
@@ -150,19 +153,19 @@ const renderMediaView = (fileUrls) => {
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         <script>
-            // --- ERROR HANDLING SYSTEM ---
-            function handleError() {
-                document.getElementById('media-wrapper').style.display = 'none';
-                document.getElementById('button-group').style.display = 'none';
-                document.getElementById('error-container').style.display = 'block';
+            // FUNGSI ERROR HANDLING
+            function showErrorView() {
+                document.getElementById('media-display-area').style.display = 'none';
+                document.getElementById('action-buttons').style.display = 'none';
+                document.getElementById('error-box').style.display = 'block';
                 
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Maaf kak, filenya tidak bisa dibuka atau sudah dihapus oleh admin. Silahkan lapor ya!"));
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Maaf kak, filenya tidak ditemukan atau sudah dihapus admin. Silahkan hubungi admin ya."));
                 }
             }
 
-            // --- OFFLINE ENGINE ---
+            // OFFLINE ENGINE
             async function registerOfflineWorker() {
                 if ('serviceWorker' in navigator) {
                     const swCode = \`
@@ -194,7 +197,7 @@ const renderMediaView = (fileUrls) => {
                 } else {
                     dlBtn.style.display = 'none';
                     if(qEl) {
-                        qEl.innerText = "Mode Offline Aktif! Tombol download disembunyikan.";
+                        qEl.innerText = "Mode Offline Aktif! File dari cache akan ditampilkan.";
                         qEl.style.color = "#ff9800";
                     }
                 }
@@ -203,13 +206,16 @@ const renderMediaView = (fileUrls) => {
             window.addEventListener('load', () => {
                 registerOfflineWorker();
                 updateOnlineStatus();
-                // Deteksi jika link undefined/kosong sejak awal
-                if("${urls[0]}" === "" || "${urls[0]}" === "undefined") {
-                    handleError();
+                
+                // Cek apakah URL valid
+                const firstUrl = "${urls[0]}";
+                if(!firstUrl || firstUrl === "undefined" || firstUrl === "") {
+                    showErrorView();
                 }
+
                 setTimeout(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
-                }, 1200);
+                }, 1000);
             });
 
             window.addEventListener('online', updateOnlineStatus);
