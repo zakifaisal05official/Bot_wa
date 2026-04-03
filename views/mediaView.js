@@ -4,7 +4,9 @@ const renderMediaView = (fileUrls) => {
     const urls = Array.isArray(fileUrls) ? fileUrls : [fileUrls];
     const isPdf = urls[0].toLowerCase().endsWith('.pdf');
     
-    // 20 Kata-kata semangat untuk ditampilkan secara acak
+    // Mengambil nama file dari URL
+    const fileName = urls[0].split('/').pop().split('?')[0] || "Dokumen PDF";
+    
     const quotes = [
         "Semangat! Setiap langkah kecil membawamu ke tujuan besar.",
         "Jangan menyerah, hal-hal besar butuh waktu.",
@@ -56,22 +58,22 @@ const renderMediaView = (fileUrls) => {
             .media-header { padding: 20px; text-align: center; border-bottom: 1px solid #2a3942; background: rgba(0,0,0,0.2); }
             .media-header h5 { color: var(--primary); font-weight: 800; letter-spacing: 2px; margin: 0; text-transform: uppercase; }
             
+            /* PDF TITLE BOX */
+            .pdf-name-tag {
+                background: rgba(0, 168, 132, 0.15); color: #00e676; 
+                padding: 10px 15px; border-radius: 12px; font-size: 0.85rem; 
+                margin-bottom: 15px; display: inline-block; border: 1px solid var(--primary);
+                word-break: break-all; max-width: 90%; font-weight: 600;
+            }
+
             .media-content { padding: 20px; text-align: center; }
             .media-frame { border-radius: 15px; border: 2px solid var(--primary); box-shadow: 0 0 20px rgba(0,168,132,0.2); max-width: 100%; height: auto; max-height: 60vh; object-fit: contain; cursor: zoom-in; transition: transform 0.1s ease; background: #000; touch-action: none; }
             
-            .media-frame:fullscreen { object-fit: contain; background: black; width: 100vw; height: 100vh; }
-
-            /* ERROR BOX STYLING */
             #error-box { display: none; padding: 30px; background: rgba(255, 75, 75, 0.1); border: 1px dashed var(--danger); border-radius: 25px; margin: 10px 0; }
             .btn-admin { background: var(--danger); color: white; border: none; padding: 12px 30px; border-radius: 50px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px; margin-top: 15px; transition: 0.3s; box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3); }
-            .btn-admin:hover { background: #ff1f1f; color: white; transform: translateY(-2px); }
 
             .quote-container { margin: 15px 0; padding: 15px; background: rgba(0,168,132,0.1); border-radius: 15px; border-left: 4px solid var(--primary); }
             .quote-text { font-style: italic; font-size: 0.9rem; color: #d1d7db; }
-
-            .swiper { width: 100%; padding-bottom: 40px; }
-            .swiper-button-next, .swiper-button-prev { color: var(--primary) !important; transform: scale(0.7); }
-            .swiper-pagination-bullet-active { background: var(--primary) !important; }
 
             .btn-group-custom { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 15px; }
             
@@ -81,6 +83,12 @@ const renderMediaView = (fileUrls) => {
                 font-weight: 800; text-decoration: none; align-items: center; gap: 10px;
                 transition: 0.4s; box-shadow: 0 8px 20px rgba(0,168,132,0.3); animation: pulseCustom 2s infinite;
             }
+
+            .btn-browser {
+                background: transparent; color: #34b7f1; border: 1px solid #34b7f1; padding: 10px 25px; border-radius: 50px;
+                text-decoration: none; font-size: 0.8rem; font-weight: 600; margin-bottom: 5px; transition: 0.3s;
+            }
+            .btn-browser:hover { background: rgba(52, 183, 241, 0.1); }
             
             .btn-fullscreen { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 8px 20px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; }
 
@@ -106,8 +114,9 @@ const renderMediaView = (fileUrls) => {
             <div class="media-content">
                 <div class="quote-container animate__animated animate__fadeIn">
                     <div class="quote-text" id="randomQuote"></div>
-                    <div style="font-size: 0.6rem; color: var(--primary); margin-top: 5px; opacity: 0.7;">🔊 Klik layar untuk suara & Full screen untuk zoom</div>
                 </div>
+
+                ${isPdf ? `<div class="pdf-name-tag animate__animated animate__fadeInDown">📄 ${fileName}</div>` : ''}
 
                 <div id="error-box" class="animate__animated animate__headShake">
                     <div style="color: var(--danger); font-weight: 900; font-size: 1.2rem;">⚠️ FILE TIDAK DITEMUKAN</div>
@@ -138,7 +147,10 @@ const renderMediaView = (fileUrls) => {
                 </div>
 
                 <div class="btn-group-custom" id="action-buttons">
+                    ${isPdf ? `<a href="${urls[0]}" target="_blank" class="btn-browser">🌐 BUKA DI TAB BARU</a>` : ''}
+                    
                     ${!isPdf ? `<button class="btn-fullscreen" onclick="triggerFullScreen()">⛶ LIHAT FULL LAYAR</button>` : ''}
+                    
                     <a href="${urls[0]}" id="downloadLink" download class="btn-download" onclick="event.stopPropagation(); playSuccessSound()">
                         <span>📥 DOWNLOAD FILE</span>
                     </a>
@@ -153,19 +165,16 @@ const renderMediaView = (fileUrls) => {
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         <script>
-            // FUNGSI ERROR HANDLING
             function showErrorView() {
                 document.getElementById('media-display-area').style.display = 'none';
                 document.getElementById('action-buttons').style.display = 'none';
                 document.getElementById('error-box').style.display = 'block';
-                
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Maaf kak, filenya tidak ditemukan atau sudah dihapus admin. Silahkan hubungi admin ya."));
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Maaf kak, filenya tidak ditemukan. Silahkan hubungi admin ya."));
                 }
             }
 
-            // OFFLINE ENGINE
             async function registerOfflineWorker() {
                 if ('serviceWorker' in navigator) {
                     const swCode = \`
@@ -206,13 +215,7 @@ const renderMediaView = (fileUrls) => {
             window.addEventListener('load', () => {
                 registerOfflineWorker();
                 updateOnlineStatus();
-                
-                // Cek apakah URL valid
-                const firstUrl = "${urls[0]}";
-                if(!firstUrl || firstUrl === "undefined" || firstUrl === "") {
-                    showErrorView();
-                }
-
+                if("${urls[0]}" === "" || "${urls[0]}" === "undefined") showErrorView();
                 setTimeout(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
                 }, 1000);
@@ -236,23 +239,18 @@ const renderMediaView = (fileUrls) => {
 
             function playSuccessSound() {
                 if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Terima kasih sudah mendownload file ini, semangat terus ya kak!"));
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Download dimulai, semangat ya kak!"));
                 }
             }
 
-            // ZOOM ENGINE
             document.querySelectorAll('.zoomable').forEach(img => {
                 const mc = new Hammer.Manager(img);
-                const pinch = new Hammer.Pinch();
-                mc.add(pinch);
+                mc.add(new Hammer.Pinch());
                 let currentScale = 1;
-
                 mc.on("pinchmove", (ev) => {
                     currentScale = Math.max(1, Math.min(ev.scale, 5));
                     img.style.transform = \`scale(\${currentScale})\`;
                 });
-
                 mc.on("pinchend", () => {
                     if(currentScale <= 1.1) img.style.transform = 'scale(1)';
                 });
