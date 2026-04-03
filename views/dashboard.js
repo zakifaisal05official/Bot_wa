@@ -19,6 +19,24 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
     ];
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
+    // --- BAGIAN OTOMATISASI SYSTEM CONFIG ---
+    const menuButtons = Object.keys(botConfig).map(key => {
+        // Merapikan nama key (contoh: smartFeedback -> Smart Feedback)
+        const formattedName = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        return `
+            <div class="col-6">
+                <div class="stats-card">
+                    <span style="font-size: 0.85rem; color: #8696a0;">${formattedName}</span><br>
+                    <a href="/toggle/${key}">
+                        <button class="btn btn-sm ${botConfig[key] ? 'btn-success' : 'btn-secondary'} w-100 mt-1" style="font-size: 0.7rem; font-weight: bold; border-radius: 10px;">
+                            ${botConfig[key] ? 'ON' : 'OFF'}
+                        </button>
+                    </a>
+                </div>
+            </div>
+        `;
+    }).join('');
+
     const commonHead = `
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -148,11 +166,7 @@ const renderDashboard = (isConnected, qrCodeData, botConfig, stats, logs, port, 
                             </div>
                             
                             <div id="layoutMenu" style="display:none;" class="row g-2 mb-3 animate__animated animate__fadeIn">
-                                <div class="col-6"><div class="stats-card"><span>Quiz Bot</span><br><a href="/toggle/quiz"><button class="btn btn-sm ${botConfig.quiz ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.quiz ? 'ON' : 'OFF'}</button></a></div></div>
-                                <div class="col-6"><div class="stats-card"><span>Feedback</span><br><a href="/toggle/smartFeedback"><button class="btn btn-sm ${botConfig.smartFeedback ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.smartFeedback ? 'ON' : 'OFF'}</button></a></div></div>
-                                <div class="col-6"><div class="stats-card"><span>Jadwal</span><br><a href="/toggle/jadwalBesok"><button class="btn btn-sm ${botConfig.jadwalBesok ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.jadwalBesok ? 'ON' : 'OFF'}</button></a></div></div>
-                                <div class="col-6"><div class="stats-card"><span>PR Minggu</span><br><a href="/toggle/prMingguan"><button class="btn btn-sm ${botConfig.prMingguan ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.prMingguan ? 'ON' : 'OFF'}</button></a></div></div>
-                                <div class="col-12"><div class="stats-card"><span>Pengingat Sahur</span><br><a href="/toggle/sahur"><button class="btn btn-sm ${botConfig.sahur ? 'btn-success' : 'btn-secondary'} w-100 mt-1">${botConfig.sahur ? 'ON' : 'OFF'}</button></a></div></div>
+                                ${menuButtons}
                             </div>
 
                             <div class="row g-2 text-center mb-3">
