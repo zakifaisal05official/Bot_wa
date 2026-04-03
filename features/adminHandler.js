@@ -64,7 +64,6 @@ async function handleAdminCommands(sock, msg, cmd, args, utils, body, nonAdminMs
                 }
             }
         });
-        // Mengembalikan null jika tidak ada mapel yang cocok agar bisa memicu pesan error/saran
         return foundMatch ? existingEntries.join('\n\n').trim() : null;
     };
 
@@ -123,7 +122,6 @@ async function handleAdminCommands(sock, msg, cmd, args, utils, body, nonAdminMs
             const firstPart = args.slice(0, 3).join(' ').toLowerCase();
             let dIdx = daysUpdate.findIndex(d => firstPart.includes(d));
             
-            // Validasi Hari
             if (dIdx === -1) {
                 return await sock.sendMessage(sender, { text: "❌ *HARI TIDAK DIKENALI*\n\nMohon sertakan nama hari (Senin-Jumat).\nContoh: *!update senin matematika hal 10*" });
             }
@@ -169,8 +167,9 @@ async function handleAdminCommands(sock, msg, cmd, args, utils, body, nonAdminMs
             break;
 
         case '!hapus':
-            const targetHapus = args[1]?.toLowerCase();
-            const targetMapel = args.slice(2).join(' ').toLowerCase();
+            const targetHapus = args[0]?.toLowerCase(); // Ambil hari
+            const targetMapel = args.slice(1).join(' ').toLowerCase(); // Ambil nama mapel
+            
             if (['senin', 'selasa', 'rabu', 'kamis', 'jumat'].includes(targetHapus)) {
                 if (targetMapel === 'semua') {
                     db.updateTugas(targetHapus, "");
@@ -178,9 +177,16 @@ async function handleAdminCommands(sock, msg, cmd, args, utils, body, nonAdminMs
                 } else {
                     const findM = STRUKTUR_JADWAL[targetHapus].find(m => new RegExp(`\\b${targetMapel}\\b`, 'i').test(m));
                     if (!findM) return await sock.sendMessage(sender, { text: `❌ *MAPEL TIDAK DITEMUKAN*` });
-                    let filtered = (db.getAll()[targetHapus] || "").split('\n\n').filter(e => !e.includes(MAPEL_CONFIG[findM]));
-                    db.updateTugas(targetHapus, filtered.join('\n\n'));
-                    await sock.sendMessage(sender, { text: `✅ Berhasil menghapus tugas *${findM}*!` });
+                    
+                    const emojiMapel = MAPEL_CONFIG[findM];
+                    let currentData = db.getAll()[targetHapus] || "";
+                    
+                    // Logika Hapus per Blok (Menghapus sampai separator & link web)
+                    let entries = currentData.split(/\n\n(?=•)/g);
+                    let filtered = entries.filter(e => !e.includes(emojiMapel));
+                    
+                    db.updateTugas(targetHapus, filtered.join('\n\n').trim());
+                    await sock.sendMessage(sender, { text: `✅ Berhasil menghapus tugas *${findM}* beserta file terkait!` });
                 }
             } else {
                 await sock.sendMessage(sender, { text: "⚠️ *Format: !hapus [hari] [mapel/semua]*" });
