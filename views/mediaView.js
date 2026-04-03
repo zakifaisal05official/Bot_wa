@@ -39,7 +39,7 @@ const renderMediaView = (fileUrls) => {
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
         <style>
-            :root { --primary: #00a884; --bg: #0b141a; --card: #1f2c33; }
+            :root { --primary: #00a884; --bg: #0b141a; --card: #1f2c33; --danger: #ff4b4b; }
             
             /* LOADING SCREEN */
             #loading-overlay {
@@ -62,6 +62,11 @@ const renderMediaView = (fileUrls) => {
             
             .media-frame:fullscreen { object-fit: contain; background: black; width: 100vw; height: 100vh; }
 
+            /* ERROR STYLING */
+            #error-container { display: none; padding: 30px; background: rgba(255, 75, 75, 0.1); border: 1px dashed var(--danger); border-radius: 20px; margin-top: 10px; }
+            .btn-admin { background: var(--danger); color: white; border: none; padding: 10px 25px; border-radius: 50px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; transition: 0.3s; }
+            .btn-admin:hover { background: #ff1f1f; color: white; transform: scale(1.05); }
+
             .quote-container { margin: 15px 0; padding: 15px; background: rgba(0,168,132,0.1); border-radius: 15px; border-left: 4px solid var(--primary); }
             .quote-text { font-style: italic; font-size: 0.9rem; color: #d1d7db; }
 
@@ -71,7 +76,6 @@ const renderMediaView = (fileUrls) => {
 
             .btn-group-custom { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 15px; }
             
-            /* Perbaikan: Default disembunyikan agar saat load/refresh offline tidak muncul */
             .btn-download { 
                 display: none; 
                 background: linear-gradient(135deg, var(--primary), #06cf9c); color: white; border: none; padding: 14px 35px; border-radius: 50px; 
@@ -106,23 +110,31 @@ const renderMediaView = (fileUrls) => {
                     <div style="font-size: 0.6rem; color: var(--primary); margin-top: 5px; opacity: 0.7;">🔊 Klik layar untuk suara & Full screen untuk zoom</div>
                 </div>
 
-                ${isPdf ? 
-                    `<iframe src="${urls[0]}" width="100%" height="500px" class="media-frame"></iframe>` :
-                    `<div class="swiper">
-                        <div class="swiper-wrapper">
-                            ${urls.map(url => `
-                                <div class="swiper-slide">
-                                    <img src="${url}" class="media-frame img-fluid zoomable" alt="Tugas" onclick="toggleFullScreen(this)">
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="swiper-pagination"></div>
-                        <div class="swiper-button-prev"></div>
-                        <div class="swiper-button-next"></div>
-                    </div>`
-                }
+                <div id="error-container" class="animate__animated animate__shakeX">
+                    <div style="color: var(--danger); font-weight: bold; font-size: 1.1rem;">⚠️ WADUH, ADA MASALAH!</div>
+                    <p style="font-size: 0.85rem; color: #d1d7db; margin-top: 10px;">File mungkin sudah dihapus oleh Admin atau terjadi gangguan pada sistem kami.</p>
+                    <a href="https://wa.me/628123456789" class="btn-admin">📞 HUBUNGI ADMIN</a>
+                </div>
 
-                <div class="btn-group-custom">
+                <div id="media-wrapper">
+                    ${isPdf ? 
+                        `<iframe src="${urls[0]}" width="100%" height="500px" class="media-frame" onerror="handleError()"></iframe>` :
+                        `<div class="swiper">
+                            <div class="swiper-wrapper">
+                                ${urls.map(url => `
+                                    <div class="swiper-slide">
+                                        <img src="${url}" class="media-frame img-fluid zoomable" alt="Tugas" onclick="toggleFullScreen(this)" onerror="handleError()">
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="swiper-pagination"></div>
+                            <div class="swiper-button-prev"></div>
+                            <div class="swiper-button-next"></div>
+                        </div>`
+                    }
+                </div>
+
+                <div class="btn-group-custom" id="button-group">
                     ${!isPdf ? `<button class="btn-fullscreen" onclick="triggerFullScreen()">⛶ LIHAT FULL LAYAR</button>` : ''}
                     <a href="${urls[0]}" id="downloadLink" download class="btn-download" onclick="event.stopPropagation(); playSuccessSound()">
                         <span>📥 DOWNLOAD FILE</span>
@@ -138,6 +150,18 @@ const renderMediaView = (fileUrls) => {
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         <script>
+            // --- ERROR HANDLING SYSTEM ---
+            function handleError() {
+                document.getElementById('media-wrapper').style.display = 'none';
+                document.getElementById('button-group').style.display = 'none';
+                document.getElementById('error-container').style.display = 'block';
+                
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Maaf kak, filenya tidak bisa dibuka atau sudah dihapus oleh admin. Silahkan lapor ya!"));
+                }
+            }
+
             // --- OFFLINE ENGINE ---
             async function registerOfflineWorker() {
                 if ('serviceWorker' in navigator) {
@@ -162,7 +186,6 @@ const renderMediaView = (fileUrls) => {
                 }
             }
 
-            // Logic Sembunyikan/Munculkan Tombol Download
             function updateOnlineStatus() {
                 const dlBtn = document.getElementById('downloadLink');
                 const qEl = document.getElementById('randomQuote');
@@ -179,7 +202,11 @@ const renderMediaView = (fileUrls) => {
 
             window.addEventListener('load', () => {
                 registerOfflineWorker();
-                updateOnlineStatus(); // Cek langsung saat load
+                updateOnlineStatus();
+                // Deteksi jika link undefined/kosong sejak awal
+                if("${urls[0]}" === "" || "${urls[0]}" === "undefined") {
+                    handleError();
+                }
                 setTimeout(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
                 }, 1200);
@@ -208,7 +235,7 @@ const renderMediaView = (fileUrls) => {
                 }
             }
 
-            // ZOOM ENGINE (Hammer.js)
+            // ZOOM ENGINE
             document.querySelectorAll('.zoomable').forEach(img => {
                 const mc = new Hammer.Manager(img);
                 const pinch = new Hammer.Pinch();
@@ -256,4 +283,3 @@ const renderMediaView = (fileUrls) => {
 };
 
 module.exports = { renderMediaView };
-        
