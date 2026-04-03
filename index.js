@@ -31,9 +31,7 @@ const { renderMediaView } = require('./views/mediaView');
 
 // --- DYNAMIC VOLUME PATH ---
 const VOLUME_PATH = '/app/auth_info';
-// Perubahan kecil: Pakai ridfot sesuai identitasmu
 const CONFIG_PATH = path.join(VOLUME_PATH, 'config.ridfot'); 
-// Path folder foto
 const PUBLIC_FILES_PATH = path.join(VOLUME_PATH, 'public_files');
 
 // Pastikan folder volume dan folder publik ada
@@ -61,30 +59,28 @@ const cleanOldFiles = () => {
         });
     }
 };
-// Jalankan setiap 24 jam
 setInterval(cleanOldFiles, 24 * 60 * 60 * 1000);
 cleanOldFiles(); 
 
-// Default config: Pastikan semua fitur terdaftar di sini
+// --- UPDATE: SYSTEM CONFIG (Semua fitur otomatis sekarang ada di sini) ---
 let botConfig = { 
     quiz: true, 
     jadwalBesok: true, 
     smartFeedback: true, 
     prMingguan: true, 
-    sahur: true 
+    sahur: true,
+    tkaReminder: true // Tambahkan tkaReminder agar bisa di ON/OFF dari Web
 };
 
-// Fungsi Load Config: Mengambil data dari volume agar status tidak reset
+// Fungsi Load Config
 function loadConfig() {
     try {
         if (fs.existsSync(CONFIG_PATH)) {
             const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
             const parsed = JSON.parse(data);
-            // Gabungkan data lama dengan default agar fitur baru muncul
             Object.assign(botConfig, parsed);
             console.log("✅ Config Berhasil Dimuat dari Volume");
         } else {
-            // Jika file belum ada, buat file baru
             fs.writeFileSync(CONFIG_PATH, JSON.stringify(botConfig, null, 2));
         }
     } catch (e) { 
@@ -106,7 +102,6 @@ let qrCodeData = "", isConnected = false, sock, logs = [], stats = { pesanMasuk:
 // --- CONFIGURASI STATIC FILE & MEDIA ROUTE ---
 app.use('/files', express.static(PUBLIC_FILES_PATH));
 
-// UPDATE: Rute untuk mendukung multi-file (Slider)
 app.get("/tugas/:filenames", (req, res) => {
     const filenames = req.params.filenames.split(','); 
     const fileUrls = filenames.map(name => `/files/${name}`); 
@@ -137,7 +132,6 @@ app.get("/", (req, res) => {
     res.send(renderDashboard(isConnected, qrCodeData, botConfig, stats, logs, port));
 });
 
-// --- PERUBAHAN: Jalankan listen di atas agar Zeabur mendeteksi servis aktif ---
 app.listen(port, "0.0.0.0", () => {
     console.log(`✅ Web Dashboard aktif di port ${port}`);
 });
@@ -181,7 +175,7 @@ async function start() {
             initListPrMingguanScheduler(sock, botConfig);
             initSahurScheduler(sock, botConfig);
 
-            // --- BERIKUT ADALAH TAMBAHAN UNTUK JALANKAN TKA SCHEDULER ---
+            // --- JALANKAN TKA SCHEDULER DENGAN CONFIG ---
             initTkaScheduler(sock, botConfig);
         }
     });
@@ -197,5 +191,4 @@ async function start() {
     });
 }
 
-// Jalankan bot setelah server web siap
 start();
