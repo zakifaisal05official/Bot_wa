@@ -7,7 +7,6 @@ const fs = require('fs');
 const ADMIN_RAW = ['6289531549103', '171425214255294', '6285158738155' , '241849843351688' , '254326740103190' , '8474121494667']; 
 
 function getClosestCommand(cmd) {
-    // Daftar perintah baru & pemetaan perintah lama ke baru
     const commandsMap = {
         '!menu': '!bantuan',
         '!p': '!cekbot',
@@ -15,7 +14,6 @@ function getClosestCommand(cmd) {
         '!deadline': '!tugas_lama'
     };
 
-    // Jika user ketik perintah lama, langsung sarankan yang baru
     if (commandsMap[cmd]) return commandsMap[cmd];
 
     const validCommands = [
@@ -25,7 +23,6 @@ function getClosestCommand(cmd) {
 
     if (validCommands.includes(cmd)) return null;
 
-    // Cari yang paling mirip secara teks
     return validCommands.find(v => {
         const distance = Math.abs(v.length - cmd.length);
         return distance <= 2 && (v.startsWith(cmd.substring(0, 3)) || cmd.startsWith(v.substring(0, 3)));
@@ -38,6 +35,7 @@ async function handleMessages(sock, m, botConfig, utils) {
         if (!msg || !msg.message || msg.key.fromMe) return;
 
         const sender = msg.key.remoteJid;
+        const pushName = msg.pushName || 'User';
         const body = (msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.documentMessage?.caption || "").trim();
         if (!body) return;
 
@@ -65,8 +63,48 @@ async function handleMessages(sock, m, botConfig, utils) {
         const args = body.split(' ');
         const cmd = args[0].toLowerCase();
 
+        // --- LOGIKA MENU BANTUAN OTOMATIS ---
+        if (cmd === '!bantuan') {
+            // Menu dasar untuk semua (Siswa & Admin)
+            let menuTeks = 
+                `✨ *MENU UTAMA SYTEAM-BOT* ✨\n` +
+                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `Halo *${pushName}*! Berikut perintah kamu:\n\n` +
+                `📝 *!list_pr* -> Liat daftar PR\n` +
+                `📆 *!jadwal* -> Liat jadwal pelajaran\n` +
+                `➕ *!tambah_pr* -> Lapor PR baru\n` +
+                `🗑️ *!hapus_pr* -> Request hapus PR\n` +
+                `⏳ *!tugas_lama* -> PR belum dikumpul\n` +
+                `⚡ *!cekbot* -> Cek status bot\n`;
+
+            // Jika ADMIN, tambahkan panduan lengkap di bawahnya
+            if (isAdmin) {
+                menuTeks += 
+                    `\n🛠️ *PANDUAN LENGKAP PENGURUS (ADMIN)*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `✅ *!update [hari] [mapel] [tugas]*\n` +
+                    `_Fungsi: Masukin PR ke web/database._\n` +
+                    `_Contoh: !update senin mtk hal 10_\n\n` +
+                    `📢 *!info [pesan]*\n` +
+                    `_Fungsi: Kirim pengumuman ke grup 9G._\n\n` +
+                    `❌ *!hapus [hari] [mapel]*\n` +
+                    `_Fungsi: Hapus tugas. Pakai "semua" untuk hapus semua PR di hari itu._\n` +
+                    `_Contoh: !hapus senin mtk_\n\n` +
+                    `📅 *!update_jadwal*\n` +
+                    `_Fungsi: Refresh jadwal pelajaran terbaru._\n\n` +
+                    `📂 *!cek_db*\n` +
+                    `_Fungsi: Intip data mentah database._\n\n` +
+                    `♻️ *!reset-bot*\n` +
+                    `_Fungsi: Restart bot kalau lemot/error._\n`;
+            }
+
+            menuTeks += `\n━━━━━━━━━━━━━━━━━━━━\n_Gunakan tanda ! di depan perintah_`;
+            
+            return await sock.sendMessage(sender, { text: menuTeks });
+        }
+
         // Routing Perintah User
-        const userCmds = ['!cekbot', '!list_pr', '!tugas_lama', '!bantuan', '!jadwal', '!tambah_pr', '!hapus_pr'];
+        const userCmds = ['!cekbot', '!list_pr', '!tugas_lama', '!jadwal', '!tambah_pr', '!hapus_pr'];
         
         // Routing Perintah Admin
         const adminCmds = ['!update', '!update_jadwal', '!hapus', '!grup', '!info', '!reset-bot', '!data', '!cek_db'];
@@ -77,16 +115,11 @@ async function handleMessages(sock, m, botConfig, utils) {
             if (!isAdmin) return await sock.sendMessage(sender, { text: nonAdminMsg });
             await handleAdminCommands(sock, msg, cmd, args, utils, body, nonAdminMsg);
         } else {
-            // Logika Suggestion jika perintah tidak muncul atau salah ketik
             const suggestion = getClosestCommand(cmd);
             if (suggestion) {
-                const pesanSaran = 
-                    `🧐 *PERINTAH TIDAK DIKENAL*\n` +
-                    `━━━━━━━━━━━━━━━━━━━━\n` +
-                    `Mungkin maksud kamu: *${suggestion}* ?\n\n` +
-                    `💡 *Info:* Kami baru saja memperbarui nama perintah agar lebih rapi. Ketik *!bantuan* untuk melihat menu terbaru.`;
-                
-                return await sock.sendMessage(sender, { text: pesanSaran });
+                return await sock.sendMessage(sender, { 
+                    text: `🧐 *PERINTAH TIDAK DIKENAL*\n━━━━━━━━━━━━━━━━━━━━\nMaksud kamu: *${suggestion}* ?\n\nKetik *!bantuan* untuk melihat menu.` 
+                });
             }
         }
 
