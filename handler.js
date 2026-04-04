@@ -90,12 +90,12 @@ async function handleMessages(sock, m, botConfig, utils) {
                     `❌ *!hapus [hari] [mapel]*\n` +
                     `_Fungsi: Hapus tugas. Pakai "semua" untuk hapus semua PR di hari itu._\n` +
                     `_Contoh: !hapus senin mtk_\n\n` +
-                    `📅 *!update_jadwal  [hari] [mapel] [tugas]*\n` +
-                   `_Fungsi: Masukin PR ke web/database._\n` +
+                    `📅 *!update_jadwal [hari] [mapel] [tugas]*\n` +
+                    `_Fungsi: Masukin PR ke web/database._\n` +
                     `_Contoh: !update senin mtk hal 10_\n\n` +
                     `📂 *!cek_db*\n` +
-                    `_Fungsi: Intip data mentah database._\n\n` +
-            }
+                    `_Fungsi: Intip data mentah database._\n`;
+            } // <--- SEBELUMNYA KURANG PENUTUP INI
 
             menuTeks += `\n━━━━━━━━━━━━━━━━━━━━\n_Gunakan tanda ! di depan perintah_`;
             
