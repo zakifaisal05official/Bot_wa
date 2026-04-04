@@ -18,7 +18,7 @@ function getClosestCommand(cmd) {
 
     const validCommands = [
         '!cekbot', '!list_pr', '!tugas_lama', '!bantuan', '!jadwal', '!tambah_pr', '!hapus_pr', 
-        '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!data', '!cek_db'
+        '!update', '!update_jadwal', '!hapus', '!grup', '!polling', '!info', '!reset-bot', '!data', '!cek_db', `!deadline`
     ];
 
     if (validCommands.includes(cmd)) return null;
