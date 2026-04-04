@@ -45,16 +45,14 @@ async function handleUserCommands(sock, msg, cmd, args, utils) {
 
         case '!jadwal':
             const currentData = db.getAll() || {};
-            const inputHari = args[0]?.toLowerCase(); // Cek apakah user input hari (misal: !jadwal senin)
+            const inputHari = args[0]?.toLowerCase();
 
             let teksJadwal = `📅 *JADWAL PELAJARAN* 📅\n━━━━━━━━━━━━━━━━━━━━\n\n`;
             
             if (inputHari && HARI_VALID.includes(inputHari)) {
-                // Tampilkan hanya hari yang diminta
                 const isiJadwal = currentData[`${inputHari}_jadwal`] || "_Jadwal belum diisi._";
                 teksJadwal += `*${inputHari.toUpperCase()}*\n${isiJadwal}\n\n`;
             } else {
-                // Tampilkan semua (Full)
                 HARI_VALID.forEach((day) => {
                     const isiJadwal = currentData[`${day}_jadwal`] || "_Belum ada jadwal._";
                     teksJadwal += `*${day.toUpperCase()}*\n${isiJadwal}\n\n`;
@@ -120,22 +118,6 @@ async function handleUserCommands(sock, msg, cmd, args, utils) {
         case '!tugas_lama':
             const infoDl = (db.getAll() || {}).deadline || "Semua tugas sudah selesai.";
             await sock.sendMessage(sender, { text: `⏳ *DAFTAR TUGAS BELUM DIKUMPULKAN*\n\n${infoDl}` });
-            break;
-
-        case '!bantuan':
-            const helpMenu = 
-                `✨ *MENU UTAMA SYTEAM-BOT* ✨\n` +
-                `━━━━━━━━━━━━━━━━━━━━\n` +
-                `Halo *${pushName}*! Pilih menu di bawah:\n\n` +
-                `📝 *!list_pr*\n_Liat daftar PR minggu ini._\n\n` +
-                `📆 *!jadwal*\n_Liat semua jadwal pelajaran._\n\n` +
-                `📅 *!jadwal [hari]*\n_Liat jadwal hari tertentu (Contoh: !jadwal senin)._\n\n` +
-                `➕ *!tambah_pr [Hari] [Tugas]*\n_Lapor kalau ada PR baru._\n\n` +
-                `🗑️ *!hapus_pr [Detail]*\n_Lapor kalau PR sudah selesai/salah._\n\n` +
-                `⏳ *!tugas_lama*\n_Liat tugas yang belum dikumpul._\n\n` +
-                `⚡ *!cekbot*\n_Cek bot lagi online atau nggak._\n\n` +
-                `━━━━━━━━━━━━━━━━━━━━`;
-            await sock.sendMessage(sender, { text: helpMenu });
             break;
     }
 }
