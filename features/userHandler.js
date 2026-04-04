@@ -1,5 +1,7 @@
 const db = require('../data');
 const { MOTIVASI_SEKOLAH } = require('../constants');
+// Mengambil data dari file pelajaran yang beda folder
+const { MAPEL_CONFIG, STRUKTUR_JADWAL } = require('../pelajaran'); 
 
 // Ganti dengan nomor WA admin (format: 628xxx@s.whatsapp.net)
 const ADMIN_NUMBER = '6289531549103@s.whatsapp.net'; 
@@ -44,18 +46,27 @@ async function handleUserCommands(sock, msg, cmd, args, utils) {
             break;
 
         case '!jadwal':
-            const currentData = db.getAll() || {};
             const inputHari = args[0]?.toLowerCase();
-
             let teksJadwal = `📅 *JADWAL PELAJARAN* 📅\n━━━━━━━━━━━━━━━━━━━━\n\n`;
             
+            // Fungsi internal untuk menyusun jadwal dari pelajaran.js
+            const susunJadwal = (hari) => {
+                const listKode = STRUKTUR_JADWAL[hari];
+                if (!listKode || listKode.length === 0) return `*${hari.toUpperCase()}*\n_Libur / Tidak ada jadwal._\n\n`;
+                
+                let hasil = `*${hari.toUpperCase()}*\n`;
+                listKode.forEach((kode, index) => {
+                    const namaMapel = MAPEL_CONFIG[kode] || kode;
+                    hasil += `${index + 1}. ${namaMapel}\n`;
+                });
+                return hasil + `\n`;
+            };
+
             if (inputHari && HARI_VALID.includes(inputHari)) {
-                const isiJadwal = currentData[`${inputHari}_jadwal`] || "_Jadwal belum diisi._";
-                teksJadwal += `*${inputHari.toUpperCase()}*\n${isiJadwal}\n\n`;
+                teksJadwal += susunJadwal(inputHari);
             } else {
                 HARI_VALID.forEach((day) => {
-                    const isiJadwal = currentData[`${day}_jadwal`] || "_Belum ada jadwal._";
-                    teksJadwal += `*${day.toUpperCase()}*\n${isiJadwal}\n\n`;
+                    teksJadwal += susunJadwal(day);
                 });
                 teksJadwal += `_Tips: Ketik *!jadwal [hari]* untuk satu hari saja._\n`;
             }
