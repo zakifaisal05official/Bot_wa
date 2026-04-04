@@ -83,19 +83,18 @@ async function handleMessages(sock, m, botConfig, utils) {
                     `\n🛠️ *PANDUAN LENGKAP PENGURUS (ADMIN)*\n` +
                     `━━━━━━━━━━━━━━━━━━━━\n` +
                     `✅ *!update [hari] [mapel] [tugas]*\n` +
-                    `_Fungsi: Masukin PR ke web/database._\n` +
+                    `_Fungsi: Masukin PR ke web/database dan lasung ke kirim ke grup._\n` +
                     `_Contoh: !update senin mtk hal 10_\n\n` +
                     `📢 *!info [pesan]*\n` +
-                    `_Fungsi: Kirim pengumuman ke grup 9G._\n\n` +
+                    `_Fungsi: Kirim pengumuman ke pengumuman y.m.b_\n\n` +
                     `❌ *!hapus [hari] [mapel]*\n` +
                     `_Fungsi: Hapus tugas. Pakai "semua" untuk hapus semua PR di hari itu._\n` +
                     `_Contoh: !hapus senin mtk_\n\n` +
-                    `📅 *!update_jadwal*\n` +
-                    `_Fungsi: Refresh jadwal pelajaran terbaru._\n\n` +
+                    `📅 *!update_jadwal  [hari] [mapel] [tugas]*\n` +
+                   `_Fungsi: Masukin PR ke web/database._\n` +
+                    `_Contoh: !update senin mtk hal 10_\n\n` +
                     `📂 *!cek_db*\n` +
                     `_Fungsi: Intip data mentah database._\n\n` +
-                    `♻️ *!reset-bot*\n` +
-                    `_Fungsi: Restart bot kalau lemot/error._\n`;
             }
 
             menuTeks += `\n━━━━━━━━━━━━━━━━━━━━\n_Gunakan tanda ! di depan perintah_`;
