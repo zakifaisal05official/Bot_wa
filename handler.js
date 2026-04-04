@@ -102,7 +102,7 @@ async function handleMessages(sock, m, botConfig, utils) {
             return await sock.sendMessage(sender, { text: menuTeks });
         }
 
-        // Routing Perintah User
+        // Routing Perintah Use
         const userCmds = ['!cekbot', '!list_pr', '!tugas_lama', '!jadwal', '!tambah_pr', '!hapus_pr'];
         
         // Routing Perintah Admin
